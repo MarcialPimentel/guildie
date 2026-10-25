@@ -1,0 +1,37 @@
+; Engine configuration file.
+; Guildie client (GDD 10, 11.6). Portrait, mobile-first web build.
+
+config_version=5
+
+[application]
+
+config/name="Guildie"
+config/description="Rise from apprentice to master in a guild city on the edge of the steam age."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Api="*res://scripts/autoload/api.gd"
+Session="*res://scripts/autoload/session.gd"
+
+[display]
+
+window/size/viewport_width=540
+window/size/viewport_height=960
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[gui]
+
+common/drop_mouse_on_gui_input_disabled=true
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.105882, 0.0941176, 0.0862745, 1)

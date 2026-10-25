@@ -15,3 +15,6 @@ config.php
 Thumbs.db
 .vscode/
 .idea/
+
+# --- Packaged uploads (built by tools/package.sh) ---
+/dist/

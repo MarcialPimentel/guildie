@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.2.1 · **Date:** 2026-10-25 · **Status:** Pre-production
+**Version:** 0.2.2 · **Date:** 2026-10-25 · **Status:** Pre-production
 **Owner:** Marz · **Engine:** Godot 4 (web export) · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -520,8 +520,9 @@ Everything runs on the existing SiteGround hosting, on one domain.
 ### 11.8 Hosting & deploy
 
 - Web build and API hosted on SiteGround alongside other projects (proposed path: `marz.gg/games/guildie/`).
-- Initial deploys go through SiteGround's File Manager or FTP. Automated deploys from GitHub can come later.
-- Build number shown in the client.
+- Deploys use two zips built by `tools/package.sh` and attached to a GitHub release: one extracted into `guildie-private/`, one into `public_html/games/guildie/`. Step-by-step: `docs/deploy.md`. Automated deploys from GitHub can come later.
+- Build number comes from the repo's `VERSION` file, stamped into both server and client, and shown in the client footer.
+- Client engine: Godot 4.7, GL Compatibility renderer, single-threaded web export (no special server headers needed).
 - Development environment separate from the demo environment once real players join.
 
 ---
@@ -598,6 +599,8 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-25 | Accounts: name + simple hashed password | Friends-only testing; hashing costs nothing extra |
 | 2026-10-25 | Leaderboards: total gold and rank progress | Covers both player goals (wealth and mastery) |
 | 2026-10-25 | Future professions not decided yet | Focus on the launch three |
+| 2026-10-25 | Build number lives in a `VERSION` file, not server config | Deploys can't drift out of sync with a hand-edited config value |
+| 2026-10-25 | Session tokens sent in an `X-Guildie-Token` header and stored hashed | Some shared hosts strip the standard Authorization header; hashing protects players if the database leaks |
 
 ---
 
