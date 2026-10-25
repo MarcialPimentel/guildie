@@ -1,0 +1,10 @@
+{
+  "_comment": "Economy settings read by the server. Values are [tune] placeholders (GDD).",
+  "new_player": {
+    "starting_gold": 100,
+    "starting_items": [
+      { "item_id": "copper_ore", "quantity": 5 }
+    ]
+  },
+  "test_add_item_max": 10
+}

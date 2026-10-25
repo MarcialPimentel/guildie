@@ -1,0 +1,3 @@
+# Don't list folder contents if someone opens /api/ directly.
+Options -Indexes
+DirectoryIndex index.php
