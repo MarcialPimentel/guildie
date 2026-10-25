@@ -14,7 +14,8 @@ Guildie is a mobile-first browser crafting and trading game (Godot 4 client, PHP
 - **Every game action runs in one database transaction.** Use PDO prepared statements only; never build SQL from strings.
 - **No secrets in the repo.** Real credentials live only in `guildie-private/config.php` on the server.
 - **Static game data lives in `/content` as JSON**, shared by server and client.
-- **Bump the build number** (`build` in config) on every deploy.
+- **Bump the `VERSION` file** for every deploy. `tools/package.sh` stamps it into the server (`app/version.php`) and the client (`build_info.gd`).
+- **Test before opening a PR:** `tools/smoke_test.py` against a local server and `client/tests/client_smoke.gd` headless. Deploy steps live in `docs/deploy.md`.
 
 ## Layout
 
@@ -25,6 +26,7 @@ Guildie is a mobile-first browser crafting and trading game (Godot 4 client, PHP
 /server/config     config template     -> guildie-private/config.php
 /server/migrations SQL, applied in order via phpMyAdmin
 /server/tools      one-off helpers (upload, use, delete)
+/tools             package.sh (builds upload zips), smoke_test.py (API test)
 /content           JSON game data
 /docs              GDD, setup and deploy guides
 ```

@@ -15,9 +15,6 @@ return [
         'charset' => 'utf8mb4',
     ],
 
-    // Shown in the client so you can confirm a deploy is current. Bump on every deploy.
-    'build' => '0.0.1',
-
     // How often the market tick should run (seconds). Used by the catch-up guard.
     'tick_interval_seconds' => 600,
 

@@ -97,13 +97,14 @@ return [
         'pass'    => 'PASTE_DATABASE_PASSWORD',
         'charset' => 'utf8mb4',
     ],
-    'build' => '0.0.1',
     'tick_interval_seconds' => 600,
     'debug' => false,
 ];
 ```
 
 4. Save. Keep the quotes around each value.
+
+(If your `config.php` has a `'build' => '0.0.1',` line from an earlier version of this guide, that's fine. It's no longer used; the build number now comes from the uploaded code.)
 
 **Never** paste this password into a chat, an issue, or the repo. Only this one file on the server holds it.
 
@@ -145,4 +146,4 @@ Send Claude:
 
 **Do not send** the database name, user, or password. Claude doesn't need them.
 
-That's it. After this, Claude can write the database migration (#3) and the PHP API (#4), and you'll deploy them by uploading files into the folders you just created.
+That's it. Next: [deploy.md](deploy.md) walks through uploading the game and creating the database tables.

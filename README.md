@@ -20,6 +20,12 @@ Quick links:
 - [Technical Architecture](docs/GDD.md#11-technical-architecture)
 - [Milestones](docs/GDD.md#12-milestones)
 
+## Setup and deploy
+
+- [SiteGround setup](docs/setup-siteground.md): one-time database, folders, and config
+- [Deploying](docs/deploy.md): first deploy and routine updates
+- Current build: see [`VERSION`](VERSION)
+
 ## Roadmap
 
 Milestones are tracked as GitHub milestones with issues:
