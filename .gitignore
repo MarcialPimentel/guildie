@@ -1,0 +1,17 @@
+# --- Godot ---
+.godot/
+/client/build/
+/client/export/
+*.tmp
+
+# --- Server secrets ---
+# The real config holds database credentials. Only config.example.php is committed.
+config.php
+.env
+*.log
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,13 @@
+{
+  "_comment": "Static item definitions. Single source of truth for both the PHP server and the Godot client (GDD 11.7). The full launch list (GDD 5.5) arrives in M1.",
+  "items": [
+    {
+      "id": "copper_ore",
+      "name": "Copper Ore",
+      "type": "raw",
+      "profession": "blacksmith",
+      "reference_value": 4,
+      "description": "Soft reddish ore from the guild mine. The first thing every apprentice smith learns to work."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.2 · **Date:** 2026-10-25 · **Status:** Pre-production
+**Version:** 0.2.1 · **Date:** 2026-10-25 · **Status:** Pre-production
 **Owner:** Marz · **Engine:** Godot 4 (web export) · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -462,7 +462,7 @@ Everything runs on the existing SiteGround hosting, on one domain.
 - **Same domain for client and API**, so there are no cross-origin (CORS) issues.
 - **Plain PHP 8 with PDO**: prepared statements everywhere, and InnoDB transactions for every game action.
 - **JSON in, JSON out.** One small router (`api/index.php`) dispatches actions.
-- **Secrets** (database credentials) live in a config file outside `public_html`.
+- **Secrets** (database credentials) live in `guildie-private/config.php`, outside `public_html`. Setup steps: `docs/setup-siteground.md`.
 - **Good enough for a friends-and-family demo.** Revisit hosting if the game grows beyond shared-hosting limits.
 
 ### 11.2.1 Accounts (proof of concept)
@@ -503,12 +503,17 @@ Everything runs on the existing SiteGround hosting, on one domain.
 ### 11.7 Repo layout
 
 ```
-/client     Godot 4 project
-/server     PHP API, tick.php, config template
-/server/migrations   SQL files (001_init.sql, 002_..., applied in order)
-/content    JSON definitions: items, recipes, professions, buildings, personas, events
-/docs       GDD and supporting docs
+/client             Godot 4 project
+/server/api         Public entry point      -> public_html/games/guildie/api/
+/server/app         Private game logic       -> guildie-private/app/ (includes tick.php)
+/server/config      Config template          -> guildie-private/config.php (filled in, never committed)
+/server/migrations  SQL files (001_init.sql, ...), applied in order via phpMyAdmin
+/server/tools       One-off helpers (upload, use, delete)
+/content            JSON definitions: items, recipes, professions, buildings, personas, events
+/docs               GDD, setup and deploy guides
 ```
+
+**Public versus private:** only the thin entry point in `api/` is reachable from the web. Game logic, `tick.php`, and the config with database credentials live in `guildie-private/`, a folder next to `public_html` that a browser can't open.
 
 `/content` is the single source of truth for static game data. Both the PHP server and the Godot client read the same files.
 
