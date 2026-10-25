@@ -9,13 +9,13 @@ Before starting, make sure the [SiteGround setup guide](setup-siteground.md) is 
 
 ## What you upload
 
-Each release on GitHub (**Releases** on the right side of the repo page) has these files:
+Each deploy uses these files. Claude sends them to you in the chat for each version (they can also be attached to a GitHub release, under **Releases** on the right side of the repo page):
 
 | File | Where it goes | What it is |
 |---|---|---|
 | `guildie-private-<version>.zip` | Extract into `guildie-private/` | Server code (`app/`) and game data (`content/`) |
 | `guildie-public-<version>.zip` | Extract into `public_html/games/guildie/` | The game (Godot web build) and `api/index.php` |
-| `001_init.sql` (and later migrations) | Import in phpMyAdmin | Database tables |
+| `001_init.sql` (and later migrations) | Import in phpMyAdmin | Database tables. Also in the repo under `server/migrations/`. |
 
 Neither zip contains `config.php`, so extracting them never touches your database settings.
 
@@ -25,7 +25,7 @@ Neither zip contains `config.php`, so extracting them never touches your databas
 
 ### Step 1: Create the database tables
 
-1. Download `001_init.sql` from the release.
+1. Download `001_init.sql` (from the chat, or from `server/migrations/` in the repo: open the file, then use the download button).
 2. In Site Tools, go to **Site → MySQL**, open the **phpMyAdmin** tab, and click **Access phpMyAdmin**.
 3. In the left panel, click your Guildie database.
 4. Open the **Import** tab, choose `001_init.sql`, and click **Go** (or **Import**) at the bottom.
@@ -101,7 +101,7 @@ If all of that works, **M0 is complete.**
 
 For every update after the first one:
 
-1. Check the release notes for **new migration files** (`002_...sql`, etc.). If there are any, import them in phpMyAdmin first (Step 1 above), in order.
+1. Check whether the update includes **new migration files** (`002_...sql`, etc.). If there are any, import them in phpMyAdmin first (Step 1 above), in order.
 2. Upload and extract `guildie-private-<version>.zip` into `guildie-private/` (Step 2). Say **yes** if asked to overwrite.
 3. Upload and extract `guildie-public-<version>.zip` into `public_html/games/guildie/` (Step 3). Say **yes** to overwrite.
 4. Open the ping URL and confirm the new `build`.
