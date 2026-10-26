@@ -1,6 +1,6 @@
 # Deploying Guildie to SiteGround
 
-**From 0.2.1, deploys are automatic.** Every merge to `main` runs the checks and, if they pass, uploads the new version to marz.gg over FTPS (`.github/workflows/deploy.yml`). Database updates apply themselves on the server's next request. Nothing to upload by hand.
+**From 0.2.1, deploys are automatic.** Every merge to `main` runs the checks and, if they pass, uploads the new version to marz.gg over FTPS through two locked-down FTP accounts (`.github/workflows/deploy.yml`). Database updates apply themselves on the server's next request. Nothing to upload by hand.
 
 - **[Automatic deploys](#automatic-deploys)**: how it works and the one-time setup (about 10 minutes).
 - **[Manual deploy](#first-deploy-one-time)**: the old way, kept for emergencies or if FTP ever breaks.
@@ -22,36 +22,40 @@ The build number shows as e.g. **0.2.1 (build 12)**: the `VERSION` file plus the
 
 ### One-time setup
 
-**1. Create an FTP account for deploys (SiteGround).**
+Two SiteGround FTP accounts, each limited to the one folder it needs, so neither password can reach WordPress or anything else on the site.
+
+**1. FTP account for the server code (SiteGround).**
 
 1. Site Tools → **Site → FTP Accounts**.
-2. Create an account: username `guildie-deploy` (SiteGround adds `@marz.gg`), a strong password (save it in your password manager), and as its folder the **site's top folder**, the one that contains both `public_html` and `guildie-private` (usually `/` in the folder picker). Not `public_html`: the deploy must reach `guildie-private` too.
-3. On the new account: **⋮ → FTP Credentials**. Note the **Host** and **Port** (normally 21).
+2. Create `guildie-private` (SiteGround adds `@marz.gg`) with a strong password (save it in your password manager) and home path **`/marz.gg/guildie-private/`**.
+3. On the account: **⋮ → FTP Credentials**. Note the **Host**.
 
-Pythio's `deploy@marz.gg` account can't be reused: its folder is `public_html/games`, which can't reach `guildie-private`.
+**2. FTP account for the game files.** Reuse Pythio's `deploy@marz.gg` (home path `/marz.gg/public_html/games/`). Its password is the one in Pythio's `FTP_PASSWORD` secret / your password manager.
 
-**2. Add three secrets to the GitHub repo.**
+**3. Add five secrets to the Guildie repo.**
 
 Repo **Settings → Secrets and variables → Actions → New repository secret**:
 
 | Name | Value |
 |---|---|
-| `FTP_SERVER` | the Host from step 1 |
-| `FTP_USERNAME` | the full username, e.g. `guildie-deploy@marz.gg` |
+| `FTP_SERVER` | the Host (the same for both accounts) |
+| `FTP_USERNAME` | `guildie-private@marz.gg` |
 | `FTP_PASSWORD` | its password |
+| `FTP_PUBLIC_USERNAME` | `deploy@marz.gg` |
+| `FTP_PUBLIC_PASSWORD` | its password |
 
-GitHub encrypts them: nobody can read them back, only the deploy job can use them. The upload folders aren't secret; they're in the workflow file.
+GitHub encrypts them: nobody can read them back, only the deploy job can use them. Until all five exist, merges run the checks and skip the upload (the Deploy job says which secret is missing).
 
-**3. Run it.** Merge the next PR, or GitHub → **Actions → Deploy → Run workflow** (on `main`). After a few minutes, the ping URL shows the new `build`.
+**4. Run it.** Merge the next PR, or GitHub → **Actions → Deploy → Run workflow** (on `main`). After a few minutes, the ping URL shows the new `build`.
 
 ### If an automatic deploy goes wrong
 
 | What you see | Most likely cause | Fix |
 |---|---|---|
-| Deploy job says "FTP secrets not set yet" | Secrets missing or misspelt | Re-check the three names exactly |
+| Deploy job says "Upload skipped: these secrets aren't set yet" | Secrets missing or misspelt | It names the missing ones; add them exactly as written |
 | Upload step: login failed | Wrong username format or password | Username includes `@marz.gg`; re-enter `FTP_PASSWORD` |
 | Upload step: TLS / certificate error | FTPS handshake | Change both `protocol: ftps` to `protocol: ftp` in `.github/workflows/deploy.yml` |
-| Upload step: "folder not found" / files land in the wrong place | The FTP account's folder isn't the site root | Edit the account's folder to the site root, or tell Claude the folder it uses |
+| Upload step: "folder not found" / files land in the wrong place | An account's home path differs from the table above | Check the home paths in FTP Accounts, or tell Claude what they are |
 | Checks fail on a PR | A real bug caught before it went live | Nothing reached players; Claude fixes the PR |
 
 To **roll back**, revert the PR on GitHub and merge the revert. A database change that already ran is not undone, so migrations must stay backward-compatible.

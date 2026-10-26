@@ -2,14 +2,20 @@
 #
 #   checks  (PRs and main): PHP syntax, content validator, API smoke test against a throwaway
 #           MySQL, headless client test, Godot web export -> downloadable packages (Artifacts)
-#   deploy  (main only):    uploads guildie-private/ (server code, content, migrations) and
-#           public_html/games/guildie/ (the game). The server applies new migrations itself.
+#   deploy  (main only):    uploads the server code into guildie-private/, then the game into
+#           public_html/games/guildie/. The server applies new migrations itself.
 #
-# Needs three repository secrets (Settings -> Secrets and variables -> Actions), see docs/deploy.md:
-#   FTP_SERVER    FTP host from SiteGround (Site Tools -> Site -> FTP Accounts -> FTP Credentials)
-#   FTP_USERNAME  e.g. guildie-deploy@marz.gg (account folder = the site root)
-#   FTP_PASSWORD  that account's password
-# Without them, checks still run and the upload is skipped.
+# Two SiteGround FTP accounts, each limited to the folder it needs (see docs/deploy.md):
+#   guildie-private@marz.gg  home = /marz.gg/guildie-private/      -> server code
+#   deploy@marz.gg           home = /marz.gg/public_html/games/    -> the game (shared with Pythio)
+#
+# Repository secrets (Settings -> Secrets and variables -> Actions):
+#   FTP_SERVER             FTP host (same for both accounts)
+#   FTP_USERNAME           guildie-private@marz.gg
+#   FTP_PASSWORD           its password
+#   FTP_PUBLIC_USERNAME    deploy@marz.gg
+#   FTP_PUBLIC_PASSWORD    its password (the same one Pythio's FTP_PASSWORD holds)
+# Until all five are set, checks still run and the upload is skipped.
 name: Deploy
 
 on:
@@ -25,9 +31,9 @@ concurrency:
 
 env:
   GODOT_VERSION: "4.7.2"
-  # Folders relative to the FTP account's root (the site root, which holds public_html).
-  PUBLIC_DIR: public_html/games/guildie/
-  PRIVATE_DIR: guildie-private/
+  # Folders relative to each FTP account's home folder.
+  PRIVATE_DIR: ./          # guildie-private@marz.gg's home IS guildie-private/
+  PUBLIC_DIR: guildie/     # deploy@marz.gg's home is public_html/games/
 
 jobs:
   checks:
@@ -148,9 +154,17 @@ jobs:
         id: check
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PUBLIC_USERNAME: ${{ secrets.FTP_PUBLIC_USERNAME }}
+          FTP_PUBLIC_PASSWORD: ${{ secrets.FTP_PUBLIC_PASSWORD }}
         run: |
-          if [ -z "$FTP_SERVER" ]; then
-            echo "::notice::FTP secrets not set yet: skipping upload. See docs/deploy.md."
+          missing=""
+          for n in FTP_SERVER FTP_USERNAME FTP_PASSWORD FTP_PUBLIC_USERNAME FTP_PUBLIC_PASSWORD; do
+            [ -z "${!n}" ] && missing="$missing $n"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice::Upload skipped: these secrets aren't set yet:$missing. See docs/deploy.md."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -192,8 +206,8 @@ jobs:
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          username: ${{ secrets.FTP_PUBLIC_USERNAME }}
+          password: ${{ secrets.FTP_PUBLIC_PASSWORD }}
           protocol: ftps
           port: 21
           local-dir: upload/public/
