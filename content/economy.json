@@ -1,29 +1,28 @@
 {
   "_comment": "Economy settings (systems.md). Every number here is [tune]. pace.time_multiplier scales ALL durations (crafts, station fill time): 1.0 = fast playtest pacing, larger = slower (e.g. 6.0 makes everything six times longer).",
-
   "pace": {
     "time_multiplier": 1.0
   },
-
   "new_player": {
     "starting_gold": 150,
     "starting_items": [],
     "station_start_fill": 0.5
   },
-
   "crafting": {
     "slots": 2,
     "max_batch": 10
   },
-
   "exchange": {
-    "durations_hours": [12, 24, 48],
+    "durations_hours": [
+      12,
+      24,
+      48
+    ],
     "deposit_rate_per_12h": 0.01,
     "cut": 0.05,
     "max_active_listings": 20,
     "max_price_multiple": 20
   },
-
   "market": {
     "floor_multiplier": 0.6,
     "ceiling_multiplier": 1.5,
@@ -35,9 +34,12 @@
     "drift_min_multiplier": 0.5,
     "drift_max_multiplier": 2.0,
     "max_catchup_seconds": 3600,
-    "history_days": 7
+    "history_days": 7,
+    "scarcity_up_per_hour": 0.04,
+    "surplus_down_per_hour": 0.02,
+    "demand_reference_players": 8,
+    "demand_min_scale": 0.25
   },
-
   "personas": {
     "townsfolk": {
       "name": "Townsfolk",
@@ -45,9 +47,9 @@
       "willing_min": 0.9,
       "willing_max": 1.4,
       "demand_per_hour": {
-        "healing_draught": 12,
-        "copper_lantern": 6,
-        "hide_satchel": 6
+        "healing_draught": 4,
+        "copper_lantern": 4,
+        "hide_satchel": 5
       }
     },
     "adventurers": {
@@ -56,10 +58,24 @@
       "willing_min": 0.95,
       "willing_max": 1.25,
       "demand_per_hour": {
-        "healing_draught": 6,
-        "steam_tonic": 4,
-        "iron_sword": 1.5,
+        "healing_draught": 2,
+        "steam_tonic": 3,
+        "iron_sword": 1.2,
         "rugged_jerkin": 1.5
+      }
+    },
+    "workshops": {
+      "name": "Guild Workshops",
+      "label": "a guild workshop",
+      "willing_min": 0.8,
+      "willing_max": 1.05,
+      "demand_per_hour": {
+        "brass_fittings": 2,
+        "leather_grip": 2,
+        "smelting_flux": 1,
+        "tanning_solution": 1,
+        "iron_ingot": 0.5,
+        "cured_leather": 0.5
       }
     },
     "traders": {
