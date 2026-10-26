@@ -1,0 +1,19 @@
+{
+  "_comment": "Recipes (GDD 5.5, systems.md 5.3). time_seconds is per item at pace 1.0 and is scaled by economy.pace.time_multiplier. M1: every recipe of your profession is known from the start.",
+  "recipes": [
+    { "id": "brass_fittings",   "profession": "blacksmith",    "output": { "item_id": "brass_fittings",   "quantity": 1 }, "inputs": [ { "item_id": "copper_ore", "quantity": 2 } ], "time_seconds": 20 },
+    { "id": "copper_lantern",   "profession": "blacksmith",    "output": { "item_id": "copper_lantern",   "quantity": 1 }, "inputs": [ { "item_id": "copper_ore", "quantity": 3 } ], "time_seconds": 40 },
+    { "id": "iron_ingot",       "profession": "blacksmith",    "output": { "item_id": "iron_ingot",       "quantity": 1 }, "inputs": [ { "item_id": "iron_ore", "quantity": 2 }, { "item_id": "smelting_flux", "quantity": 1 } ], "time_seconds": 45 },
+    { "id": "iron_sword",       "profession": "blacksmith",    "output": { "item_id": "iron_sword",       "quantity": 1 }, "inputs": [ { "item_id": "iron_ingot", "quantity": 2 }, { "item_id": "leather_grip", "quantity": 1 } ], "time_seconds": 120 },
+
+    { "id": "healing_draught",  "profession": "alchemist",     "output": { "item_id": "healing_draught",  "quantity": 1 }, "inputs": [ { "item_id": "sunleaf", "quantity": 2 } ], "time_seconds": 20 },
+    { "id": "smelting_flux",    "profession": "alchemist",     "output": { "item_id": "smelting_flux",    "quantity": 1 }, "inputs": [ { "item_id": "ember_moss", "quantity": 2 } ], "time_seconds": 30 },
+    { "id": "tanning_solution", "profession": "alchemist",     "output": { "item_id": "tanning_solution", "quantity": 1 }, "inputs": [ { "item_id": "sunleaf", "quantity": 1 }, { "item_id": "ember_moss", "quantity": 1 } ], "time_seconds": 30 },
+    { "id": "steam_tonic",      "profession": "alchemist",     "output": { "item_id": "steam_tonic",      "quantity": 1 }, "inputs": [ { "item_id": "ember_moss", "quantity": 2 }, { "item_id": "brass_fittings", "quantity": 1 } ], "time_seconds": 90 },
+
+    { "id": "leather_grip",     "profession": "leatherworker", "output": { "item_id": "leather_grip",     "quantity": 1 }, "inputs": [ { "item_id": "raw_hide", "quantity": 2 } ], "time_seconds": 20 },
+    { "id": "hide_satchel",     "profession": "leatherworker", "output": { "item_id": "hide_satchel",     "quantity": 1 }, "inputs": [ { "item_id": "raw_hide", "quantity": 3 } ], "time_seconds": 40 },
+    { "id": "cured_leather",    "profession": "leatherworker", "output": { "item_id": "cured_leather",    "quantity": 1 }, "inputs": [ { "item_id": "thick_hide", "quantity": 2 }, { "item_id": "tanning_solution", "quantity": 1 } ], "time_seconds": 45 },
+    { "id": "rugged_jerkin",    "profession": "leatherworker", "output": { "item_id": "rugged_jerkin",    "quantity": 1 }, "inputs": [ { "item_id": "cured_leather", "quantity": 2 }, { "item_id": "brass_fittings", "quantity": 1 } ], "time_seconds": 120 }
+  ]
+}

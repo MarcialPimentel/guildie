@@ -9,14 +9,25 @@ declare(strict_types=1);
 function guildie_actions(): array
 {
     return [
-        // name             methods allowed       login required
-        'ping'          => [['GET', 'POST'], false, 'action_ping'],
-        'register'      => [['POST'],        false, 'action_register'],
-        'login'         => [['POST'],        false, 'action_login'],
-        'logout'        => [['POST'],        false, 'action_logout'],
-        'get_state'     => [['GET', 'POST'], true,  'action_get_state'],
-        // TEMPORARY (M0 only): proves the server can change inventory. Removed in M1.
-        'test_add_item' => [['POST'],        true,  'action_test_add_item'],
+        // name                 methods allowed       login required
+        'ping'              => [['GET', 'POST'], false, 'action_ping'],
+        'register'          => [['POST'],        false, 'action_register'],
+        'login'             => [['POST'],        false, 'action_login'],
+        'logout'            => [['POST'],        false, 'action_logout'],
+        'get_state'         => [['GET', 'POST'], true,  'action_get_state'],
+        'professions'       => [['GET'],         true,  'action_professions'],
+        'choose_profession' => [['POST'],        true,  'action_choose_profession'],
+        'collect_station'   => [['POST'],        true,  'action_collect_station'],
+        'start_craft'       => [['POST'],        true,  'action_start_craft'],
+        'collect_crafts'    => [['POST'],        true,  'action_collect_crafts'],
+        'market'            => [['GET'],         true,  'action_market'],
+        'market_item'       => [['GET', 'POST'], true,  'action_market_item'],
+        'sell_quote'        => [['POST'],        true,  'action_sell_quote'],
+        'list_item'         => [['POST'],        true,  'action_list_item'],
+        'buy_listing'       => [['POST'],        true,  'action_buy_listing'],
+        'cancel_listing'    => [['POST'],        true,  'action_cancel_listing'],
+        'my_listings'       => [['GET'],         true,  'action_my_listings'],
+        'activity'          => [['GET'],         true,  'action_activity'],
     ];
 }
 
@@ -24,7 +35,7 @@ function action_ping(array $body, ?int $playerId): array
 {
     return [
         'pong'        => true,
-        'server_time' => time(),
+        'server_time' => game_now(),
         'build'       => GUILDIE_BUILD,
         'tick'        => tick_status(),
     ];
@@ -53,16 +64,83 @@ function action_get_state(array $body, ?int $playerId): array
     return player_state($playerId);
 }
 
-function action_test_add_item(array $body, ?int $playerId): array
+function action_professions(array $body, ?int $playerId): array
 {
-    $itemId = body_string($body, 'item_id') ?: 'copper_ore';
-    $max = (int) (content_economy()['test_add_item_max'] ?? 10);
-    $quantity = body_int($body, 'quantity', 1, 1, $max);
+    return ['professions' => professions_for_choice()];
+}
 
-    tx(function (PDO $pdo) use ($playerId, $itemId, $quantity) {
-        inventory_add($pdo, $playerId, $itemId, $quantity);
-    });
+function action_choose_profession(array $body, ?int $playerId): array
+{
+    choose_profession($playerId, body_string($body, 'profession_id'));
     return player_state($playerId);
+}
+
+function action_collect_station(array $body, ?int $playerId): array
+{
+    $collected = gathering_collect($playerId);
+    return ['collected' => $collected, 'state' => player_state($playerId)];
+}
+
+function action_start_craft(array $body, ?int $playerId): array
+{
+    crafting_start($playerId, body_string($body, 'recipe_id'), body_int($body, 'quantity', 1, 1, 1000));
+    return player_state($playerId);
+}
+
+function action_collect_crafts(array $body, ?int $playerId): array
+{
+    $collected = crafting_collect($playerId);
+    return ['collected' => $collected, 'state' => player_state($playerId)];
+}
+
+function action_market(array $body, ?int $playerId): array
+{
+    return ['items' => exchange_overview(), 'server_time' => game_now()];
+}
+
+function action_market_item(array $body, ?int $playerId): array
+{
+    $itemId = body_string($body, 'item_id') ?: (string) ($_GET['item_id'] ?? '');
+    return exchange_item($playerId, $itemId);
+}
+
+function action_sell_quote(array $body, ?int $playerId): array
+{
+    return exchange_sell_quote($playerId, body_string($body, 'item_id'), body_int($body, 'quantity', 1, 1, 10000));
+}
+
+function action_list_item(array $body, ?int $playerId): array
+{
+    $result = exchange_list(
+        $playerId,
+        body_string($body, 'item_id'),
+        body_int($body, 'quantity', 1, 1, 10000),
+        body_int($body, 'unit_price', 1, 1, 100000000),
+        body_int($body, 'duration_hours', 24, 1, 1000)
+    );
+    return ['listing' => $result, 'state' => player_state($playerId)];
+}
+
+function action_buy_listing(array $body, ?int $playerId): array
+{
+    $result = exchange_buy($playerId, body_int($body, 'listing_id', 0, 1, PHP_INT_MAX), body_int($body, 'quantity', 1, 1, 10000));
+    return ['purchase' => $result, 'state' => player_state($playerId)];
+}
+
+function action_cancel_listing(array $body, ?int $playerId): array
+{
+    exchange_cancel($playerId, body_int($body, 'listing_id', 0, 1, PHP_INT_MAX));
+    return ['listings' => exchange_my_listings($playerId), 'state' => player_state($playerId)];
+}
+
+function action_my_listings(array $body, ?int $playerId): array
+{
+    return ['listings' => exchange_my_listings($playerId)];
+}
+
+function action_activity(array $body, ?int $playerId): array
+{
+    return ['activity' => activity_list($playerId, 50)];
 }
 
 /**
@@ -102,7 +180,7 @@ function guildie_handle_request(): void
         error_log('Guildie server error: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
         $error = ['code' => 'server_error', 'message' => 'Something went wrong on the server.'];
         if (config('debug', false)) {
-            $error['detail'] = $e->getMessage();
+            $error['detail'] = $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine();
         }
         send_json(['ok' => false, 'error' => $error], 500);
     }

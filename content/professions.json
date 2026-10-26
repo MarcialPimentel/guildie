@@ -1,0 +1,50 @@
+{
+  "_comment": "Professions and their gathering stations (GDD 5.4, systems.md 5.1-5.2). Rates are units per hour and caps are the most a station holds; both are scaled by economy.pace.time_multiplier.",
+  "professions": [
+    {
+      "id": "blacksmith",
+      "name": "Blacksmith",
+      "tagline": "Ore, fire and brass.",
+      "description": "Mine copper and iron, forge brass fittings every crafter needs, and make lanterns and tournament swords.",
+      "needs_from_others": "Smelting Flux (Alchemist) and Leather Grips (Leatherworker) for the iron tier.",
+      "station": {
+        "id": "mine",
+        "name": "The Mine",
+        "outputs": [
+          { "item_id": "copper_ore", "rate_per_hour": 30, "cap": 30 },
+          { "item_id": "iron_ore",   "rate_per_hour": 12, "cap": 12 }
+        ]
+      }
+    },
+    {
+      "id": "alchemist",
+      "name": "Alchemist",
+      "tagline": "Herbs, flasks and fumes.",
+      "description": "Grow sunleaf and ember moss, brew the city's healing draughts, and supply the fluxes and solutions other guilds rely on.",
+      "needs_from_others": "Brass Fittings (Blacksmith) for Steam Tonic.",
+      "station": {
+        "id": "herb_garden",
+        "name": "The Herb Garden",
+        "outputs": [
+          { "item_id": "sunleaf",    "rate_per_hour": 30, "cap": 30 },
+          { "item_id": "ember_moss", "rate_per_hour": 12, "cap": 12 }
+        ]
+      }
+    },
+    {
+      "id": "leatherworker",
+      "name": "Leatherworker",
+      "tagline": "Hides, stitches and buckles.",
+      "description": "Send trappers out for hides, stitch grips and satchels, and craft armour for the tournament crowd.",
+      "needs_from_others": "Tanning Solution (Alchemist) and Brass Fittings (Blacksmith) for the higher tier.",
+      "station": {
+        "id": "trappers_lodge",
+        "name": "The Trapper's Lodge",
+        "outputs": [
+          { "item_id": "raw_hide",   "rate_per_hour": 30, "cap": 30 },
+          { "item_id": "thick_hide", "rate_per_hour": 12, "cap": 12 }
+        ]
+      }
+    }
+  ]
+}

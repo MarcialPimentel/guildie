@@ -1,10 +1,74 @@
 {
-  "_comment": "Economy settings read by the server. Values are [tune] placeholders (GDD).",
-  "new_player": {
-    "starting_gold": 100,
-    "starting_items": [
-      { "item_id": "copper_ore", "quantity": 5 }
-    ]
+  "_comment": "Economy settings (systems.md). Every number here is [tune]. pace.time_multiplier scales ALL durations (crafts, station fill time): 1.0 = fast playtest pacing, larger = slower (e.g. 6.0 makes everything six times longer).",
+
+  "pace": {
+    "time_multiplier": 1.0
   },
-  "test_add_item_max": 10
+
+  "new_player": {
+    "starting_gold": 150,
+    "starting_items": [],
+    "station_start_fill": 0.5
+  },
+
+  "crafting": {
+    "slots": 2,
+    "max_batch": 10
+  },
+
+  "exchange": {
+    "durations_hours": [12, 24, 48],
+    "deposit_rate_per_12h": 0.01,
+    "cut": 0.05,
+    "max_active_listings": 20,
+    "max_price_multiple": 20
+  },
+
+  "market": {
+    "floor_multiplier": 0.6,
+    "ceiling_multiplier": 1.5,
+    "ceiling_stock": 5,
+    "trader_buy_below": 0.8,
+    "trader_relist_multiplier": 1.05,
+    "trader_max_stock": 15,
+    "drift_rate": 0.05,
+    "drift_min_multiplier": 0.5,
+    "drift_max_multiplier": 2.0,
+    "max_catchup_seconds": 3600,
+    "history_days": 7
+  },
+
+  "personas": {
+    "townsfolk": {
+      "name": "Townsfolk",
+      "label": "a townsperson",
+      "willing_min": 0.9,
+      "willing_max": 1.4,
+      "demand_per_hour": {
+        "healing_draught": 12,
+        "copper_lantern": 6,
+        "hide_satchel": 6
+      }
+    },
+    "adventurers": {
+      "name": "Adventurers",
+      "label": "an adventurer",
+      "willing_min": 0.95,
+      "willing_max": 1.25,
+      "demand_per_hour": {
+        "healing_draught": 6,
+        "steam_tonic": 4,
+        "iron_sword": 1.5,
+        "rugged_jerkin": 1.5
+      }
+    },
+    "traders": {
+      "name": "Traders",
+      "label": "a trader"
+    },
+    "suppliers": {
+      "name": "Guild Suppliers",
+      "label": "the guild suppliers"
+    }
+  }
 }
