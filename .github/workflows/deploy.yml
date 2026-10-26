@@ -1,0 +1,197 @@
+# Checks every pull request, and on every merge to main deploys Guildie to marz.gg over FTPS.
+#
+#   checks  (PRs and main): PHP syntax, content validator, API smoke test against a throwaway
+#           MySQL, headless client test, Godot web export -> downloadable packages (Artifacts)
+#   deploy  (main only):    uploads guildie-private/ (server code, content, migrations) and
+#           public_html/games/guildie/ (the game). The server applies new migrations itself.
+#
+# Needs three repository secrets (Settings -> Secrets and variables -> Actions), see docs/deploy.md:
+#   FTP_SERVER    FTP host from SiteGround (Site Tools -> Site -> FTP Accounts -> FTP Credentials)
+#   FTP_USERNAME  e.g. guildie-deploy@marz.gg (account folder = the site root)
+#   FTP_PASSWORD  that account's password
+# Without them, checks still run and the upload is skipped.
+name: Deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: "4.7.2"
+  # Folders relative to the FTP account's root (the site root, which holds public_html).
+  PUBLIC_DIR: public_html/games/guildie/
+  PRIVATE_DIR: guildie-private/
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: guildie_test
+          MYSQL_USER: guildie
+          MYSQL_PASSWORD: localtestpw
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_mysql, mbstring, json
+
+      - name: PHP syntax
+        run: |
+          for f in $(find server tools -name '*.php'); do php -l "$f" > /dev/null || exit 1; done
+          echo "All PHP files OK"
+
+      - name: Content validator
+        run: python3 tools/validate_content.py
+
+      - name: Start the API against a throwaway database (fast-pace content)
+        run: |
+          mkdir -p ci/private ci/www/games/guildie ci/content
+          ln -s "$PWD/server/app" ci/private/app
+          ln -s "$PWD/server/api" ci/www/games/guildie/api
+          cp content/*.json ci/content/
+          python3 - <<'EOF'
+          import json
+          p = 'ci/content/economy.json'; d = json.load(open(p))
+          d['pace']['time_multiplier'] = 0.05
+          json.dump(d, open(p, 'w'), indent=1)
+          EOF
+          cat > ci/private/config.php <<'EOF'
+          <?php
+          return ['db' => ['host' => '127.0.0.1', 'name' => 'guildie_test', 'user' => 'guildie', 'pass' => 'localtestpw', 'charset' => 'utf8mb4'],
+                  'tick_interval_seconds' => 300, 'debug' => true];
+          EOF
+          export GUILDIE_PRIVATE="$PWD/ci/private" GUILDIE_CONTENT="$PWD/ci/content" GUILDIE_MIGRATIONS="$PWD/server/migrations"
+          echo "GUILDIE_PRIVATE=$GUILDIE_PRIVATE" >> "$GITHUB_ENV"
+          echo "GUILDIE_CONTENT=$GUILDIE_CONTENT" >> "$GITHUB_ENV"
+          echo "GUILDIE_MIGRATIONS=$GUILDIE_MIGRATIONS" >> "$GITHUB_ENV"
+          (cd ci/www && nohup php -S 127.0.0.1:8080 -t . > ../php-server.log 2>&1 &)
+          sleep 2
+          # The first request applies all migrations to the empty database.
+          curl -sf "http://127.0.0.1:8080/games/guildie/api/index.php?action=ping"; echo
+
+      - name: API smoke test
+        run: python3 tools/smoke_test.py http://127.0.0.1:8080/games/guildie/api/index.php --tick "php server/app/tick.php --force"
+
+      - name: Cache Godot and web export templates
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-web
+
+      - name: Download Godot and web export templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          BASE=https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable
+          T=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p ~/godot "$T"
+          cd ~/godot
+          wget -q "$BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q Godot_v*.zip && rm Godot_v*.zip && mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot
+          wget -q "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q -j -o Godot_v*_export_templates.tpz 'templates/web*' 'templates/version.txt' -d "$T"
+          rm Godot_v*_export_templates.tpz
+
+      - name: Client test (plays the real screens against the API)
+        working-directory: client
+        run: |
+          ~/godot/godot --headless --import > /dev/null 2>&1 || true
+          GUILDIE_API_URL=http://127.0.0.1:8080/games/guildie/api/index.php \
+            ~/godot/godot --headless -s tests/client_smoke.gd 2>&1 | tee ../client-test.log
+          grep -q "ALL PASSED" ../client-test.log
+          if grep -E "SCRIPT ERROR|Parse Error" ../client-test.log; then exit 1; fi
+
+      - name: Build the upload packages
+        run: GODOT=~/godot/godot BUILD_NUMBER=${{ github.run_number }} tools/package.sh
+
+      - name: Server log (on failure)
+        if: failure()
+        run: cat ci/php-server.log || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guildie-packages
+          path: dist/guildie-*.zip
+          retention-days: 14
+
+  deploy:
+    needs: checks
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check FTP settings
+        id: check
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        run: |
+          if [ -z "$FTP_SERVER" ]; then
+            echo "::notice::FTP secrets not set yet: skipping upload. See docs/deploy.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          name: guildie-packages
+          path: dist
+
+      - name: Unpack
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          mkdir -p upload/private upload/public
+          unzip -q dist/guildie-private-*.zip -d upload/private
+          unzip -q dist/guildie-public-*.zip -d upload/public
+          ls upload/private upload/public
+
+      # Server first, so the new game never talks to old server code.
+      - name: Upload server code to guildie-private/
+        if: steps.check.outputs.ready == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: upload/private/
+          server-dir: ${{ env.PRIVATE_DIR }}
+          exclude: |
+            **/config.php
+
+      - name: Upload the game to public_html/games/guildie/
+        if: steps.check.outputs.ready == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: upload/public/
+          server-dir: ${{ env.PUBLIC_DIR }}
+
+      - name: Done
+        if: steps.check.outputs.ready == 'true'
+        run: echo "::notice::Deployed. Check https://marz.gg/games/guildie/api/index.php?action=ping for the new build."

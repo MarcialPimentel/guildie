@@ -18,3 +18,6 @@ Thumbs.db
 
 # --- Packaged uploads (built by tools/package.sh) ---
 /dist/
+
+# --- CI scratch ---
+/ci/

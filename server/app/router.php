@@ -37,6 +37,7 @@ function action_ping(array $body, ?int $playerId): array
         'pong'        => true,
         'server_time' => game_now(),
         'build'       => GUILDIE_BUILD,
+        'schema'      => schema_version(db()),
         'tick'        => tick_status(),
     ];
 }
@@ -162,6 +163,9 @@ function guildie_handle_request(): void
         }
 
         $body = $method === 'POST' ? request_body() : [];
+
+        // Apply any database updates that came with a new deploy (once, under a lock).
+        migrate_if_needed();
 
         // Run an overdue market tick before handling the request (never blocks the request if it fails).
         if ($action !== 'ping') {

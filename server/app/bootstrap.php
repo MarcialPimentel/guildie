@@ -27,6 +27,7 @@ define('GUILDIE_CONTENT', getenv('GUILDIE_CONTENT') ?: GUILDIE_PRIVATE . '/conte
 
 require __DIR__ . '/lib/config.php';
 require __DIR__ . '/lib/db.php';
+require __DIR__ . '/lib/migrate.php';
 require __DIR__ . '/lib/http.php';
 require __DIR__ . '/lib/content.php';
 require __DIR__ . '/lib/clock.php';
