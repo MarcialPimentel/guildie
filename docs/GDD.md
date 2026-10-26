@@ -528,7 +528,7 @@ Everything runs on the existing SiteGround hosting, on one domain.
 ### 11.8 Hosting & deploy
 
 - Web build and API hosted on SiteGround alongside other projects (proposed path: `marz.gg/games/guildie/`).
-- Deploys use two zips built by `tools/package.sh` and attached to a GitHub release: one extracted into `guildie-private/`, one into `public_html/games/guildie/`. Step-by-step: `docs/deploy.md`. Automated deploys from GitHub can come later.
+- Deploys are automatic from 0.2.1: a merge to `main` runs the checks, then GitHub uploads the server code to `guildie-private/` and the game to `public_html/games/guildie/` over FTPS. The server applies new database migrations itself. Details and the manual fallback: `docs/deploy.md`.
 - Build number comes from the repo's `VERSION` file, stamped into both server and client, and shown in the client footer.
 - Client engine: Godot 4.7, GL Compatibility renderer, single-threaded web export (no special server headers needed).
 - Development environment separate from the demo environment once real players join.
@@ -553,7 +553,6 @@ Each milestone ends with a playtest and a clear exit question.
 - Player-to-player crafting orders
 - Auction bidding
 - Guest login
-- Automated deploys from GitHub
 
 ---
 
@@ -617,6 +616,7 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-26 | Market tick every 5 minutes | The market should visibly move during a session |
 | 2026-10-26 | Copper Lantern and Hide Satchel added | Every profession needs a self-sufficient finished good to earn from day one (Alchemists already had Healing Draught) |
 | 2026-10-26 | Guild Workshops persona added; scarcity pricing; NPC demand scales with active players | Economy simulator showed tier-2 goods were never made, undercutting deflated prices, and fixed demand overwhelmed small groups (systems.md M1 tuning notes) |
+| 2026-10-26 | Automatic deploys from GitHub (FTPS, same approach as Pythio) with self-applying migrations | Removes manual uploads and phpMyAdmin imports from every release |
 | 2026-10-26 | Two crafting slots, batches up to 10, 150 starting gold | Lets a player make a component and a finished good at the same time; enough gold to buy a first cross-guild input |
 
 ---

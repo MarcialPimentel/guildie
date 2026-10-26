@@ -15,8 +15,11 @@ Guildie is a mobile-first browser crafting and trading game (Godot 4 client, PHP
 - **Every game action runs in one database transaction.** Use PDO prepared statements only; never build SQL from strings.
 - **No secrets in the repo.** Real credentials live only in `guildie-private/config.php` on the server.
 - **Static game data lives in `/content` as JSON**, shared by server and client.
-- **Bump the `VERSION` file** for every deploy. `tools/package.sh` stamps it into the server (`app/version.php`) and the client (`build_info.gd`).
-- **Test before opening a PR:** `tools/smoke_test.py` against a local server and `client/tests/client_smoke.gd` headless. Deploy steps live in `docs/deploy.md`.
+- **Merging to `main` deploys to marz.gg automatically** (`.github/workflows/deploy.yml`). Marz approves in chat by saying "merge #N"; merge only the PR named. Never push to `main` directly.
+- **Bump the `VERSION` file** for each release. `tools/package.sh` stamps it (plus the CI run number) into the server and the client footer.
+- **Database changes are new numbered files in `server/migrations/`** (never edit an applied one). The server applies them itself after a deploy, so they must be safe to re-run and backward-compatible.
+- **Test before opening a PR:** `tools/smoke_test.py` against a local server and `client/tests/client_smoke.gd` headless (CI runs both on every PR). Deploy details live in `docs/deploy.md`.
+- **Private hosting details** (paths, account names, which secrets exist) are in Marz's private doc "Guildie — Hosting & Session Handoff (private)", never in the repo.
 
 ## Layout
 

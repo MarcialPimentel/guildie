@@ -8,6 +8,7 @@
 #   dist/guildie-private-<version>.zip  -> extract into guildie-private/
 #       app/      (server code, version stamped)
 #       content/  (game data)
+#       migrations/ (applied automatically by the server)
 #
 # Neither package contains config.php, so extracting never overwrites your database settings.
 #
@@ -17,6 +18,12 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
+# Optional build suffix (CI passes the run number), shown as e.g. "0.2.1 (build 12)".
+if [ -n "${BUILD_NUMBER:-}" ]; then
+  VERSION_LABEL="$VERSION (build $BUILD_NUMBER)"
+else
+  VERSION_LABEL="$VERSION"
+fi
 GODOT="${GODOT:-godot}"
 DIST="$ROOT/dist"
 STAGE="$DIST/stage"
@@ -29,8 +36,8 @@ mkdir -p "$STAGE/client" "$STAGE/public/api" "$STAGE/private"
 # --- Client: copy, stamp the build number, export for the web ---
 cp -r "$ROOT/client/." "$STAGE/client/"
 rm -rf "$STAGE/client/build"
-sed -i "s/^const CLIENT_BUILD := \".*\"/const CLIENT_BUILD := \"$VERSION\"/" "$STAGE/client/scripts/build_info.gd"
-grep -q "CLIENT_BUILD := \"$VERSION\"" "$STAGE/client/scripts/build_info.gd" || { echo "Failed to stamp client build"; exit 1; }
+sed -i "s/^const CLIENT_BUILD := \".*\"/const CLIENT_BUILD := \"$VERSION_LABEL\"/" "$STAGE/client/scripts/build_info.gd"
+grep -qF "CLIENT_BUILD := \"$VERSION_LABEL\"" "$STAGE/client/scripts/build_info.gd" || { echo "Failed to stamp client build"; exit 1; }
 
 "$GODOT" --headless --path "$STAGE/client" --import > "$DIST/godot-import.log" 2>&1 || true
 "$GODOT" --headless --path "$STAGE/client" --export-release "Web" "$STAGE/public/index.html" > "$DIST/godot-export.log" 2>&1
@@ -42,7 +49,9 @@ cp "$ROOT/server/api/index.php" "$ROOT/server/api/.htaccess" "$STAGE/public/api/
 # --- Private server code + content, with the version stamped ---
 cp -r "$ROOT/server/app" "$STAGE/private/app"
 cp -r "$ROOT/content" "$STAGE/private/content"
-printf "<?php\n// Stamped by tools/package.sh\nreturn '%s';\n" "$VERSION" > "$STAGE/private/app/version.php"
+mkdir -p "$STAGE/private/migrations"
+cp "$ROOT"/server/migrations/[0-9][0-9][0-9]_*.sql "$STAGE/private/migrations/"
+printf "<?php\n// Stamped by tools/package.sh\nreturn '%s';\n" "$VERSION_LABEL" > "$STAGE/private/app/version.php"
 
 # --- Zip ---
 rm -f "$DIST/guildie-public-$VERSION.zip" "$DIST/guildie-private-$VERSION.zip"

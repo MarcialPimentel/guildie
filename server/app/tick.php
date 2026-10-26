@@ -18,6 +18,9 @@ require __DIR__ . '/bootstrap.php';
 $source = in_array('--force', $argv, true) ? 'manual' : 'cron';
 
 try {
+    foreach (migrate_if_needed() as $n) {
+        echo "Applied migration $n.\n";
+    }
     $result = maybe_run_tick($source);
     $stamp = gmdate('Y-m-d H:i:s') . ' UTC';
     if ($result === null) {

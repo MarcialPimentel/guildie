@@ -1,14 +1,70 @@
 # Deploying Guildie to SiteGround
 
-There are two kinds of deploy:
+**From 0.2.1, deploys are automatic.** Every merge to `main` runs the checks and, if they pass, uploads the new version to marz.gg over FTPS through two locked-down FTP accounts (`.github/workflows/deploy.yml`). Database updates apply themselves on the server's next request. Nothing to upload by hand.
 
-- **[First deploy](#first-deploy-one-time)** (once): database tables, files, and the cron job. About 20–30 minutes.
-- **[Routine deploy](#routine-deploy)** (every update): upload two zips. About 5 minutes.
-- **[Deploying 0.2.0 (M1)](#deploying-020-m1-market-prototype)**: the one-time extra steps for the M1 update.
+- **[Automatic deploys](#automatic-deploys)**: how it works and the one-time setup (about 10 minutes).
+- **[Manual deploy](#first-deploy-one-time)**: the old way, kept for emergencies or if FTP ever breaks.
 
-Before starting, make sure the [SiteGround setup guide](setup-siteground.md) is done (database, user, folders, and `guildie-private/config.php`).
+Before anything, the [SiteGround setup guide](setup-siteground.md) must be done (database, user, folders, and `guildie-private/config.php`).
 
-## What you upload
+---
+
+## Automatic deploys
+
+### What happens on a merge
+
+1. **Checks** (on every pull request too): PHP syntax, the content validator, the API smoke test against a throwaway MySQL database, the headless client test, and the Godot web export. A pull request shows a green check when they pass; its packages can be downloaded under the PR's **Checks → Deploy → Artifacts**.
+2. **Upload server code** into `guildie-private/` (`app/`, `content/`, `migrations/`). `config.php` is never touched.
+3. **Upload the game** into `public_html/games/guildie/`.
+4. **Database updates:** the first request or cron tick after the upload applies any new `migrations/NNN_*.sql` file once (protected by a database lock) and records it in `game_state.schema_version`. The ping URL shows `"schema"`.
+
+The build number shows as e.g. **0.2.1 (build 12)**: the `VERSION` file plus the GitHub run number.
+
+### One-time setup
+
+Two SiteGround FTP accounts, each limited to the one folder it needs, so neither password can reach WordPress or anything else on the site.
+
+**1. FTP account for the server code (SiteGround).**
+
+1. Site Tools → **Site → FTP Accounts**.
+2. Create `guildie-private` (SiteGround adds `@marz.gg`) with a strong password (save it in your password manager) and home path **`/marz.gg/guildie-private/`**.
+3. On the account: **⋮ → FTP Credentials**. Note the **Host**.
+
+**2. FTP account for the game files.** Reuse Pythio's `deploy@marz.gg` (home path `/marz.gg/public_html/games/`). Its password is the one in Pythio's `FTP_PASSWORD` secret / your password manager.
+
+**3. Add five secrets to the Guildie repo.**
+
+Repo **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Name | Value |
+|---|---|
+| `FTP_SERVER` | the Host (the same for both accounts) |
+| `FTP_USERNAME` | `guildie-private@marz.gg` |
+| `FTP_PASSWORD` | its password |
+| `FTP_PUBLIC_USERNAME` | `deploy@marz.gg` |
+| `FTP_PUBLIC_PASSWORD` | its password |
+
+GitHub encrypts them: nobody can read them back, only the deploy job can use them. Until all five exist, merges run the checks and skip the upload (the Deploy job says which secret is missing).
+
+**4. Run it.** Merge the next PR, or GitHub → **Actions → Deploy → Run workflow** (on `main`). After a few minutes, the ping URL shows the new `build`.
+
+### If an automatic deploy goes wrong
+
+| What you see | Most likely cause | Fix |
+|---|---|---|
+| Deploy job says "Upload skipped: these secrets aren't set yet" | Secrets missing or misspelt | It names the missing ones; add them exactly as written |
+| Upload step: login failed | Wrong username format or password | Username includes `@marz.gg`; re-enter `FTP_PASSWORD` |
+| Upload step: TLS / certificate error | FTPS handshake | Change both `protocol: ftps` to `protocol: ftp` in `.github/workflows/deploy.yml` |
+| Upload step: "folder not found" / files land in the wrong place | An account's home path differs from the table above | Check the home paths in FTP Accounts, or tell Claude what they are |
+| Checks fail on a PR | A real bug caught before it went live | Nothing reached players; Claude fixes the PR |
+
+To **roll back**, revert the PR on GitHub and merge the revert. A database change that already ran is not undone, so migrations must stay backward-compatible.
+
+---
+
+# Manual deploy (fallback)
+
+## What you upload (manual)
 
 Each deploy uses these files. Claude sends them to you in the chat for each version (they can also be attached to a GitHub release, under **Releases** on the right side of the repo page):
 
@@ -94,11 +150,11 @@ The `> /dev/null 2>&1` part stops SiteGround from emailing you every 5 minutes. 
 
 ---
 
-## Routine deploy
+## Routine deploy (manual)
 
-For every update after the first one:
+Only needed if automatic deploys are unavailable:
 
-1. Check whether the update includes **new migration files** (`002_...sql`, etc.). If there are any, import them in phpMyAdmin first (Step 1 above), in order.
+1. New migration files apply themselves from 0.2.1 on (they're inside the private zip). For older versions, import them in phpMyAdmin first (Step 1 above), in order.
 2. Upload and extract `guildie-private-<version>.zip` into `guildie-private/` (Step 2). Say **yes** if asked to overwrite.
 3. Upload and extract `guildie-public-<version>.zip` into `public_html/games/guildie/` (Step 3). Say **yes** to overwrite.
 4. Open the ping URL and confirm the new `build`.
@@ -171,7 +227,7 @@ If something else goes wrong, send Claude the exact message from the ping page o
 GODOT=/path/to/godot-4.7 tools/package.sh
 ```
 
-The build number comes from the `VERSION` file at the repo root. Bump it for every deploy; the script stamps it into both the server and the client. The zips are written to `dist/` (not committed).
+The build number comes from the `VERSION` file at the repo root (plus `BUILD_NUMBER` if set, as CI does). Bump `VERSION` for each meaningful release; the script stamps it into both the server and the client. The zips are written to `dist/` (not committed).
 
 To check a live deploy end to end from a computer:
 
