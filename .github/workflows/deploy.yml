@@ -82,9 +82,14 @@ jobs:
           echo "GUILDIE_CONTENT=$GUILDIE_CONTENT" >> "$GITHUB_ENV"
           echo "GUILDIE_MIGRATIONS=$GUILDIE_MIGRATIONS" >> "$GITHUB_ENV"
           (cd ci/www && nohup php -S 127.0.0.1:8080 -t . > ../php-server.log 2>&1 &)
-          sleep 2
+          for i in $(seq 20); do curl -s -o /dev/null http://127.0.0.1:8080/ && break; sleep 0.5; done
           # The first request applies all migrations to the empty database.
-          curl -sf "http://127.0.0.1:8080/games/guildie/api/index.php?action=ping"; echo
+          out=$(curl -s "http://127.0.0.1:8080/games/guildie/api/index.php?action=ping" || true)
+          echo "$out"
+          if ! echo "$out" | grep -q '"ok":true'; then
+            echo "::error title=API did not start::$(echo "$out" | head -c 600) | $(tail -3 ci/php-server.log | tr '\n' ' ')"
+            exit 1
+          fi
 
       - name: API smoke test
         run: python3 tools/smoke_test.py http://127.0.0.1:8080/games/guildie/api/index.php --tick "php server/app/tick.php --force"
