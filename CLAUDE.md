@@ -4,7 +4,8 @@ Guildie is a mobile-first browser crafting and trading game (Godot 4 client, PHP
 
 ## Before building anything
 
-- **`docs/GDD.md` is the source of truth.** Read the sections relevant to the task before proposing or writing code. If a change conflicts with the GDD, raise it rather than silently diverging, and update the GDD (and its Decision Log) in the same PR when a design decision changes.
+- **`docs/GDD.md` and `docs/systems.md` are the source of truth.** `systems.md` says which system a feature belongs to, what data it owns, and its rules.
+- **`docs/GDD.md` is the vision.** Read the sections relevant to the task before proposing or writing code. If a change conflicts with the GDD, raise it rather than silently diverging, and update the GDD (and its Decision Log) in the same PR when a design decision changes.
 - Work is tracked as GitHub milestones (M0–M4) and issues. One PR per issue where practical, with `Closes #N` in the description.
 - Marz (the owner) does not write code. He reviews PRs, playtests, and does the SiteGround steps by hand, so any manual step must come with clear, click-by-click instructions in `docs/`.
 

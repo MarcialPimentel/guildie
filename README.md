@@ -13,6 +13,7 @@ Guildie is a mobile-first browser crafting and trading game. Choose one professi
 The full design lives in **[docs/GDD.md](docs/GDD.md)**. It is the source of truth for all design decisions, and every working session should reference it before building features.
 
 Quick links:
+- [Systems breakdown](docs/systems.md)
 - [Design Pillars](docs/GDD.md#2-design-pillars)
 - [Core Loops](docs/GDD.md#4-core-loops)
 - [Profession Framework](docs/GDD.md#5-profession-framework)
