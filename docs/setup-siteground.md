@@ -97,7 +97,7 @@ return [
         'pass'    => 'PASTE_DATABASE_PASSWORD',
         'charset' => 'utf8mb4',
     ],
-    'tick_interval_seconds' => 600,
+    'tick_interval_seconds' => 300,
     'debug' => false,
 ];
 ```

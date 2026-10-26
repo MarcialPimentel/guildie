@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.3 · **Date:** 2026-10-25 · **Status:** Pre-production
+**Version:** 0.4 · **Date:** 2026-10-25 · **Status:** Pre-production
 **Owner:** Marz · **Engine:** Godot 4 (web export) · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -262,7 +262,9 @@ These three are chosen to form a **dependency triangle**. Each is about 70% self
 | **Alchemist** | The Herb Garden | **Plots and volatile brewing:** plant herbs in plots with growth timers. Optional opt-in "volatile brew" that risks some ingredients for a chance at extra or higher-quality output. |
 | **Leatherworker** | The Trapper's Lodge | **Expeditions:** send trappers out for a chosen duration. Short trips return common hides, and long trips have a chance at thick or rare pelts. This creates a risk-versus-time choice that fits the check-in rhythm. |
 
-### 5.5 Launch item list (~16 items) [tune]
+### 5.5 Launch item list (18 items) [tune]
+
+The live numbers (recipes, times, values) are in `/content`; this table shows the structure.
 
 | Item | Type | Made by | Inputs | Used by |
 |---|---|---|---|---|
@@ -270,6 +272,7 @@ These three are chosen to form a **dependency triangle**. Each is about 70% self
 | Iron Ore | Raw (rank 15+) | Blacksmith (Mine) | — | Blacksmith |
 | Brass Fittings | Component | Blacksmith | Copper Ore | **Alchemist, Leatherworker** |
 | Iron Ingot | Component | Blacksmith | Iron Ore + **Smelting Flux** | Blacksmith |
+| Copper Lantern | Finished | Blacksmith | Copper Ore | NPC buyers *(added in M1)* |
 | Iron Sword | Finished | Blacksmith | Iron Ingot + **Leather Grip** | NPC buyers |
 | Sunleaf | Raw | Alchemist (Garden) | — | Alchemist |
 | Ember Moss | Raw (rank 15+) | Alchemist (Garden) | — | Alchemist |
@@ -281,6 +284,7 @@ These three are chosen to form a **dependency triangle**. Each is about 70% self
 | Thick Hide | Raw (rank 15+ / long expeditions) | Leatherworker (Lodge) | — | Leatherworker |
 | Leather Grip | Component | Leatherworker | Raw Hide | **Blacksmith** |
 | Cured Leather | Component | Leatherworker | Thick Hide + **Tanning Solution** | Leatherworker |
+| Hide Satchel | Finished | Leatherworker | Raw Hide | NPC buyers *(added in M1)* |
 | Rugged Jerkin | Finished | Leatherworker | Cured Leather + **Brass Fittings** | NPC buyers |
 
 **Dependency summary**
@@ -329,7 +333,9 @@ NPCs are **liquidity and demand**, not fake players. Their main job is to consum
 | **Townsfolk** | Low-tier finished goods (Healing Draughts, basic gear) | — | Steady daily demand, not very price-sensitive |
 | **Adventurers / Tournament Squires** | Swords, draughts, tonics | — | Big spike before the weekly tournament |
 | **Collectors** | Masterwork and rare items | — | Rare appearances, pay well above the ceiling |
-| **Traders** | Anything listed well below R | Relist near R | Punish underpricing and keep prices honest |
+| **Traders** | Anything listed at 0.8 × R or less | Relist near R | Punish underpricing, keep prices honest, and give players a "quick sale" |
+| **Guild Workshops** *(M1)* | A little of every component | — | Components are never a dead end |
+| **Guild Suppliers** *(M1)* | — | 5 of every item at 1.5 × R | Nothing is ever unavailable |
 | **Prospectors** | — | Raw materials | Occasionally flood a material and crash its price |
 | **The Steam Factory** | Raw materials in bulk | Cheap mass-produced Common goods | Thematic rival: competes with low-tier crafters and gives a reason to craft higher quality |
 
@@ -574,7 +580,7 @@ Each milestone ends with a playtest and a clear exit question.
 2. **Exact skill curve and craft timers** to hit the pacing targets in [Section 3](#target-pacing). Tune in M1–M2 playtests.
 3. **Active bonus size:** how much more should active play reward than idle without making idle feel bad?
 4. **Second profession carryover:** what transfers from the first profession, if anything?
-5. **Systems defaults P1–P6:** confirm or change the proposed defaults in [systems.md](systems.md#proposed-defaults-to-confirm) (signature mechanics, progression split, Focus active play, Activity Log, economy simulator, batch crafting).
+5. **Gold sinks before slowing the pace:** players accumulate gold quickly in M1 with little to spend it on. Which M2 sinks come first?
 6. **City name:** "Brassmere" is the working name. Final name to be decided later.
 
 ---
@@ -605,6 +611,13 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-25 | Session tokens sent in an `X-Guildie-Token` header and stored hashed | Some shared hosts strip the standard Authorization header; hashing protects players if the database leaks |
 | 2026-10-25 | Market tick runs every 10 minutes from cron | SiteGround allows shorter intervals (resolves the cron Open Question); 10 minutes is enough until the NPC market exists, and can be shortened in M1 by changing cron and `tick_interval_seconds` together |
 | 2026-10-26 | Game broken into systems in `docs/systems.md` | Every feature belongs to one system with clear data ownership; milestones are defined per system |
+| 2026-10-26 | Systems defaults P1–P6 confirmed | Gathering-station decisions; skill unlocks *what*, buildings *how much*, rank caps buildings; Focus as active play (M2 prototype); Activity Log and economy simulator in M1; batch crafting |
+| 2026-10-26 | M1 deploy wipes all accounts | Every playtester starts equal |
+| 2026-10-26 | M1 playtest runs at fast pace (`pace.time_multiplier` 1.0: crafts in seconds to minutes, stations fill in ~1 hour) | A week of testing shows the whole loop; one setting slows everything later |
+| 2026-10-26 | Market tick every 5 minutes | The market should visibly move during a session |
+| 2026-10-26 | Copper Lantern and Hide Satchel added | Every profession needs a self-sufficient finished good to earn from day one (Alchemists already had Healing Draught) |
+| 2026-10-26 | Guild Workshops persona added; scarcity pricing; NPC demand scales with active players | Economy simulator showed tier-2 goods were never made, undercutting deflated prices, and fixed demand overwhelmed small groups (systems.md M1 tuning notes) |
+| 2026-10-26 | Two crafting slots, batches up to 10, 150 starting gold | Lets a player make a component and a finished good at the same time; enough gold to buy a first cross-guild input |
 
 ---
 

@@ -22,6 +22,7 @@ DIST="$ROOT/dist"
 STAGE="$DIST/stage"
 
 echo "Packaging Guildie $VERSION"
+python3 "$ROOT/tools/validate_content.py" "$ROOT/content"
 rm -rf "$STAGE"
 mkdir -p "$STAGE/client" "$STAGE/public/api" "$STAGE/private"
 
