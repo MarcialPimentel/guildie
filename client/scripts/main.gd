@@ -1,8 +1,9 @@
-## Root of the game: shows the login screen or the home screen depending on the session.
+## Root of the game: login -> choose a profession -> the game screen.
 extends Control
 
 const LoginScreen := preload("res://scripts/ui/login_screen.gd")
-const HomeScreen := preload("res://scripts/ui/home_screen.gd")
+const ProfessionScreen := preload("res://scripts/ui/profession_screen.gd")
+const GameScreen := preload("res://scripts/ui/game_screen.gd")
 
 var _current: Control
 
@@ -15,16 +16,16 @@ func _ready() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 
-	Session.logged_in.connect(_show_home)
+	Session.logged_in.connect(_route)
 	Session.logged_out.connect(_show_login)
 
 	if Session.has_token():
 		_show_loading()
 		var response := await Session.refresh()
 		if response["ok"]:
-			_show_home()
+			_route()
 		elif response.get("status", 0) != 401:
-			# Server unreachable: still show login so the player sees the error and can retry.
+			# Server unreachable: show login so the player sees the error and can retry.
 			_show_login()
 			_current.call("_show_error", Api.error_message(response))
 		# On 401, Session already emitted logged_out, which showed the login screen.
@@ -32,10 +33,20 @@ func _ready() -> void:
 		_show_login()
 
 
+## After login (or choosing a profession), go to the right screen.
+func _route() -> void:
+	if Session.has_profession():
+		_swap(GameScreen.new())
+	else:
+		var screen := ProfessionScreen.new()
+		screen.chosen.connect(_route)
+		_swap(screen)
+
+
 func _show_loading() -> void:
 	var loading := Control.new()
 	loading.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var l := UI.label("Opening the guild hall…", 24, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	var l := UI.label("Opening the guild hall…", 22, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	l.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	loading.add_child(l)
@@ -44,10 +55,6 @@ func _show_loading() -> void:
 
 func _show_login() -> void:
 	_swap(LoginScreen.new())
-
-
-func _show_home() -> void:
-	_swap(HomeScreen.new())
 
 
 func _swap(screen: Control) -> void:

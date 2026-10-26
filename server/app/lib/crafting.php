@@ -35,6 +35,7 @@ function crafting_recipes(int $playerId, string $professionId): array
             'id'           => $recipe['id'],
             'name'         => item_name($recipe['output']['item_id']),
             'output'       => ['item_id' => $recipe['output']['item_id'], 'quantity' => (int) $recipe['output']['quantity']],
+            'value'        => (int) round(market_reference_value($recipe['output']['item_id'])),
             'inputs'       => $inputs,
             'seconds_each' => (int) ceil($recipe['time_seconds'] * pace()),
             'can_make'     => max(0, $maxBatch),

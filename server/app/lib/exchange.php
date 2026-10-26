@@ -270,6 +270,7 @@ function exchange_item(int $playerId, string $itemId): array
         'description' => $item['description'] ?? '',
         'reference' => (int) round($ref),
         'floor'     => (int) floor($ref * (float) econ('market.floor_multiplier', 0.6)),
+        'trader_price' => (int) floor($ref * (float) econ('market.trader_buy_below', 0.8)),
         'ceiling'   => (int) ceil($ref * (float) econ('market.ceiling_multiplier', 1.5)),
         'you_have'  => inventory_count($pdo, $playerId, $itemId),
         'listings'  => array_map(fn($l) => [
