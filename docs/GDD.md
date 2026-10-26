@@ -1,11 +1,13 @@
 # Guildie — Game Design Document
 
-**Version:** 0.2.2 · **Date:** 2026-10-25 · **Status:** Pre-production
+**Version:** 0.3 · **Date:** 2026-10-25 · **Status:** Pre-production
 **Owner:** Marz · **Engine:** Godot 4 (web export) · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
 >
 > Numbers marked **[tune]** are placeholders for playtesting, not commitments.
+>
+> **Systems breakdown:** [systems.md](systems.md) splits the game into its systems (what each owns, its rules, tuning knobs, and which milestone builds it). Read it alongside this document before building features.
 
 ---
 
@@ -534,8 +536,8 @@ Each milestone ends with a playtest and a clear exit question.
 | Milestone | Scope | Exit criteria |
 |---|---|---|
 | **M0 Foundation** | Repo, Godot project, MySQL database and PHP API on SiteGround (step-by-step setup guide), name + password login, read and write one inventory item through the server, cron job running a test tick, deploy steps, build number | Open on a phone, log in, see server-owned gold and an item |
-| **M1 Market Prototype** | 3 professions (basic recipes), ~16 items, gathering stations, crafting with timers, the Exchange with NPC personas, liquidity band, market tick. Plain text UI. | **"Is making one good trade fun?"** |
-| **M2 Crafting Depth** | Skill ranks and colors, quality tiers, procs, signature mechanics, crafting orders, workshop upgrades, "while you were away" screen | **"Do I want to come back tomorrow?"** |
+| **M1 Market Prototype** | 3 professions (choice + starter recipes), ~16 items, gathering stations, crafting with timers and batches, the Exchange with 3 NPC personas, liquidity band, market tick, Activity Log, economy simulator. Plain text UI. See [systems.md §9](systems.md#9-milestone-matrix). | **"Is making one good trade fun?"** |
+| **M2 Crafting Depth** | Skill ranks and colors, quality tiers, procs, gathering decisions, crafting orders, workshop upgrades, Guild Week, "while you were away" screen, Focus prototype | **"Do I want to come back tomorrow?"** |
 | **M3 Real Players** | Shared market with multiple players, NPC scaling, leaderboards (gold and rank progress), anti-abuse | **"Does trading with real people feel different and better?"** |
 | **M4 Look & Feel** | Isometric workshop art, steam progression visuals, events and news board, onboarding polish, installable web app | **"Would I show this to a stranger?"** |
 | **Later** | Guilds, specializations, second profession, more professions | — |
@@ -572,7 +574,7 @@ Each milestone ends with a playtest and a clear exit question.
 2. **Exact skill curve and craft timers** to hit the pacing targets in [Section 3](#target-pacing). Tune in M1–M2 playtests.
 3. **Active bonus size:** how much more should active play reward than idle without making idle feel bad?
 4. **Second profession carryover:** what transfers from the first profession, if anything?
-5. **SiteGround cron:** confirm the shortest cron interval available on the current plan (affects tick frequency).
+5. **Systems defaults P1–P6:** confirm or change the proposed defaults in [systems.md](systems.md#proposed-defaults-to-confirm) (signature mechanics, progression split, Focus active play, Activity Log, economy simulator, batch crafting).
 6. **City name:** "Brassmere" is the working name. Final name to be decided later.
 
 ---
@@ -601,6 +603,8 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-25 | Future professions not decided yet | Focus on the launch three |
 | 2026-10-25 | Build number lives in a `VERSION` file, not server config | Deploys can't drift out of sync with a hand-edited config value |
 | 2026-10-25 | Session tokens sent in an `X-Guildie-Token` header and stored hashed | Some shared hosts strip the standard Authorization header; hashing protects players if the database leaks |
+| 2026-10-25 | Market tick runs every 10 minutes from cron | SiteGround allows shorter intervals (resolves the cron Open Question); 10 minutes is enough until the NPC market exists, and can be shortened in M1 by changing cron and `tick_interval_seconds` together |
+| 2026-10-26 | Game broken into systems in `docs/systems.md` | Every feature belongs to one system with clear data ownership; milestones are defined per system |
 
 ---
 

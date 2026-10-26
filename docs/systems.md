@@ -1,0 +1,452 @@
+# Guildie — Systems Design
+
+**Version:** 0.1 · **Date:** 2026-10-26 · **Companion to:** [GDD.md](GDD.md)
+
+The GDD describes *what Guildie is*. This document breaks the game into **systems**: self-contained pieces of mechanics, each with one clear job, its own data, and defined connections to the others. Every feature we build should belong to exactly one system (or be explicitly cross-cutting).
+
+> **How to use this doc**
+> - Before building a feature, find its system here and follow its rules. If it doesn't fit any system, update this doc first.
+> - **[tune]** marks numbers to be set by playtesting.
+> - **[Proposed]** marks a default Claude chose that Marz hasn't confirmed yet. See [Proposed defaults to confirm](#proposed-defaults-to-confirm).
+
+---
+
+## Contents
+
+1. [System map](#1-system-map)
+2. [Player verbs](#2-player-verbs)
+3. [Shared conventions](#3-shared-conventions)
+4. [Foundation systems](#4-foundation-systems): Accounts, Time & Timers, Content, Inventory & Wallet, Activity Log
+5. [Production systems](#5-production-systems): Professions & Progression, Gathering, Crafting, Focus (active play)
+6. [Exchange systems](#6-exchange-systems): The Exchange, Market Simulation, Crafting Orders
+7. [Meta systems](#7-meta-systems): Workshop & Buildings, Calendar & Events, Leaderboards, Guilds
+8. [Cross-cutting systems](#8-cross-cutting-systems): Economy Balance, Onboarding
+9. [Milestone matrix](#9-milestone-matrix)
+10. [Proposed defaults to confirm](#proposed-defaults-to-confirm)
+
+---
+
+## 1. System map
+
+Systems are grouped in layers (table below). A system may depend on systems in its own layer or layers above it, never below. The diagram shows how value flows between the main systems.
+
+```mermaid
+flowchart LR
+    GATH["Gathering<br/>raw materials over time"] --> INV[("Inventory<br/>& Wallet")]
+    INV -->|inputs| CRAFT["Crafting<br/>timers, batches"]
+    CRAFT -->|goods| INV
+    INV -->|list| EXC["The Exchange<br/>listings & trades"]
+    EXC -->|gold, bought items| INV
+    MKT["Market Simulation<br/>NPC buyers & sellers"] -->|"NPCs buy (and consume) & sell"| EXC
+    CRAFT -->|skill-ups| PROF["Professions<br/>& Progression"]
+    PROF -->|unlocks recipes| CRAFT
+    FOCUS["Focus<br/>active play"] -.->|bonus| CRAFT
+    WORK["Workshop<br/>& Buildings"] -.->|slots, rates, caps| GATH
+    WORK -.->|slots, speed| CRAFT
+    CAL["Calendar<br/>& Events"] -.->|demand modifiers| MKT
+    TICK(["Market tick<br/>every 10 min"]) -.-> MKT
+```
+
+**The core loop in one line:** gather → craft → list → NPCs and players buy (NPCs consume what they buy) → gold → reinvest. Dotted lines are modifiers. Every system also reports into the **Activity Log**.
+
+| Layer | System | One-line job | Status |
+|---|---|---|---|
+| Foundation | **Accounts** | Who the player is | ✅ M0 |
+| | **Time & Timers** | When things happen, including while offline | Tick ✅ M0, timers M1 |
+| | **Content** | What exists (items, recipes, professions) as data | Started M0 |
+| | **Inventory & Wallet** | What the player owns | ✅ basic M0 |
+| | **Activity Log** | What happened, for the return screen and history | New, M1 |
+| Production | **Professions & Progression** | What the player is and how they grow | M1 (choice), M2 (skill) |
+| | **Gathering** | Raw materials over time | M1 |
+| | **Crafting** | Turning inputs into goods | M1 |
+| | **Focus** | Optional active play that improves crafts | M2 |
+| Exchange | **The Exchange** | Player-facing auction house | M1 |
+| | **Market Simulation** | NPC demand and supply that keeps the market alive | M1 |
+| | **Crafting Orders** | Specific requests with rewards | M2 |
+| Meta | **Workshop & Buildings** | Capacity and speed upgrades | M2 |
+| | **Calendar & Events** | Weekly rhythm and world events | M2 (week), M4 (events) |
+| | **Leaderboards** | Public rankings | M3 |
+| | **Guilds** | Social layer | Later |
+| Cross-cutting | **Economy Balance** | Faucets, sinks, and monitoring | M1 onward |
+| | **Onboarding** | The first three minutes | M2 (basic), M4 (polish) |
+
+---
+
+## 2. Player verbs
+
+Everything a player can *do*, and which system owns it. If a new feature adds a verb, add it here.
+
+| Verb | Owner | Session type | Milestone |
+|---|---|---|---|
+| **Choose** a profession | Professions | Once | M1 |
+| **Collect** from a gathering station | Gathering | 30 s | M1 |
+| **Decide** a gathering option (vein, plot, expedition length) | Gathering | 30 s | M2 |
+| **Craft** (queue a recipe) | Crafting | 30 s | M1 |
+| **Collect** finished crafts | Crafting | 30 s | M1 |
+| **Tend** active crafts (Focus) | Focus | 30 min | M2 |
+| **List** an item for sale | Exchange | 30 s | M1 |
+| **Buy** a listing | Exchange | 5–30 min | M1 |
+| **Cancel / relist** | Exchange | 30 s | M1 |
+| **Read** prices, history, news | Exchange, Calendar | 5–30 min | M1 (prices), M2 (news) |
+| **Fulfill** an order | Crafting Orders | 5 min | M2 |
+| **Learn** a recipe | Professions | 5 min | M2 |
+| **Upgrade** a building | Workshop | 5 min | M2 |
+
+**Design check:** the 30-second verbs (collect, craft, list) must each be one or two taps. The 30-minute verbs (tend, buy, read) are where depth and skill live.
+
+---
+
+## 3. Shared conventions
+
+These rules apply to every system.
+
+**Time model**
+- Nothing runs per second on the server. Every timed thing stores a **start and end timestamp** and is **resolved lazily** when the player acts or loads state (GDD 11.5).
+- Offline progress is the same calculation as online progress: `elapsed = now − last_resolved`. There's no separate "offline" code path.
+- The **market tick** (every 10 minutes [tune]) is the only scheduled work, and it only touches market and world state, never an individual player's timers.
+
+**Actions**
+- Every player action is one server action, in one transaction, that either fully succeeds or changes nothing (GDD 11.2.2).
+- Each action validates against current server state, never against what the client thinks.
+
+**Data ownership**
+- Each table is owned by one system. Other systems change it only through that system's functions (for example, Crafting calls `inventory_remove()`; it never writes the `inventory` table directly).
+- Static definitions live in `/content` JSON. Tuning numbers live in content files, not in code, so balancing never requires a code change.
+
+**Events**
+- Any system can write to the Activity Log. The log is append-only and is how the return screen, notifications, and later metrics know what happened.
+
+**Randomness**
+- All rolls (procs, rare drops, skill-ups) happen on the server with `random_int`. The client only shows results.
+
+---
+
+## 4. Foundation systems
+
+### 4.1 Accounts
+
+| | |
+|---|---|
+| **Job** | Identity and sessions |
+| **Owns** | `players`, `sessions`, `login_failures` |
+| **Status** | ✅ Built in M0 |
+| **Rules** | Name + hashed password; session tokens stored as hashes; 30-day idle expiry; 10 failed logins per IP per 15 minutes |
+| **Later** | Guest login (backlog), account settings |
+
+### 4.2 Time & Timers
+
+| | |
+|---|---|
+| **Job** | Decide when things finish and resolve elapsed time, online or offline |
+| **Owns** | `game_state` (tick bookkeeping), `tick_log`; the timestamp convention every timed system uses |
+| **Inputs** | Server clock; cron |
+| **Outputs** | Tick runs for Market Simulation and Calendar; helper functions for "how much time has passed" |
+| **Rules** | Tick every 10 minutes [tune], with catch-up on API requests when overdue. A row lock means only one tick runs at a time. SiteGround allows short cron intervals, so the tick can be shortened if the market needs to move faster. |
+| **Tuning knobs** | `tick_interval_seconds` (config.php, must match the cron schedule) |
+| **M1 adds** | Shared timer helpers used by Gathering and Crafting |
+
+### 4.3 Content
+
+| | |
+|---|---|
+| **Job** | Define everything that exists, as data |
+| **Owns** | `/content/*.json`: `items`, `recipes`, `professions`, `economy`, later `buildings`, `personas`, `events` |
+| **Rules** | One source of truth, read by both server and client. IDs are lowercase snake_case and never renamed once live (players own items by ID). Every file is validated by a test so a typo can't break the live game. |
+| **M1 adds** | Full launch list (GDD 5.5), recipes, three professions, reference values, a content validator |
+
+### 4.4 Inventory & Wallet
+
+| | |
+|---|---|
+| **Job** | Track what each player owns |
+| **Owns** | `inventory` (item, quality, quantity), `players.gold` |
+| **Verbs** | None directly; other systems move items through it |
+| **Rules** | Only add/remove functions change it, always inside the calling action's transaction. Quantities and gold can never go negative (enforced in code and by unsigned columns). Gold is a whole number. |
+| **Tuning knobs** | Starting gold and items (`economy.json`); storage cap [tune, M2] |
+| **M1 adds** | `inventory_remove`, items **reserved** while listed on the Exchange (listed items leave the inventory and return if cancelled or expired) |
+| **Later** | Storage cap from the Storehouse building (M2) |
+
+### 4.5 Activity Log *(new)*
+
+| | |
+|---|---|
+| **Job** | Record what happened, so the game can tell the player |
+| **Owns** | `activity` table: player (or none for world events), type, small JSON payload, time |
+| **Inputs** | Events from every system: craft finished, item sold, listing expired, skill-up, rare drop, order posted, world event |
+| **Outputs** | The **"While you were away"** screen (events since last visit), notification badges, later metrics |
+| **Rules** | Append-only. Writes happen in the same transaction as the action that caused them. Old rows are pruned by the tick after 30 days [tune]. Price history comes from the Exchange's trade ledger, not from this log. |
+| **Why it's foundational** | The return screen is Guildie's retention engine (GDD 8.2), and every system needs a place to report into. Building it in M1 means each new system plugs in from day one. |
+| **Milestone** | M1 (table + writes), M2 (return screen UI) |
+
+---
+
+## 5. Production systems
+
+### 5.1 Professions & Progression
+
+| | |
+|---|---|
+| **Job** | The player's identity and long-term growth |
+| **Owns** | `player_professions` (profession, skill, rank, known recipes) |
+| **Verbs** | Choose (once), Learn recipe (M2) |
+| **Inputs** | Skill-up rolls from Crafting |
+| **Outputs** | Which recipes are available; rank, which gates building levels |
+
+**Rules**
+- One profession at the start, chosen during onboarding. A second unlocks at skill 80 in the first (GDD 5.7).
+- Skill 1–100 in four ranks: Apprentice, Journeyman, Expert, Master.
+- Each craft can raise skill based on the recipe's colour (orange 100%, yellow 75%, green 25%, grey 0% [tune]).
+- **Progression split [Proposed]:**
+  - **Skill and rank unlock *what* you can make**: recipes, materials, and the right to upgrade buildings to higher levels.
+  - **Buildings unlock *how much and how fast***: queue slots, gathering rate, storage, craft speed.
+  - Rank is the "Town Hall": it caps building levels, so the two tracks never compete.
+
+**Tuning knobs:** skill-up chances, colour thresholds per recipe, recipe unlock levels, rank boundaries.
+
+**Milestones:** M1 = choice + a fixed starter recipe list. M2 = skill, colours, ranks, learning recipes.
+
+### 5.2 Gathering
+
+| | |
+|---|---|
+| **Job** | Produce each profession's raw materials over time |
+| **Owns** | `stations` (player, station type, last collected time, current option such as chosen vein) |
+| **Verbs** | Collect; Decide an option (M2) |
+| **Inputs** | Elapsed time; building level (M2) |
+| **Outputs** | Raw materials into Inventory |
+
+**Rules**
+- Each profession has one station: **Mine** (Blacksmith), **Herb Garden** (Alchemist), **Trapper's Lodge** (Leatherworker).
+- Production = `rate × elapsed time`, capped at storage. Resolved when the player collects. Anything past the cap is lost, which is what makes check-ins matter.
+- Higher-tier materials (Iron Ore, Ember Moss, Thick Hide) unlock at skill 15 [tune].
+- **Each station has one signature *decision* [Proposed]** (the idle side of the profession's identity):
+  - **Mine — Veins:** choose which vein to work. Veins deplete; a "rich vein" appears now and then with a better yield.
+  - **Herb Garden — Plots:** choose what each plot grows; different herbs take different times.
+  - **Trapper's Lodge — Expeditions:** choose trip length. Short trips are safe and common; long trips have a chance at Thick or rare hides.
+- These are *decisions you make at check-in*, not active play. Active play lives in Focus (5.4).
+
+**Balance note:** Gathering is the game's biggest faucet. Every station produces free materials forever, so its rates must be tuned together with Market Simulation's NPC consumption (see 8.1).
+
+**Tuning knobs:** rate per hour, storage cap, unlock levels, vein/plot/expedition tables.
+
+**Milestones:** M1 = one fixed output per station, rate + cap, collect. M2 = signature decisions, rare results.
+
+### 5.3 Crafting
+
+| | |
+|---|---|
+| **Job** | Turn inputs into goods over time |
+| **Owns** | `craft_jobs` (player, recipe, quantity, start, end, status, result) |
+| **Verbs** | Craft (queue), Collect |
+| **Inputs** | Recipes (Professions), materials (Inventory), slots and speed (Workshop), bonus (Focus) |
+| **Outputs** | Items into Inventory; skill-up rolls to Professions; events to the Activity Log |
+
+**Rules**
+- Starting a craft **removes the inputs immediately** (no double-spending) and creates a job with an end time.
+- A job occupies one **queue slot** until collected. Starting slots: 1 [tune]. More come from rank and buildings.
+- Results are rolled **at collection** on the server: quantity (multicraft), refunds (resourcefulness), quality (inspiration), skill-up.
+- Craft time scales by recipe tier: seconds to minutes for Apprentice recipes, hours for Master recipes (GDD 3, Target pacing).
+- A player can queue a **batch** (craft 5 at once) in one slot, with total time = per-item time × quantity, so short sessions can set up long idle runs.
+
+**Tuning knobs:** recipe inputs, outputs, time, difficulty; proc chances; starting slots; batch limit.
+
+**Milestones:** M1 = recipes, timers, one slot, batches, collect (Common quality only). M2 = quality tiers, procs, extra slots.
+
+### 5.4 Focus — active play *(new, Proposed)*
+
+The GDD promises that a 30-minute session rewards active play, but never says what the player's hands are doing. Focus is the proposed answer: **a light "plate-spinning" layer over crafting**, in the spirit of Pythio's high-APM play.
+
+| | |
+|---|---|
+| **Job** | Make a focused session more rewarding than idling, without punishing idlers |
+| **Owns** | Per-job focus state (stability meter, events handled) |
+| **Verbs** | Tend |
+| **Inputs** | Active craft jobs |
+| **Outputs** | Quality and proc bonuses to Crafting |
+
+**Concept [Proposed]**
+- While the player is in the game, active crafts occasionally need attention: the forge cools, a brew starts to bubble over, stitching slips. Each profession skins the same mechanic its own way.
+- Tapping the right job at the right time keeps it in the "sweet spot." Managing several jobs at once is the skill.
+- Well-tended crafts get a bonus to quality and proc chance (roughly +25–50% value [tune], GDD 5.2).
+- Ignoring Focus is fine: the craft finishes normally at base quality. **Idle is never penalised.**
+- Anti-cheat: the server issues focus events and checks responses against its own timings, so the bonus can't be faked from the client.
+
+**Open:** this is the biggest unvalidated idea in the design. It should be prototyped as a small experiment in M2 before it's built properly.
+
+**Milestone:** M2 (prototype), then decided.
+
+---
+
+## 6. Exchange systems
+
+### 6.1 The Exchange
+
+| | |
+|---|---|
+| **Job** | The auction house players use |
+| **Owns** | `listings`, `trades` (append-only ledger), `mailbox` |
+| **Verbs** | List, Buy, Cancel, Read prices |
+| **Inputs** | Items from Inventory; NPC activity from Market Simulation |
+| **Outputs** | Gold and items moved between owners; sale events to the Activity Log; price history from `trades` |
+
+**Rules** (GDD 6.1)
+- **Buyout only.** A listing has item, quality, quantity, unit price, duration (12/24/48 h [tune]).
+- **Listing** moves the items out of inventory and charges a **deposit** (non-refundable, scaled to duration and reference value [tune]).
+- **Buying** locks the listing row, checks the buyer's gold, transfers items to the buyer and gold (minus the **5% cut**) to the seller, and records a trade, all in one transaction. Partial buys of a stack are allowed.
+- **Expired or cancelled** listings return items to the seller's **mailbox** (M1 can return straight to inventory; the mailbox comes when inventory has a cap).
+- Every trade shows who the counterparty was: a named player or an NPC persona ("Bought by a Tournament Squire").
+- Listing limit per player [tune] (GDD 6.7).
+
+**Tuning knobs:** deposit rate, cut, durations, listing limit.
+
+**Milestones:** M1 = full buyout flow, price history. M3 = anti-abuse.
+
+### 6.2 Market Simulation
+
+| | |
+|---|---|
+| **Job** | Keep the market alive with any number of players (Pillar 3) |
+| **Owns** | `market_items` (reference value, band, recent volume, demand state) |
+| **Runs** | On every market tick |
+| **Inputs** | Content (base values), Exchange (listings, recent trades), Calendar (modifiers) |
+| **Outputs** | NPC purchases and NPC listings on the Exchange |
+
+**Rules** (GDD 6.2–6.4)
+- **Reference value (R)** per item starts from content and drifts toward recent real trade prices, slowly [tune].
+- **Liquidity band:** NPC buyers will always buy at **0.6 × R** or better (floor); NPC sellers keep a small stock at **1.5 × R** (ceiling) [tune]. Players trade inside the band.
+- **Each tick, per item:**
+  1. Work out NPC **demand** for this tick = base demand × calendar modifier × event modifier [tune].
+  2. NPC buyers take the **cheapest listings** whose price is at or below what they're willing to pay (a random price between the floor and a bit above R, depending on the persona), until demand is used up. Bought goods are **consumed**: this is the main sink.
+  3. If no one is selling an item, an NPC seller lists a small amount at the ceiling.
+  4. Update R and recent volume.
+- **Personas** are behaviour profiles, not fake players (GDD 6.3). M1 needs three: **Townsfolk** (steady, low-tier demand), **Adventurers** (weapons and draughts, spiky), **Traders** (buy anything listed well below R, keeping prices honest).
+- NPC participation for an item **shrinks as real-player volume grows** (GDD 6.4, M3).
+
+**Tuning knobs:** band multipliers, base demand per item, persona price ranges, drift speed, NPC stock size. These are the most important numbers in the game and need an **economy simulator** (see 8.1) before going live.
+
+**Milestones:** M1 = R, band, three personas, NPC buy + sell. M2 = Collectors, Prospectors, Steam Factory, calendar hooks. M3 = scaling with real players.
+
+### 6.3 Crafting Orders
+
+| | |
+|---|---|
+| **Job** | Give players direction and guaranteed demand |
+| **Owns** | `orders` (item, minimum quality, quantity, deadline, reward, who posted, who filled) |
+| **Verbs** | Fulfill |
+| **Inputs** | Market Simulation and Calendar post orders |
+| **Outputs** | Rewards (gold, rare materials, recipes) to Inventory; events to Activity Log |
+
+**Rules:** NPCs post orders sized to the player's rank; fulfilling removes the items (consumed: a sink) and pays the reward. Rare-recipe rewards make orders the main way to discover recipes. Player-posted orders are in the backlog.
+
+**Milestone:** M2.
+
+---
+
+## 7. Meta systems
+
+### 7.1 Workshop & Buildings
+
+| | |
+|---|---|
+| **Job** | The Clash-of-Clans-style base: capacity, speed, and the steam-age arc |
+| **Owns** | `buildings` (player, type, level, upgrade end time) |
+| **Verbs** | Upgrade |
+| **Outputs** | Modifiers to Gathering (rate, cap), Crafting (slots, speed), Inventory (storage) |
+
+**Rules**
+- Buildings from GDD 8.1: profession workstation, gathering station, Storehouse, Steam Engine (Journeyman+), Mailbox, Guild Board.
+- Upgrades cost gold and materials (a sink) and take time.
+- **Maximum building level is capped by profession rank** [Proposed], which keeps the two progression tracks aligned (see 5.1).
+- **Steam machines** (Expert+) automate work and burn **coal** as an ongoing running cost: a sink that scales with how much you automate.
+
+**Milestone:** M2 (core upgrades), M4 (isometric visuals, steam visuals).
+
+### 7.2 Calendar & Events
+
+| | |
+|---|---|
+| **Job** | The world's rhythm: why today is different from yesterday |
+| **Owns** | `world_events`, the weekly calendar definition |
+| **Runs** | On the tick |
+| **Outputs** | Demand and supply modifiers to Market Simulation; special orders; news to the Activity Log |
+
+**Rules:** The **Guild Week** cycle (GDD 6.5): Monday restock, Wednesday tournament announced, Friday tournament, Sunday market day. **World events** (mine collapse, plague, factory strike, royal commission) layer on top and are announced in advance on the news board, so information has value.
+
+**Milestone:** M2 (Guild Week), M4 (world events, news board polish).
+
+### 7.3 Leaderboards
+
+| | |
+|---|---|
+| **Job** | Public goals and friendly rivalry |
+| **Owns** | Derived views (no data of its own) |
+| **Rules** | Two boards: **total gold** and **rank progress** (GDD decision). Open question: total gold vs net worth (GDD Open Question 1). |
+| **Milestone** | M3 |
+
+### 7.4 Guilds
+
+Social layer: guild orders needing several professions, a shared guild hall, guild rankings (GDD 8.3). **Later.**
+
+---
+
+## 8. Cross-cutting systems
+
+### 8.1 Economy Balance
+
+Not a feature, but a system with its own tools and rules.
+
+**Faucets** (value enters): NPC purchases, order rewards, gathering, rare drops and procs.
+**Sinks** (value leaves): NPC consumption of bought goods, deposits and the 5% cut, recipe purchases, building upgrades, coal, the second profession unlock.
+
+**Rules**
+- Every new faucet must ship with a matching sink, or a note on which existing sink absorbs it.
+- The core balance equation per item: *gathering output across all players* ≈ *NPC consumption + player use* over a typical week. If output wins, prices fall to the floor and stay there.
+- **Economy simulator [Proposed, M1]:** a small script that runs a simulated week with N virtual players following simple strategies, using the real content numbers and market rules. It reports price curves, gold in circulation, and time-to-rank. We tune numbers there before they reach the live game.
+- **Live watch metrics:** gold in circulation, median price per item, daily gold in vs out, share of sales to NPCs vs players (GDD 7, 13).
+
+### 8.2 Onboarding
+
+The first three minutes (GDD 9): choose a profession → collect → craft → **guaranteed first sale** → first order → queue a long craft. Uses the other systems; owns only a per-player tutorial step. M2 basic flow, M4 polish.
+
+---
+
+## 9. Milestone matrix
+
+What each system delivers in each milestone.
+
+| System | M1 Market Prototype | M2 Crafting Depth | M3 Real Players | M4 Look & Feel |
+|---|---|---|---|---|
+| Accounts | — | — | — | Guest login? |
+| Time & Timers | Timer helpers | — | — | — |
+| Content | Full launch list + validator | Recipes for full skill curve | — | — |
+| Inventory & Wallet | Remove, reserve for listings | Storage cap | — | — |
+| **Activity Log** | **Table + writes** | Return screen | Metrics | — |
+| Professions | Choice, starter recipes | Skill, colours, ranks, learning | — | Second profession? |
+| Gathering | Rate + cap + collect | Signature decisions, rares | — | — |
+| Crafting | Timers, batches, 1 slot | Quality, procs, more slots | — | — |
+| Focus | — | **Prototype** | Build if it works | Polish |
+| Exchange | Buyout flow, price history | Mailbox | Anti-abuse, limits | — |
+| Market Simulation | R, band, 3 personas | More personas, calendar | Player-volume scaling | — |
+| Crafting Orders | — | NPC orders | — | — |
+| Workshop | — | Upgrades, rank caps | — | Isometric art |
+| Calendar & Events | — | Guild Week | — | World events, news |
+| Leaderboards | — | — | Gold + rank | — |
+| Economy Balance | **Simulator** | Retune | Live metrics | — |
+| Onboarding | — | Basic flow | — | Polish |
+
+**M1 in one sentence:** *Choose a profession, gather, craft, and sell to a living NPC market, with enough numbers in place to answer "is making one good trade fun?"*
+
+---
+
+## Proposed defaults to confirm
+
+These were chosen to unblock the design. Each is marked **[Proposed]** above. Confirm or change them; once confirmed, they move to the GDD Decision Log.
+
+| # | Question | Proposed default | Where |
+|---|---|---|---|
+| P1 | Where do signature mechanics live? | **One idle decision per gathering station** (veins, plots, expeditions). Active play is a separate shared system, Focus, skinned per profession. | 5.2, 5.4 |
+| P2 | How do the two progression tracks relate? | **Skill/rank unlocks what you can make; buildings unlock how much and how fast; rank caps building level.** | 5.1, 7.1 |
+| P3 | What is active play? | **Focus:** tend several active crafts at once (plate-spinning) for quality and proc bonuses. Idle gets base results. Prototype in M2 before committing. | 5.4 |
+| P4 | Add an Activity Log system? | **Yes, in M1.** It's the foundation for the return screen and notifications. | 4.5 |
+| P5 | Build an economy simulator? | **Yes, in M1,** before the NPC market goes live. | 8.1 |
+| P6 | Can players craft in batches? | **Yes,** several of one recipe in a single slot, so short sessions can set up long idle runs. | 5.3 |
