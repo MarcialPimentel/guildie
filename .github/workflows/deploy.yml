@@ -182,8 +182,10 @@ jobs:
           port: 21
           local-dir: upload/private/
           server-dir: ${{ env.PRIVATE_DIR }}
+          # Never upload or delete the server's real config.php (top of guildie-private/).
+          # Only that exact path: app/lib/config.php is code and must be uploaded.
           exclude: |
-            **/config.php
+            config.php
 
       - name: Upload the game to public_html/games/guildie/
         if: steps.check.outputs.ready == 'true'

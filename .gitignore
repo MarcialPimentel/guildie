@@ -5,8 +5,12 @@
 *.tmp
 
 # --- Server secrets ---
-# The real config holds database credentials. Only config.example.php is committed.
-config.php
+# The real config (database credentials) lives only on the server as guildie-private/config.php.
+# Only server/config/config.example.php is committed. (Don't ignore every "config.php":
+# server/app/lib/config.php is code.)
+/server/config/config.php
+/config.php
+guildie-private/
 .env
 *.log
 
