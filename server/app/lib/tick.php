@@ -2,8 +2,7 @@
 declare(strict_types=1);
 
 /*
- * The market tick (GDD 11.5). In M0 it only proves the schedule works and does housekeeping;
- * NPC market activity is added in M1 inside tick_work().
+ * The market tick (GDD 11.5, systems.md 4.2). Runs housekeeping and the NPC market (market.php).
  *
  * Two ways a tick runs:
  *  - cron:    tick.php every few minutes (runs if one is due)
@@ -43,19 +42,21 @@ function maybe_run_tick(string $source): ?array
     $pdo = db();
 
     // Cheap check first, without a lock, so normal requests stay fast.
-    if (!tick_is_due(last_tick_at($pdo), $source, time())) {
+    if (!tick_is_due(last_tick_at($pdo), $source, game_now())) {
         return null;
     }
 
     return tx(function (PDO $pdo) use ($source) {
-        $now = time();
+        $now = game_now();
         // Lock the row and re-check: another request may have just run the tick.
-        if (!tick_is_due(last_tick_at($pdo, true), $source, $now)) {
+        $last = last_tick_at($pdo, true);
+        if (!tick_is_due($last, $source, $now)) {
             return null;
         }
 
         $started = microtime(true);
-        tick_work($pdo, $now);
+        $elapsed = $last > 0 ? $now - $last : tick_interval();
+        $stats = tick_work($pdo, $now, $elapsed);
         $durationMs = (int) round((microtime(true) - $started) * 1000);
 
         $pdo->prepare("UPDATE game_state SET v = ? WHERE k = 'last_tick_at'")->execute([(string) $now]);
@@ -63,18 +64,19 @@ function maybe_run_tick(string $source): ?array
         $pdo->prepare('INSERT INTO tick_log (source, duration_ms) VALUES (?, ?)')->execute([$source, $durationMs]);
 
         $count = (int) $pdo->query("SELECT v FROM game_state WHERE k = 'tick_count'")->fetchColumn();
-        return ['source' => $source, 'tick_count' => $count, 'ran_at' => $now, 'duration_ms' => $durationMs];
+        return ['source' => $source, 'tick_count' => $count, 'ran_at' => $now, 'duration_ms' => $durationMs, 'market' => $stats];
     });
 }
 
 /**
- * The work a tick does. M0: housekeeping only. M1 adds NPC buyers/sellers and price updates here.
+ * The work a tick does: housekeeping, then the NPC market.
  */
-function tick_work(PDO $pdo, int $now): void
+function tick_work(PDO $pdo, int $now, int $elapsed): array
 {
     $pdo->exec('DELETE FROM tick_log WHERE ran_at < UTC_TIMESTAMP() - INTERVAL 7 DAY');
     $pdo->exec('DELETE FROM login_failures WHERE attempted_at < UTC_TIMESTAMP() - INTERVAL 1 DAY');
     $pdo->prepare('DELETE FROM sessions WHERE last_seen_at < UTC_TIMESTAMP() - INTERVAL ? DAY')->execute([SESSION_IDLE_DAYS]);
+    return market_tick($pdo, $now, $elapsed);
 }
 
 /** Status for the ping endpoint, so the tick can be checked from a browser. */
@@ -85,7 +87,7 @@ function tick_status(): array
     $count = (int) $pdo->query("SELECT v FROM game_state WHERE k = 'tick_count'")->fetchColumn();
     return [
         'last_tick_at'      => $last,
-        'seconds_since'     => $last > 0 ? time() - $last : null,
+        'seconds_since'     => $last > 0 ? game_now() - $last : null,
         'tick_count'        => $count,
         'interval_seconds'  => tick_interval(),
     ];

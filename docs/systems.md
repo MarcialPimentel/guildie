@@ -1,13 +1,13 @@
 # Guildie — Systems Design
 
-**Version:** 0.1 · **Date:** 2026-10-26 · **Companion to:** [GDD.md](GDD.md)
+**Version:** 0.2 · **Date:** 2026-10-26 · **Companion to:** [GDD.md](GDD.md)
 
 The GDD describes *what Guildie is*. This document breaks the game into **systems**: self-contained pieces of mechanics, each with one clear job, its own data, and defined connections to the others. Every feature we build should belong to exactly one system (or be explicitly cross-cutting).
 
 > **How to use this doc**
 > - Before building a feature, find its system here and follow its rules. If it doesn't fit any system, update this doc first.
 > - **[tune]** marks numbers to be set by playtesting.
-> - **[Proposed]** marks a default Claude chose that Marz hasn't confirmed yet. See [Proposed defaults to confirm](#proposed-defaults-to-confirm).
+> - **[Confirmed]** marks defaults Marz confirmed on 2026-10-26 (P1–P6, listed at the end).
 
 ---
 
@@ -22,7 +22,8 @@ The GDD describes *what Guildie is*. This document breaks the game into **system
 7. [Meta systems](#7-meta-systems): Workshop & Buildings, Calendar & Events, Leaderboards, Guilds
 8. [Cross-cutting systems](#8-cross-cutting-systems): Economy Balance, Onboarding
 9. [Milestone matrix](#9-milestone-matrix)
-10. [Proposed defaults to confirm](#proposed-defaults-to-confirm)
+10. [Confirmed defaults](#confirmed-defaults)
+11. [M1 tuning notes](#m1-tuning-notes)
 
 ---
 
@@ -196,7 +197,7 @@ These rules apply to every system.
 - One profession at the start, chosen during onboarding. A second unlocks at skill 80 in the first (GDD 5.7).
 - Skill 1–100 in four ranks: Apprentice, Journeyman, Expert, Master.
 - Each craft can raise skill based on the recipe's colour (orange 100%, yellow 75%, green 25%, grey 0% [tune]).
-- **Progression split [Proposed]:**
+- **Progression split [Confirmed]:**
   - **Skill and rank unlock *what* you can make**: recipes, materials, and the right to upgrade buildings to higher levels.
   - **Buildings unlock *how much and how fast***: queue slots, gathering rate, storage, craft speed.
   - Rank is the "Town Hall": it caps building levels, so the two tracks never compete.
@@ -219,7 +220,7 @@ These rules apply to every system.
 - Each profession has one station: **Mine** (Blacksmith), **Herb Garden** (Alchemist), **Trapper's Lodge** (Leatherworker).
 - Production = `rate × elapsed time`, capped at storage. Resolved when the player collects. Anything past the cap is lost, which is what makes check-ins matter.
 - Higher-tier materials (Iron Ore, Ember Moss, Thick Hide) unlock at skill 15 [tune].
-- **Each station has one signature *decision* [Proposed]** (the idle side of the profession's identity):
+- **Each station has one signature *decision* [Confirmed]** (the idle side of the profession's identity):
   - **Mine — Veins:** choose which vein to work. Veins deplete; a "rich vein" appears now and then with a better yield.
   - **Herb Garden — Plots:** choose what each plot grows; different herbs take different times.
   - **Trapper's Lodge — Expeditions:** choose trip length. Short trips are safe and common; long trips have a chance at Thick or rare hides.
@@ -252,7 +253,7 @@ These rules apply to every system.
 
 **Milestones:** M1 = recipes, timers, one slot, batches, collect (Common quality only). M2 = quality tiers, procs, extra slots.
 
-### 5.4 Focus — active play *(new, Proposed)*
+### 5.4 Focus — active play *(new, Confirmed)*
 
 The GDD promises that a 30-minute session rewards active play, but never says what the player's hands are doing. Focus is the proposed answer: **a light "plate-spinning" layer over crafting**, in the spirit of Pythio's high-APM play.
 
@@ -264,7 +265,7 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 | **Inputs** | Active craft jobs |
 | **Outputs** | Quality and proc bonuses to Crafting |
 
-**Concept [Proposed]**
+**Concept [Confirmed]**
 - While the player is in the game, active crafts occasionally need attention: the forge cools, a brew starts to bubble over, stitching slips. Each profession skins the same mechanic its own way.
 - Tapping the right job at the right time keeps it in the "sweet spot." Managing several jobs at once is the skill.
 - Well-tended crafts get a bonus to quality and proc chance (roughly +25–50% value [tune], GDD 5.2).
@@ -319,12 +320,19 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
   2. NPC buyers take the **cheapest listings** whose price is at or below what they're willing to pay (a random price between the floor and a bit above R, depending on the persona), until demand is used up. Bought goods are **consumed**: this is the main sink.
   3. If no one is selling an item, an NPC seller lists a small amount at the ceiling.
   4. Update R and recent volume.
-- **Personas** are behaviour profiles, not fake players (GDD 6.3). M1 needs three: **Townsfolk** (steady, low-tier demand), **Adventurers** (weapons and draughts, spiky), **Traders** (buy anything listed well below R, keeping prices honest).
-- NPC participation for an item **shrinks as real-player volume grows** (GDD 6.4, M3).
+- **Personas** are behaviour profiles, not fake players (GDD 6.3). M1 has five:
+  - **Townsfolk:** steady demand for staples (draughts, lanterns, satchels).
+  - **Adventurers:** draughts, tonics, swords, jerkins.
+  - **Guild Workshops** *(added in M1)*: a little demand for every component, so making components is never a dead end even before other players need them.
+  - **Traders:** buy anything players list at 0.8 × R or less within a tick ("quick sale"), resell some near R, consume the rest.
+  - **Guild Suppliers:** always offer 5 of every item at the ceiling (1.5 × R).
+- **Pricing by scarcity** *(M1)*: for goods NPCs consume, R rises when demand goes unmet and eases down only when all demand was met and a glut is left over. For raw materials, R follows player trade prices. This stops undercutting alone from dragging prices down while the city still wants more.
+- **Demand scales with active players** *(simple version pulled forward from M3)*: NPC demand rates are written for 8 active players and scale with the number active in the last day (minimum 25%), so 3 friends and 30 strangers both get a balanced market.
+- Full player-volume scaling per item stays in M3.
 
 **Tuning knobs:** band multipliers, base demand per item, persona price ranges, drift speed, NPC stock size. These are the most important numbers in the game and need an **economy simulator** (see 8.1) before going live.
 
-**Milestones:** M1 = R, band, three personas, NPC buy + sell. M2 = Collectors, Prospectors, Steam Factory, calendar hooks. M3 = scaling with real players.
+**Milestones:** M1 = R, band, five personas, scarcity pricing, demand scaled by active players. M2 = Collectors, Prospectors, Steam Factory, calendar hooks. M3 = per-item scaling with real-player volume.
 
 ### 6.3 Crafting Orders
 
@@ -356,7 +364,7 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 **Rules**
 - Buildings from GDD 8.1: profession workstation, gathering station, Storehouse, Steam Engine (Journeyman+), Mailbox, Guild Board.
 - Upgrades cost gold and materials (a sink) and take time.
-- **Maximum building level is capped by profession rank** [Proposed], which keeps the two progression tracks aligned (see 5.1).
+- **Maximum building level is capped by profession rank** [Confirmed], which keeps the two progression tracks aligned (see 5.1).
 - **Steam machines** (Expert+) automate work and burn **coal** as an ongoing running cost: a sink that scales with how much you automate.
 
 **Milestone:** M2 (core upgrades), M4 (isometric visuals, steam visuals).
@@ -401,7 +409,7 @@ Not a feature, but a system with its own tools and rules.
 **Rules**
 - Every new faucet must ship with a matching sink, or a note on which existing sink absorbs it.
 - The core balance equation per item: *gathering output across all players* ≈ *NPC consumption + player use* over a typical week. If output wins, prices fall to the floor and stay there.
-- **Economy simulator [Proposed, M1]:** a small script that runs a simulated week with N virtual players following simple strategies, using the real content numbers and market rules. It reports price curves, gold in circulation, and time-to-rank. We tune numbers there before they reach the live game.
+- **Economy simulator [Confirmed, built in M1]:** a small script that runs a simulated week with N virtual players following simple strategies, using the real content numbers and market rules. It reports price curves, gold in circulation, and time-to-rank. We tune numbers there before they reach the live game.
 - **Live watch metrics:** gold in circulation, median price per item, daily gold in vs out, share of sales to NPCs vs players (GDD 7, 13).
 
 ### 8.2 Onboarding
@@ -426,7 +434,7 @@ What each system delivers in each milestone.
 | Crafting | Timers, batches, 1 slot | Quality, procs, more slots | — | — |
 | Focus | — | **Prototype** | Build if it works | Polish |
 | Exchange | Buyout flow, price history | Mailbox | Anti-abuse, limits | — |
-| Market Simulation | R, band, 3 personas | More personas, calendar | Player-volume scaling | — |
+| Market Simulation | R, band, 5 personas, scarcity pricing, active-player scaling | More personas, calendar | Player-volume scaling | — |
 | Crafting Orders | — | NPC orders | — | — |
 | Workshop | — | Upgrades, rank caps | — | Isometric art |
 | Calendar & Events | — | Guild Week | — | World events, news |
@@ -440,7 +448,7 @@ What each system delivers in each milestone.
 
 ## Proposed defaults to confirm
 
-These were chosen to unblock the design. Each is marked **[Proposed]** above. Confirm or change them; once confirmed, they move to the GDD Decision Log.
+These were chosen to unblock the design. Each is marked **[Confirmed]** above. Confirm or change them; once confirmed, they move to the GDD Decision Log.
 
 | # | Question | Proposed default | Where |
 |---|---|---|---|
@@ -450,3 +458,20 @@ These were chosen to unblock the design. Each is marked **[Proposed]** above. Co
 | P4 | Add an Activity Log system? | **Yes, in M1.** It's the foundation for the return screen and notifications. | 4.5 |
 | P5 | Build an economy simulator? | **Yes, in M1,** before the NPC market goes live. | 8.1 |
 | P6 | Can players craft in batches? | **Yes,** several of one recipe in a single slot, so short sessions can set up long idle runs. | 5.3 |
+
+---
+
+## M1 tuning notes
+
+What the economy simulator (`tools/econ_sim.php`) showed while building M1, and what changed. Each run: bot players in two play styles (checking in every 2–4 hours, or every 30–60 minutes in the evening), nobody playing overnight, one simulated week.
+
+| Run | Finding | Change |
+|---|---|---|
+| 1 | No tier-2 goods were ever made: components had no visible demand, so nobody made Brass Fittings or Leather Grips | Added the **Guild Workshops** persona |
+| 1 | Sellers undercutting each other dragged prices 20–30% down while demand was unmet | **Scarcity pricing** for consumer goods |
+| 2 | A bug: ticks where no NPC shopped counted as "glut" and lowered prices | Glut check only runs when demand was fully met |
+| 3 | Fixed NPC demand overwhelmed 6 players: everything hit the 2× price cap | **Demand scales with active players** (reference 8) |
+| 1–3 | Alchemists earned 3–5× more than others (draughts sell constantly) | Draught demand lowered; satchel and jerkin demand raised |
+| Final | 3 players, one week: Blacksmith 4,950 · Alchemist 7,409 · Leatherworker 5,878 gold. Draughts in mild oversupply (price drifting down); Brass Fittings and Steam Tonic scarce (price up). 3 and 6 players behave alike. | Shipped in 0.2.0 |
+
+**Known gaps for M2:** gold only grows (players had ~6,000 each after a week, with little to spend it on). M2's sinks (recipes, workshop upgrades, coal) are needed before pacing slows down.

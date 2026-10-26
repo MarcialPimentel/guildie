@@ -15,8 +15,8 @@ return [
         'charset' => 'utf8mb4',
     ],
 
-    // How often the market tick should run (seconds). Used by the catch-up guard.
-    'tick_interval_seconds' => 600,
+    // How often the market tick runs (seconds). Must match the cron schedule (*/5 = 300).
+    'tick_interval_seconds' => 300,
 
     // Set to true only while debugging; shows detailed errors in API responses.
     'debug' => false,
