@@ -14,7 +14,8 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   // --- login screen -> register
   await page.goto('./')
   await expect(page.locator('h1')).toHaveText('Guildie')
-  await expect(page.getByText(/Server \d/)).toBeVisible()
+  // The footer shows the server's build once the ping answers ("dev" on CI's unpackaged server).
+  await expect(page.getByText(/· Server (?!…|unreachable)\S/)).toBeVisible()
   await page.fill(id('login-name'), name)
   await page.fill(id('login-password'), 'testpass')
   await page.click(id('register'))
@@ -38,7 +39,7 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(page.locator(id('collect-crafts'))).toBeEnabled()
   await page.click(id('collect-crafts'))
   await message(page, 'Crafts collected.')
-  await expect(page.locator(id('footer'))).toContainText(/Client .* · Server \d/)
+  await expect(page.locator(id('footer'))).toContainText(/Client .+ · Server (?!\?)\S/)
 
   // --- bag -> sell form: the Exchange comes first, the guild sale below (#37)
   await page.click(id('tab-bag'))
