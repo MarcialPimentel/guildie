@@ -381,6 +381,7 @@ function exchange_sell_quote(int $playerId, string $itemId, int $quantity): arra
     return [
         'item_id'        => $itemId,
         'name'           => item_name($itemId),
+        'type'           => content_item($itemId)['type'] ?? '',
         'you_have'       => inventory_count(db(), $playerId, $itemId),
         'reference'      => (int) round($ref),
         'lowest_player'  => $lowest !== null && $lowest !== false ? (int) $lowest : null,

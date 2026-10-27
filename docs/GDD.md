@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M1 playtest (build 0.3.0)
+**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M1 playtest (build 0.3.1)
 **Owner:** Marz · **Engine:** Godot 4 (web export) · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -384,9 +384,9 @@ Players can trade with each other directly, beyond the Exchange. Real players ar
 - **No fee** for now. Direct trades skip the Exchange cut and the NPC price band; revisit at M3 if gold funnelling between accounts shows up (6.7).
 - At most 5 open offers per player [tune].
 
-### 6.9 The City: player directory (0.3.0)
+### 6.9 The City: player directory (0.3.0, one list since 0.3.1)
 
-The **City** tab lists every crafter, ranked by **Wealth (total gold)** or **Mastery** (crafts made, until skill points arrive in M2), with their guild and when they were last seen. A profile shows their stats, recipes discovered, their Exchange listings (a "shop window" you can buy from) and the **Propose a trade** button. This is a simple version of the M3 leaderboards, pulled forward so players can find each other.
+The **City** tab lists every crafter in **one list** with **gold** and **crafts made** as separate columns (skill will be a third, M2). It's sorted by gold by default; tap a column heading to sort by it. Each row shows the crafter's guild and when they were last seen. The #1 crafter by gold carries the title **"Il Factotum della Città"** (after Rossini's *Largo al factotum*) on the list and on their profile. A profile shows their stats, recipes discovered, their Exchange listings (a "shop window" you can buy from) and the **Propose a trade** button. This is a simple version of the M3 leaderboards, pulled forward so players can find each other.
 
 ---
 
@@ -458,7 +458,8 @@ Goal: the player feels the whole loop within about **three minutes**.
 
 - **Portrait phone layout first.** Desktop gets the same layout, centered or widened.
 - Large touch targets, with one-thumb reach for the most common actions (collect, queue, relist).
-- Core screens: Workshop (home), Craft, Exchange (Browse / Sell / My Listings), Inventory (Bag), City (players, profiles, trades), Orders, News.
+- Core screens: Workshop (home: station, craft queue and recipes on one screen), Exchange (Browse / Sell / My Listings), Inventory (Bag), City (players, profiles, trades), Orders, News.
+- On the sell form, **listing on the Exchange comes first**; the instant guild sale sits underneath as the fallback.
 - Every timer shows remaining time and absolute finish time.
 - Offline progress is calculated on the server from timestamps.
 - Push notifications are optional (installable web app later) and the loop must not depend on them.
@@ -599,6 +600,8 @@ Each milestone ends with a playtest and a clear exit question.
 6. **City name:** "Brassmere" is the working name. Final name to be decided later.
 7. **Skill source (#30):** replace random skill-ups with crafting XP plus a first-craft bonus? How big should the bonus be, and should gathering give XP? The current 12 recipes can't fill the 100-point curve, so more recipes are needed in M2.
 8. ~~**Player interaction beyond the Exchange**~~ **Decided 2026-10-27:** a player directory and direct trade offers ship in 0.3.0 (6.8, 6.9). Gifts and a trade fee are not decided yet.
+9. **Italian / mercantile flavour?** Inspired by *Largo al factotum*: a mercantile-Italy tone (guilds, merchants, opera-buffa humour) blended with the steam age, a Venice with brass pipes. The first taste is the #1 title, "Il Factotum della Città". A fuller theme pass (names, the city's name, NPC flavour) belongs in M4 (Look & Feel).
+10. **Client engine (#40):** keep Godot, or move the client to a web stack (TypeScript)? Playtest 0.3.0 found the browser UI feels like a phone app on desktop and loads slowly. To decide before more client work.
 
 **Playtest 1 feedback (2026-10-27):** Marz (Blacksmith) hit 0 gold and could neither list nor buy (#27, safety valve #28); asked for visible WoW-style skill points, e.g. 100/100 (#30); found no way to meet or trade with players outside the Exchange (#31, #32).
 
@@ -643,6 +646,9 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-27 | In-game Feedback button with a private reading page | Playtest notes reach Marz directly, with the screen, gold and build attached (#29) |
 | 2026-10-27 | City tab (player directory) pulled forward from M3; Wealth board ranks by **total gold** | Playtest 1: no way to meet other players; resolves Open Question 1 (#31) |
 | 2026-10-27 | Direct trades as asynchronous offers with the sender's side held; both sides must contain something (no gifts yet); no fee for now | Players are rarely online together on phones; keeps alt funnelling harder until anti-abuse lands in M3 (#32) |
+| 2026-10-27 | Workshop and Craft merged into one check-in screen; tab bar is Workshop, Market, Bag, City | The 30-second check-in (collect, then queue crafts) shouldn't need a tab switch (#39) |
+| 2026-10-27 | City shows one list with gold and crafts columns; #1 by gold is "Il Factotum della Città" | Two sorted lists repeated the same people; separate columns leave room for skill; a title gives the top a name (#38) |
+| 2026-10-27 | Sell form lists on the Exchange first, guild sale below; raw materials say they have no city buyers | The Exchange is the main way to sell (Pillar 2); answers "will it sell if I'm alone?" (#37) |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---

@@ -1,5 +1,6 @@
-## Craft: every recipe of your profession, what it needs, and how many to make (batches, systems.md 5.3).
-extends Control
+## Recipes: every recipe of your profession, what it needs, and how many to make (batches, systems.md 5.3).
+## Shown inside the Workshop tab, under the station and the craft queue (#39: one check-in screen).
+extends VBoxContainer
 
 var game: Node
 
@@ -8,7 +9,8 @@ var _quantities := {}   # recipe_id -> chosen quantity
 
 
 func _ready() -> void:
-	_col = UI.scroll_column(self)
+	_col = self
+	add_theme_constant_override("separation", 12)
 
 
 func render() -> void:
@@ -20,7 +22,7 @@ func render() -> void:
 	var busy: int = state.get("crafts", []).size()
 	var free := slots - busy
 	var header := UI.row(_col)
-	header.add_child(UI.expand(UI.label("Recipes", 26, UI.BRASS)))
+	header.add_child(UI.expand(UI.label("Recipes", 24, UI.BRASS)))
 	header.add_child(UI.value("%d free slot%s" % [free, "" if free == 1 else "s"], 18, UI.OK_GREEN if free > 0 else UI.ERROR))
 
 	for recipe in state["profession"]["recipes"]:

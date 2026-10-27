@@ -9,6 +9,22 @@ declare(strict_types=1);
 
 const DIRECTORY_LIMIT = 200;
 
+/** Title for the #1 crafter by gold ("Il Factotum della Città", #38). */
+function city_top_title(): string
+{
+    return (string) econ('city.top_title', 'Il Factotum della Città');
+}
+
+/** Id of the player who holds the top title: most gold, ties broken by name (same order as the directory). */
+function players_factotum_id(PDO $pdo): ?int
+{
+    $id = $pdo->query(
+        'SELECT p.id FROM players p JOIN player_professions pp ON pp.player_id = p.id
+         WHERE p.gold > 0 ORDER BY p.gold DESC, p.name ASC LIMIT 1'
+    )->fetchColumn();
+    return $id === false ? null : (int) $id;
+}
+
 /** Crafts made and recipes discovered per player, from collected craft jobs. */
 function players_craft_stats(PDO $pdo, ?int $playerId = null): array
 {
@@ -46,8 +62,9 @@ function players_directory(int $viewerId, string $sort): array
     )->fetchAll();
     $crafts = players_craft_stats($pdo);
     $seen = players_last_seen($pdo);
+    $factotum = players_factotum_id($pdo);
 
-    $players = array_map(function ($p) use ($crafts, $seen, $viewerId) {
+    $players = array_map(function ($p) use ($crafts, $seen, $viewerId, $factotum) {
         $id = (int) $p['id'];
         return [
             'id'          => $id,
@@ -57,6 +74,7 @@ function players_directory(int $viewerId, string $sort): array
             'crafted'     => $crafts[$id]['crafted'] ?? 0,
             'seen_ago'    => $seen[$id] ?? null,
             'me'          => $id === $viewerId,
+            'title'       => $id === $factotum ? city_top_title() : null,
         ];
     }, $rows);
 
@@ -104,6 +122,7 @@ function player_profile(int $viewerId, int $playerId): array
         'recipes_total'  => count(content_recipes_for($p['profession_id'])),
         'seen_ago'       => $seen,
         'me'             => (int) $p['id'] === $viewerId,
+        'title'          => (int) $p['id'] === players_factotum_id($pdo) ? city_top_title() : null,
         'can_trade'      => (int) $p['id'] !== $viewerId && player_profession_id($pdo, $viewerId) !== null,
         'listings'       => array_map(fn($l) => [
             'id'         => (int) $l['id'],

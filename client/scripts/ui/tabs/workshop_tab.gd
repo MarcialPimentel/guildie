@@ -1,5 +1,8 @@
-## Workshop: the 30-second check-in screen (GDD 4.1). Collect from the station, collect crafts, see what happened.
+## Workshop: the 30-second check-in screen (GDD 4.1). Collect from the station, collect crafts, queue new crafts
+## (the recipes, #39), and see what happened, all on one screen.
 extends Control
+
+const RecipesPanel := preload("res://scripts/ui/recipes_panel.gd")
 
 var game: Node
 
@@ -7,6 +10,7 @@ var _col: VBoxContainer
 var _station_box: VBoxContainer
 var _crafts_box: VBoxContainer
 var _activity_box: VBoxContainer
+var _recipes: VBoxContainer
 var _countdowns: Array = []   # [Label, ends_at, prefix]
 var _station_counts: Array = []   # [Label, ready_at_fetch, cap, rate_per_hour, fetched_at]
 var _collect_station: Button
@@ -16,6 +20,10 @@ func _ready() -> void:
 	_col = UI.scroll_column(self)
 	_station_box = UI.card(_col)
 	_crafts_box = UI.card(_col)
+	_recipes = RecipesPanel.new()
+	_recipes.name = "Recipes"
+	_recipes.set("game", game)
+	_col.add_child(_recipes)
 	_col.add_child(UI.label("Recent activity", 20, UI.BRASS))
 	_activity_box = VBoxContainer.new()
 	_activity_box.add_theme_constant_override("separation", 6)
@@ -38,6 +46,7 @@ func render() -> void:
 	_station_counts.clear()
 	_render_station(state["profession"]["station"])
 	_render_crafts(state)
+	_recipes.call("render")
 	_render_activity(state.get("activity", []))
 	(_col.get_node("Footer") as Label).text = UI.build_text()
 
@@ -81,7 +90,7 @@ func _render_crafts(state: Dictionary) -> void:
 	header.add_child(UI.value("%d / %d slots" % [crafts.size(), slots], 18, UI.MUTED))
 
 	if crafts.is_empty():
-		_crafts_box.add_child(UI.label("Nothing crafting. Head to the Craft tab.", 17, UI.MUTED))
+		_crafts_box.add_child(UI.label("Nothing crafting. Pick a recipe below.", 17, UI.MUTED))
 	var any_done := false
 	for job in crafts:
 		var r := UI.row(_crafts_box)

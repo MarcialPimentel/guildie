@@ -218,15 +218,15 @@ Automatic: merging the PR deploys it, and the server adds the new database table
 
 Players' feedback is saved from day one; this step only lets you read it.
 
-1. Make up a long secret phrase with no spaces, for example `brass-otter-lantern-4192`. Anyone who knows it can read the feedback, so don't reuse a password.
+1. Make up a long secret phrase with no spaces: three or four random words joined by dashes, plus a number. Keep it to yourself (and in `hosting.private.md` on your PC, so Claude can read feedback); never put it in the repo or the docs. Anyone who knows it can read the feedback, so don't reuse a password.
 2. SiteGround **Site Tools → Site → File Manager**.
 3. Open the folder **`guildie-private`** (next to `public_html`, not inside it).
 4. Right-click **`config.php`** → **Edit**.
 5. Find the line `'debug' => false,` and add this line **just above it** (keep the quotes and the comma):
    ```php
-   'feedback_key' => 'brass-otter-lantern-4192',
+   'feedback_key' => 'YOUR-PHRASE',
    ```
-   (use your own phrase instead of the example).
+   (with your phrase in place of `YOUR-PHRASE`).
 6. Click **Save**. Then reload the ping URL: if it still shows `"ok":true`, the edit is fine. If it shows a blank page or an error, a quote or comma is missing: open the file again and check the line.
 7. Open your feedback page and bookmark it:
    **https://marz.gg/games/guildie/api/index.php?action=feedback_list&key=YOUR-PHRASE**
@@ -239,6 +239,12 @@ Players' feedback is saved from day one; this step only lets you read it.
 Fully automatic: merging deploys it, and the server adds the new `trade_offers` table by itself (migration `004`). No SiteGround steps.
 
 **Check it:** the ping URL shows `"build":"0.3.0 (build …)"` and `"schema":4`. In the game, the tab bar has a fifth tab, **City**.
+
+---
+
+## Deploying 0.3.1 (sell form order, one City list, Workshop + Craft)
+
+Fully automatic, with no database changes. Check that the ping URL shows `"build":"0.3.1 (build …)"`, and that the game has four tabs: Workshop, Market, Bag, City.
 
 ---
 

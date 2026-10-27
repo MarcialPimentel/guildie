@@ -1,15 +1,16 @@
 ## The main game screen: header (name, guild, gold), the current tab, a message line, and the tab bar.
-## Tabs: Workshop, Craft, Market, Bag. Each tab is a Control with render() and (optionally) on_shown().
+## Tabs: Workshop (with recipes), Market, Bag, City. Each tab is a Control with render() and (optionally) on_shown().
 extends Control
 
 const WorkshopTab := preload("res://scripts/ui/tabs/workshop_tab.gd")
-const CraftTab := preload("res://scripts/ui/tabs/craft_tab.gd")
 const MarketTab := preload("res://scripts/ui/tabs/market_tab.gd")
 const BagTab := preload("res://scripts/ui/tabs/bag_tab.gd")
 const CityTab := preload("res://scripts/ui/tabs/city_tab.gd")
 
-const TAB_SPECS := [["Workshop", WorkshopTab], ["Craft", CraftTab], ["Market", MarketTab], ["Bag", BagTab], ["City", CityTab]]
-const CITY_TAB := 4
+## Workshop includes the recipes (#39: collect and craft on one screen).
+const TAB_SPECS := [["Workshop", WorkshopTab], ["Market", MarketTab], ["Bag", BagTab], ["City", CityTab]]
+const MARKET_TAB := 1
+const CITY_TAB := 3
 const REFRESH_SECONDS := 20.0
 const FEEDBACK_MAX_CHARS := 1000
 
@@ -90,7 +91,6 @@ func _ready() -> void:
 		var b := UI.button(spec[0], true, true)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size.y = 48
-		b.add_theme_font_size_override("font_size", 16)   # five tabs on a 540 px wide phone screen
 		b.pressed.connect(show_tab.bind(_tabs.size() - 1))
 		bar.add_child(b)
 		_tab_buttons.append(b)
@@ -130,14 +130,14 @@ func show_tab(index: int) -> void:
 
 ## Switch to the Market tab in a given mode ("browse", "sell", "mine").
 func open_market(mode: String) -> void:
-	_tabs[2].set("_mode", mode)
-	show_tab(2)
+	_tabs[MARKET_TAB].set("_mode", mode)
+	show_tab(MARKET_TAB)
 
 
 ## Open the Market's sell form for one item (used by the Bag's Sell buttons).
 func open_sell_form(item_id: String, quantity: int) -> void:
 	open_market("sell")
-	_tabs[2].call("_show_sell_form", item_id, quantity)
+	_tabs[MARKET_TAB].call("_show_sell_form", item_id, quantity)
 
 
 ## Which screen the player is on, saved with feedback (e.g. "Market/sell_form").

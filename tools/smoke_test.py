@@ -241,6 +241,7 @@ check("0-gold cancel works and waives the deposit", s == 200 and r["data"]["stat
 
 s, r = call("sell_quote", {"item_id": "copper_ore", "quantity": 3}, token=tok_b)
 guild = r["data"].get("guild", {}) if r.get("ok") else {}
+check("sell quote says copper ore is a raw material (#37)", r.get("data", {}).get("type") == "raw", r)
 check("sell quote includes a guild offer", guild.get("total", 0) > 0 and guild["first_unit"] >= guild["last_unit"], r)
 check("guild pays below the traders' quick sale", guild.get("first_unit", 99) <= r["data"]["trader_price"], (guild, r.get("data", {}).get("trader_price")))
 s, r = call("sell_to_guild", {"item_id": "copper_ore", "quantity": 3, "expected_total": guild.get("total", 0)}, token=tok_b)
@@ -286,6 +287,11 @@ else:
 s, r = call("players", {"sort": "wealth"}, token=tok_b)
 golds = [p["gold"] for p in r["data"]["players"]] if r.get("ok") else []
 check("directory sorted by gold", s == 200 and golds == sorted(golds, reverse=True) and r["data"]["me"]["name"] == name_b, r)
+titled = [p for p in r["data"]["players"] if p.get("title")] if r.get("ok") else []
+check("#1 by gold is 'Il Factotum della Città', and only them", len(titled) == 1 and titled[0]["rank"] == 1
+      and titled[0]["title"] == "Il Factotum della Città", titled)
+s2, r2 = call("player_profile", {"player_id": titled[0]["id"] if titled else 0}, token=tok_b)
+check("the Factotum's profile shows the title", s2 == 200 and r2["data"].get("title") == "Il Factotum della Città", r2)
 ids = {p["name"]: p["id"] for p in r["data"]["players"]} if r.get("ok") else {}
 id_a, id_b = ids.get(name, 0), ids.get(name_b, 0)
 check("directory lists both players", id_a and id_b, list(ids)[:5])
