@@ -62,10 +62,11 @@ func _run() -> void:
 	await frames()
 	check("workshop shows activity", game._tabs[0]._activity_box.get_child_count() > 0)
 
-	# --- craft tab renders and crafts
-	game.show_tab(1)
-	await frames()
-	check("craft tab shows 4 recipes", game._tabs[1]._col.get_child_count() >= 5, game._tabs[1]._col.get_child_count())
+	# --- recipes live in the Workshop now (#39)
+	check("only 4 tabs: Workshop, Market, Bag, City", game._tabs.size() == 4, game._tabs.size())
+	var recipes = game._tabs[0]._col.get_node_or_null("Recipes")
+	check("workshop shows the recipes (header + 4 recipes + note)", recipes != null and recipes.get_child_count() >= 6, recipes.get_child_count() if recipes else -1)
+	check("recipes have a Craft button", recipes != null and recipes.find_children("*", "Button", true, false).any(func(b): return b.text == "Craft" or b.text == "Missing materials"))
 	r = await session.start_craft("healing_draught", 2)
 	check("start craft", r["ok"], r)
 	await frames()
@@ -77,14 +78,14 @@ func _run() -> void:
 	check("collect crafts", r["ok"], r)
 
 	# --- bag
-	game.show_tab(3)
+	game.show_tab(2)
 	await frames()
-	check("bag lists items", game._tabs[3]._col.get_child_count() >= 2)
+	check("bag lists items", game._tabs[2]._col.get_child_count() >= 2)
 
 	# --- market browse, item, sell, mine
-	game.show_tab(2)
+	game.show_tab(1)
 	await create_timer(1.5).timeout
-	var market = game._tabs[2]
+	var market = game._tabs[1]
 	check("market browse loaded", market._view == "browse" and market._body.get_child_count() > 3, market._body.get_child_count())
 	market._show_item("healing_draught")
 	await create_timer(1.5).timeout
@@ -116,10 +117,14 @@ func _run() -> void:
 		check("buy brass fittings from suppliers", r["ok"], r)
 
 	# --- City tab (#31, #32): directory, a profile, the trade form, the trades inbox
-	game.show_tab(4)
+	game.show_tab(3)
 	await create_timer(1.5).timeout
-	var city = game._tabs[4]
+	var city = game._tabs[3]
 	check("city: player list loaded", city._view == "players" and city._body.get_child_count() >= 3, city._body.get_child_count())
+	check("city: one list with Gold and Crafts sort headings (#38)", city._body.find_child("SortGold", true, false) != null and city._body.find_child("SortCrafts", true, false) != null)
+	city._body.find_child("SortCrafts", true, false).pressed.emit()
+	await create_timer(1.5).timeout
+	check("city: tapping Crafts sorts by crafts", city._sort == "mastery" and city._view == "players")
 	r = await session.players("wealth")
 	var others: Array = r["data"]["players"].filter(func(p): return not p["me"]) if r["ok"] else []
 	check("city: directory lists me", r["ok"] and r["data"]["me"] != null, r)

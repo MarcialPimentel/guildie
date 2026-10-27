@@ -31,6 +31,10 @@
     "recovery_half_life_hours": 4,
     "hint_below": 0.6
   },
+  "city": {
+    "_comment": "City tab (#38): title shown for the #1 crafter by gold.",
+    "top_title": "Il Factotum della Citt\u00e0"
+  },
   "trade_offers": {
     "_comment": "Direct trades (#32): the sender's side is held until accepted, declined, cancelled or expired. No fee for now; both sides must contain something (no gifts).",
     "duration_hours": 24,

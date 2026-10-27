@@ -82,22 +82,28 @@ func _show_players() -> void:
 	if data.is_empty() or _view != "players":
 		return
 	UI.clear(_body)
-	var sorts := UI.row(_body, 6)
-	for spec in [["wealth", "Wealth (gold)"], ["mastery", "Mastery (crafts)"]]:
-		var b := UI.button(spec[1], true, true)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.theme_type_variation = "TabOn" if spec[0] == _sort else "SecondaryButton"
-		b.pressed.connect(func():
-			_sort = spec[0]
-			_show_players())
-		sorts.add_child(b)
-
 	var me = data.get("me")
 	if me != null:
-		_body.add_child(UI.label("You are #%d of %d crafters." % [me["rank"], data["total"]], 16, UI.MUTED))
-	_body.add_child(UI.label("Tap a crafter to see their shop window or propose a trade.", 15, UI.MUTED))
+		_body.add_child(UI.label("You are #%d of %d crafters by %s." % [me["rank"], data["total"], "gold" if _sort == "wealth" else "crafts made"], 16, UI.MUTED))
+	_body.add_child(UI.label("Tap a crafter to see their shop window or propose a trade. Tap Gold or Crafts to sort.", 15, UI.MUTED))
 
 	var box := UI.card(_body, 2)
+	# One list (#38): Gold and Crafts are separate columns; tapping a heading sorts by it.
+	var head := UI.row(box, 10)
+	var spacer := UI.label("Crafter", 14, UI.MUTED)
+	spacer.custom_minimum_size.x = 44
+	head.add_child(UI.expand(spacer))
+	for spec in [["wealth", "Gold"], ["mastery", "Crafts"]]:
+		var h := UI.button(spec[1], true, true)
+		h.name = "Sort" + spec[1]
+		h.custom_minimum_size.x = 86 if spec[0] == "wealth" else 76
+		h.add_theme_font_size_override("font_size", 15)
+		h.theme_type_variation = "TabOn" if spec[0] == _sort else "SecondaryButton"
+		h.pressed.connect(func():
+			_sort = spec[0]
+			_show_players())
+		head.add_child(h)
+
 	for p in data["players"]:
 		var b := Button.new()
 		b.flat = true
@@ -116,11 +122,18 @@ func _show_players() -> void:
 		var name_l := UI.label(str(p["name"]) + ("  (you)" if p["me"] else ""), 18, UI.BRASS if p["me"] else UI.CREAM)
 		name_l.autowrap_mode = TextServer.AUTOWRAP_OFF
 		who.add_child(name_l)
+		if p.get("title") != null:
+			who.add_child(UI.label(str(p["title"]), 14, UI.BRASS))
 		who.add_child(UI.label("%s · %s" % [p["profession"], _seen(p["seen_ago"])], 14, UI.MUTED))
-		var score := UI.value(UI.gold(int(p["gold"])) if _sort == "wealth" else "%d crafts" % p["crafted"], 18, UI.CREAM)
-		for c in [rank, UI.expand(who), score]:
+		var gold_l := UI.value(UI.gold(int(p["gold"])), 17, UI.CREAM if _sort == "wealth" else UI.MUTED)
+		gold_l.custom_minimum_size.x = 86
+		var crafts_l := UI.value(str(p["crafted"]), 17, UI.CREAM if _sort == "mastery" else UI.MUTED)
+		crafts_l.custom_minimum_size.x = 76
+		for c in [rank, UI.expand(who), gold_l, crafts_l]:
 			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			r.add_child(c)
+		if p.get("title") != null:
+			b.custom_minimum_size.y = 76
 		box.add_child(b)
 
 
@@ -139,6 +152,8 @@ func _show_profile(player_id: int) -> void:
 
 	var info := UI.card(_body, 4)
 	info.add_child(UI.label(str(p["name"]) + ("  (you)" if p["me"] else ""), 26, UI.BRASS))
+	if p.get("title") != null:
+		info.add_child(UI.label(str(p["title"]) + ": the richest crafter in the city", 16, UI.BRASS))
 	info.add_child(UI.label("%s · %s" % [p["profession"], _seen(p["seen_ago"])], 16, UI.MUTED))
 	var nums := UI.row(info)
 	for pair in [["Gold", UI.gold(int(p["gold"]))], ["Crafts made", str(p["crafted"])], ["Recipes", "%d/%d" % [p["recipes_known"], p["recipes_total"]]]]:

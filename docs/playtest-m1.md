@@ -14,14 +14,14 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
    - **Leatherworker:** hides. Makes Leather Grips, Satchels, Cured Leather, Jerkins.
    Try to spread out so all three guilds have players.
 2. **Workshop:** your gathering station fills up over time (about an hour to fill). Tap **Collect**. When it's full, it stops producing, so check in now and then.
-3. **Craft:** pick a recipe, choose how many, tap **Craft**. You have **two crafting slots**. Come back to the Workshop to collect finished crafts.
+3. **Craft** (further down the Workshop): pick a recipe, choose how many, tap **Craft**. You have **two crafting slots**. Collect finished crafts at the top of the Workshop.
 4. **Market:**
    - **Browse** to see prices. Tap an item to buy it or see who's been selling.
    - **Sell** to list your goods. A small deposit and a 5% cut come out of the money when something sells, so you can list even with 0 gold.
    - **Quick sale** prices sell to traders within a few minutes, but for less.
    - **Sell to the guild** for instant gold with no listing. It pays the least, and less the more of one item you sell, so use it when you need gold now.
 5. **Blue ingredients** come from other guilds. The best goods (swords, tonics, jerkins) need them, so you'll have to buy from other players, or from the Guild Suppliers at a premium.
-6. **City:** see every crafter, ranked by gold or by crafts made. Tap someone to see what they're selling, or **Propose a trade**: pick what you give and what you want back. What you offer is held until they accept or decline (or a day passes). Offers waiting for you show as **City (1)**; answer them in **City → Trades**.
+6. **City:** see every crafter with their gold and crafts made (tap **Gold** or **Crafts** to sort). The richest crafter is **Il Factotum della Città**. Tap someone to see what they're selling, or **Propose a trade**: pick what you give and what you want back. What you offer is held until they accept or decline (or a day passes). Offers waiting for you show as **City (1)**; answer them in **City → Trades**.
 7. **Feedback:** tap **Feedback** at the top of the screen anytime to send Marz a note.
 
 ## Things to know

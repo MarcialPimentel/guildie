@@ -242,6 +242,12 @@ Fully automatic: merging deploys it, and the server adds the new `trade_offers` 
 
 ---
 
+## Deploying 0.3.1 (sell form order, one City list, Workshop + Craft)
+
+Fully automatic, with no database changes. Check that the ping URL shows `"build":"0.3.1 (build …)"`, and that the game has four tabs: Workshop, Market, Bag, City.
+
+---
+
 ## Troubleshooting
 
 | What you see | Most likely cause | Fix |

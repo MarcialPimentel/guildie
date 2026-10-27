@@ -265,11 +265,12 @@ func _render_sell_form() -> void:
 		_sell_qty = n
 		_requote())
 
-	_guild_sale_card()
+	if q.get("type", "") == "raw":
+		box.add_child(UI.label("No city buyers for raw materials: craft them, or list them for other players. Traders only buy at the quick-sale price or less.", 15, UI.NPC_BLUE))
 
 	box = UI.card(_body, 8)
-	box.add_child(UI.label("Or list it on the Exchange", 20, UI.BRASS))
-	box.add_child(UI.label("Usually pays much more, but you wait for a buyer.", 15, UI.MUTED))
+	box.add_child(UI.label("List on the Exchange", 20, UI.BRASS))
+	box.add_child(UI.label("The best price, but you wait for a buyer. The city shops every few minutes.", 15, UI.MUTED))
 
 	# Price
 	box.add_child(UI.label("Price each", 16, UI.CREAM))
@@ -320,6 +321,8 @@ func _render_sell_form() -> void:
 			set_mode("mine"))
 	_body.add_child(list)
 
+	_guild_sale_card()   # the fallback, below the Exchange (#37)
+
 
 ## Instant sale to the guild: low price, paid now, no listing (#28). Shows the exact total before selling.
 func _guild_sale_card() -> void:
@@ -327,8 +330,8 @@ func _guild_sale_card() -> void:
 	if g.is_empty():
 		return
 	var box := UI.card(_body, 6)
-	box.add_child(UI.label("Sell to the guild now", 20, UI.BRASS))
-	box.add_child(UI.label("Instant gold, no listing and no fees, but a low price.", 15, UI.MUTED))
+	box.add_child(UI.label("Or sell to the guild now", 20, UI.BRASS))
+	box.add_child(UI.label("Instant gold, no listing and no fees, but a low price. Handy when you need gold right away.", 15, UI.MUTED))
 	if g.get("hint") != null:
 		box.add_child(UI.label(str(g["hint"]), 15, UI.ERROR))
 	var total := int(g["total"])

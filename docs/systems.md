@@ -420,7 +420,7 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 | **Job** | Public goals and friendly rivalry |
 | **Owns** | Derived views (no data of its own) |
 | **Rules** | Two boards: **total gold** (decided: not net worth) and **rank progress**. Until skill points exist, "Mastery" ranks by crafts made. |
-| **0.3.0: City directory** | Every player in a guild, sorted by Wealth (gold) or Mastery (crafts made), with guild and last seen. A profile shows gold, crafts made, recipes discovered, their active Exchange listings (buyable) and **Propose a trade**. Computed on request (`players.php`). |
+| **0.3.0: City directory** | Every player in a guild in one list with **gold** and **crafts made** columns (tap a heading to sort; gold by default), with guild and last seen. The #1 by gold carries the title "Il Factotum della Città" (`economy.json` → `city.top_title`; decided by the server). A profile shows gold, crafts made, recipes discovered, their active Exchange listings (buyable) and **Propose a trade**. Computed on request (`players.php`). |
 | **Milestone** | City directory 0.3.0; full boards with rank progress M3 |
 
 ### 7.4 Guilds
