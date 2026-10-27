@@ -1,7 +1,8 @@
-# --- Godot ---
-.godot/
-/client/build/
-/client/export/
+# --- Web client (TypeScript, built by Vite) ---
+/client/node_modules/
+/client/dist/
+/client/test-results/
+/client/playwright-report/
 *.tmp
 
 # --- Server secrets ---

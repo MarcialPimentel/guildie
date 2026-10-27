@@ -2,7 +2,7 @@
 # Builds the two upload packages for SiteGround (see docs/deploy.md):
 #
 #   dist/guildie-public-<version>.zip   -> extract into public_html/games/guildie/
-#       index.html, *.wasm, *.pck, ...   (Godot web build)
+#       index.html, assets/, .htaccess   (web client, built from client/ by Vite)
 #       api/index.php, api/.htaccess     (public API entry point)
 #
 #   dist/guildie-private-<version>.zip  -> extract into guildie-private/
@@ -12,8 +12,7 @@
 #
 # Neither package contains config.php, so extracting never overwrites your database settings.
 #
-# Usage: tools/package.sh            (needs Godot 4.7 with web export templates)
-#        GODOT=/path/to/godot tools/package.sh
+# Usage: tools/package.sh            (needs Node.js 20+ and npm)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -24,7 +23,6 @@ if [ -n "${BUILD_NUMBER:-}" ]; then
 else
   VERSION_LABEL="$VERSION"
 fi
-GODOT="${GODOT:-godot}"
 DIST="$ROOT/dist"
 STAGE="$DIST/stage"
 
@@ -33,15 +31,14 @@ python3 "$ROOT/tools/validate_content.py" "$ROOT/content"
 rm -rf "$STAGE"
 mkdir -p "$STAGE/client" "$STAGE/public/api" "$STAGE/private"
 
-# --- Client: copy, stamp the build number, export for the web ---
-cp -r "$ROOT/client/." "$STAGE/client/"
-rm -rf "$STAGE/client/build"
-sed -i "s/^const CLIENT_BUILD := \".*\"/const CLIENT_BUILD := \"$VERSION_LABEL\"/" "$STAGE/client/scripts/build_info.gd"
-grep -qF "CLIENT_BUILD := \"$VERSION_LABEL\"" "$STAGE/client/scripts/build_info.gd" || { echo "Failed to stamp client build"; exit 1; }
-
-"$GODOT" --headless --path "$STAGE/client" --import > "$DIST/godot-import.log" 2>&1 || true
-"$GODOT" --headless --path "$STAGE/client" --export-release "Web" "$STAGE/public/index.html" > "$DIST/godot-export.log" 2>&1
-[ -f "$STAGE/public/index.wasm" ] || { echo "Godot export failed; see $DIST/godot-export.log"; exit 1; }
+# --- Client: build the TypeScript web client with the build label stamped in ---
+(
+  cd "$ROOT/client"
+  [ -d node_modules ] || npm ci --no-audit --no-fund
+  GUILDIE_BUILD="$VERSION_LABEL" npm run build
+)
+cp -r "$ROOT/client/dist/." "$STAGE/public/"
+[ -f "$STAGE/public/index.html" ] || { echo "Client build failed: no index.html"; exit 1; }
 
 # --- Public API entry point ---
 cp "$ROOT/server/api/index.php" "$ROOT/server/api/.htaccess" "$STAGE/public/api/"

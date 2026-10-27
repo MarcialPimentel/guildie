@@ -1,6 +1,6 @@
 # Guildie — notes for AI working sessions
 
-Guildie is a mobile-first browser crafting and trading game (Godot 4 client, PHP 8 + MySQL server on SiteGround).
+Guildie is a mobile-first browser crafting and trading game (TypeScript + Preact web client, PHP 8 + MySQL server on SiteGround).
 
 ## Before building anything
 
@@ -18,13 +18,13 @@ Guildie is a mobile-first browser crafting and trading game (Godot 4 client, PHP
 - **Merging to `main` deploys to marz.gg automatically** (`.github/workflows/deploy.yml`). Marz approves in chat by saying "merge #N"; merge only the PR named. Never push to `main` directly.
 - **Bump the `VERSION` file** for each release. `tools/package.sh` stamps it (plus the CI run number) into the server and the client footer.
 - **Database changes are new numbered files in `server/migrations/`** (never edit an applied one). The server applies them itself after a deploy, so they must be safe to re-run and backward-compatible.
-- **Test before opening a PR:** `tools/smoke_test.py` against a local server and `client/tests/client_smoke.gd` headless (CI runs both on every PR). Deploy details live in `docs/deploy.md`.
+- **Test before opening a PR:** `tools/smoke_test.py` against a local server, `npm run build` in `client/` (type check + build), and the Playwright browser test `client/tests/play.spec.ts` (CI runs all of them on every PR, on a phone and a desktop screen). Deploy details live in `docs/deploy.md`.
 - **Private hosting details** (paths, account names, which secrets exist) are in Marz's private doc "Guildie — Hosting & Session Handoff (private)", never in the repo.
 
 ## Layout
 
 ```
-/client            Godot 4 project
+/client            web client: TypeScript + Preact, built by Vite (src/, tests/)
 /server/api        public entry point  -> public_html/games/guildie/api/
 /server/app        private game logic  -> guildie-private/app/
 /server/config     config template     -> guildie-private/config.php

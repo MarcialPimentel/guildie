@@ -9,7 +9,7 @@ This guide sets up everything Guildie needs on SiteGround before any game code i
 | Thing | Where | Why |
 |---|---|---|
 | A MySQL database and user | Site Tools → MySQL | Stores all game state |
-| `public_html/games/guildie/` | File Manager | The Godot web build (the game page) |
+| `public_html/games/guildie/` | File Manager | The web client (the game page) |
 | `public_html/games/guildie/api/` | File Manager | The public PHP entry point |
 | `guildie-private/` | File Manager, **next to** `public_html` | Config with the database password, plus game logic. The web can't reach it. |
 | `guildie-private/config.php` | File Manager | Database credentials and settings |

@@ -1,0 +1,143 @@
+// Workshop: the 30-second check-in (GDD 4.1, #39). Collect from the station, collect crafts, queue new crafts
+// and see what happened, all on one screen. On desktop the recipes sit in a second column.
+import { useState } from 'preact/hooks'
+import { ago, CLIENT_BUILD, duration, gold, trimNumber } from '../format'
+import { session, useSession } from '../session'
+import type { GameState, Recipe } from '../types'
+import { ActionButton, Stepper, useNow } from './common'
+
+export function Workshop() {
+  const s = useSession()
+  const state = s.state!
+  const now = useNow()
+
+  return (
+    <div class="cols">
+      <div class="stack">
+        <Station state={state} now={now} />
+        <Crafts state={state} now={now} />
+        <section class="stack tight">
+          <h2>Recent activity</h2>
+          {state.activity.length === 0 && <p class="muted">Nothing yet.</p>}
+          {state.activity.slice(0, 12).map((a) => (
+            <div class="row">
+              <p class={`grow small ${a.type === 'sold' || a.type === 'sold_to_guild' || a.type === 'trade_done' ? 'ok' : ''}`}>{a.text}</p>
+              <span class="tiny muted num">{ago(now - a.created_at).replace(' ago', '')}</span>
+            </div>
+          ))}
+        </section>
+        <p class="center tiny muted" data-testid="footer">Client {CLIENT_BUILD} · Server {s.serverBuild}</p>
+        <button class="secondary small" onClick={() => session.logout()} data-testid="logout">Log out</button>
+      </div>
+      <Recipes state={state} />
+    </div>
+  )
+}
+
+function Station({ state, now }: { state: GameState; now: number }) {
+  const station = state.profession!.station
+  // The server sent counts at server_time; estimate what has been produced since (the server decides on collect).
+  const since = Math.max(0, now - state.server_time)
+  let anyReady = false
+  return (
+    <section class="card" data-testid="station">
+      <h2>{station.name}</h2>
+      {station.outputs.map((out) => {
+        const estimate = Math.min(out.cap, out.ready + Math.floor((since * out.rate_per_hour) / 3600))
+        const full = estimate >= out.cap
+        anyReady ||= estimate > 0
+        const left = out.seconds_to_full - since
+        return (
+          <div class="stack tight">
+            <div class="row">
+              <span class="grow">{out.name}</span>
+              <span class={`num ${full ? 'error' : 'brass'}`} style={{ fontSize: '20px' }}>{estimate} / {out.cap}</span>
+            </div>
+            <p class={`small ${full ? 'error' : 'muted'}`}>
+              {full
+                ? 'Full: production is paused until you collect.'
+                : `${trimNumber(out.rate_per_hour)}/hour · full in ${left <= 0 ? 'now' : duration(left)}`}
+            </p>
+          </div>
+        )
+      })}
+      <ActionButton action={() => session.collectStation()} success="Collected." disabled={!anyReady} testid="collect-station">
+        Collect
+      </ActionButton>
+    </section>
+  )
+}
+
+function Crafts({ state, now }: { state: GameState; now: number }) {
+  const crafts = state.crafts
+  const anyDone = crafts.some((c) => c.ends_at <= now)
+  return (
+    <section class="card" data-testid="crafts">
+      <div class="row">
+        <h2 class="grow">Crafting</h2>
+        <span class="muted small">{crafts.length} / {state.craft_slots} slots</span>
+      </div>
+      {crafts.length === 0 && <p class="muted">Nothing crafting. Pick a recipe{window.innerWidth >= 900 ? ' on the right' : ' below'}.</p>}
+      {crafts.map((job) => (
+        <div class="row">
+          <span class="grow">{job.name} ×{job.quantity}</span>
+          <span class="ok num">{job.ends_at <= now ? 'Ready!' : duration(job.ends_at - now)}</span>
+        </div>
+      ))}
+      {crafts.length > 0 && (
+        <ActionButton action={() => session.collectCrafts()} success="Crafts collected." disabled={!anyDone} testid="collect-crafts">
+          Collect finished crafts
+        </ActionButton>
+      )}
+    </section>
+  )
+}
+
+function Recipes({ state }: { state: GameState }) {
+  const free = state.craft_slots - state.crafts.length
+  return (
+    <section class="stack" data-testid="recipes">
+      <div class="row">
+        <h2 class="grow">Recipes</h2>
+        <span class={`small ${free > 0 ? 'ok' : 'error'}`}>{free} free slot{free === 1 ? '' : 's'}</span>
+      </div>
+      {state.profession!.recipes.map((r) => <RecipeCard recipe={r} slotFree={free > 0} maxBatch={state.max_batch} />)}
+      <p class="npc small">Blue inputs come from other guilds: buy them on the Market.</p>
+    </section>
+  )
+}
+
+function RecipeCard({ recipe, slotFree, maxBatch }: { recipe: Recipe; slotFree: boolean; maxBatch: number }) {
+  const limit = Math.max(1, Math.min(recipe.can_make, maxBatch))
+  const [chosen, setChosen] = useState(1)
+  const qty = Math.min(Math.max(1, chosen), limit)
+  const label = recipe.can_make === 0 ? 'Missing materials' : !slotFree ? 'No free slot' : `Craft ${qty}`
+
+  return (
+    <div class="card" data-testid={`recipe-${recipe.id}`}>
+      <div class="row">
+        <h3 class="grow">{recipe.name}</h3>
+        <span class="muted small">value ~{gold(recipe.value)}</span>
+      </div>
+      {recipe.inputs.map((input) => (
+        <div class="row">
+          <span class={`grow ${input.from_other_profession ? 'npc' : ''}`}>{input.quantity} × {input.name}</span>
+          <span class={`small ${input.have >= input.quantity ? 'ok' : 'error'}`}>have {input.have}</span>
+        </div>
+      ))}
+      <div class="row wrap">
+        <Stepper value={qty} min={1} max={limit} onChange={setChosen} />
+        <button class="secondary small" disabled={recipe.can_make <= 1} onClick={() => setChosen(limit)}>Max</button>
+        <span class="grow right muted small">{duration(recipe.seconds_each * qty)}</span>
+      </div>
+      <ActionButton
+        action={() => session.startCraft(recipe.id, qty)}
+        success={`Started ${qty} × ${recipe.name}.`}
+        disabled={recipe.can_make === 0 || !slotFree}
+        testid={`craft-${recipe.id}`}
+      >
+        {label}
+      </ActionButton>
+    </div>
+  )
+}
