@@ -479,6 +479,6 @@ What the economy simulator (`tools/econ_sim.php`) showed while building M1, and 
 | 1–3 | Alchemists earned 3–5× more than others (draughts sell constantly) | Draught demand lowered; satchel and jerkin demand raised |
 | Final | 3 players, one week: Blacksmith 4,950 · Alchemist 7,409 · Leatherworker 5,878 gold. Draughts in mild oversupply (price drifting down); Brass Fittings and Steam Tonic scarce (price up). 3 and 6 players behave alike. | Shipped in 0.2.0 |
 
-**Playtest 1 feedback (2026-10-27, Marz as Blacksmith):** reached 0 gold and couldn't list or buy (#27; safety valve #28); wants visible skill points like WoW, e.g. 200/200 (#30); no way to meet or trade with other players outside the Exchange (#31, #32).
+**Playtest 1 feedback (2026-10-27, Marz as Blacksmith):** reached 0 gold and couldn't list or buy (#27; safety valve #28); wants visible skill points like WoW, e.g. 100/100 (#30); no way to meet or trade with other players outside the Exchange (#31, #32).
 
 **Known gaps for M2:** gold only grows (players had ~6,000 each after a week, with little to spend it on). M2's sinks (recipes, workshop upgrades, coal) are needed before pacing slows down.

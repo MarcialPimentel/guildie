@@ -187,7 +187,7 @@ All professions share **one framework**. Each profession adds **one signature me
 ### 5.2 Shared systems
 
 **Skill and ranks**
-- Skill from 1 to 100, grouped into four ranks (see [Section 3](#progression-as-industrialization)). *Under review (#30): a 1–200 scale shown as "x/200", driven by crafting XP plus a first-craft bonus per recipe, replacing the random skill-up chance below.*
+- Skill from 1 to 100, grouped into four ranks (see [Section 3](#progression-as-industrialization)). Shown as "x/100" (max stays 100, decided 2026-10-27). *Under review (#30): skill driven by crafting XP plus a first-craft bonus per recipe, replacing the random skill-up chance below.*
 - Skill rises by crafting recipes that are still challenging.
 
 **Recipe difficulty colors** (inherited from WoW)
@@ -582,10 +582,10 @@ Each milestone ends with a playtest and a clear exit question.
 4. **Second profession carryover:** what transfers from the first profession, if anything?
 5. **Gold sinks before slowing the pace:** players accumulate gold quickly in M1 with little to spend it on. Which M2 sinks come first?
 6. **City name:** "Brassmere" is the working name. Final name to be decided later.
-7. **Skill scale and source (#30):** keep 1–100 with random skill-ups, or move to 1–200 driven by crafting XP plus a first-craft bonus? The current 12 recipes can't fill a long curve either way.
+7. **Skill source (#30):** replace random skill-ups with crafting XP plus a first-craft bonus? How big should the bonus be, and should gathering give XP? The current 12 recipes can't fill the 100-point curve, so more recipes are needed in M2.
 8. **Player interaction beyond the Exchange (#31, #32):** a player directory and asynchronous direct trade offers were requested in playtest 1. Should they come before M3?
 
-**Playtest 1 feedback (2026-10-27):** Marz (Blacksmith) hit 0 gold and could neither list nor buy (#27, safety valve #28); asked for visible WoW-style skill points (#30); found no way to meet or trade with players outside the Exchange (#31, #32).
+**Playtest 1 feedback (2026-10-27):** Marz (Blacksmith) hit 0 gold and could neither list nor buy (#27, safety valve #28); asked for visible WoW-style skill points, e.g. 100/100 (#30); found no way to meet or trade with players outside the Exchange (#31, #32).
 
 ---
 
@@ -623,6 +623,7 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-26 | Guild Workshops persona added; scarcity pricing; NPC demand scales with active players | Economy simulator showed tier-2 goods were never made, undercutting deflated prices, and fixed demand overwhelmed small groups (systems.md M1 tuning notes) |
 | 2026-10-26 | Automatic deploys from GitHub (FTPS, same approach as Pythio) with self-applying migrations | Removes manual uploads and phpMyAdmin imports from every release |
 | 2026-10-26 | Two crafting slots, batches up to 10, 150 starting gold | Lets a player make a component and a finished good at the same time; enough gold to buy a first cross-guild input |
+| 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---
 
