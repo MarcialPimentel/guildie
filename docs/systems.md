@@ -20,7 +20,7 @@ The GDD describes *what Guildie is*. This document breaks the game into **system
 5. [Production systems](#5-production-systems): Professions & Progression, Gathering, Crafting, Focus (active play)
 6. [Exchange systems](#6-exchange-systems): The Exchange, Market Simulation, Crafting Orders
 7. [Meta systems](#7-meta-systems): Workshop & Buildings, Calendar & Events, Leaderboards, Guilds
-8. [Cross-cutting systems](#8-cross-cutting-systems): Economy Balance, Onboarding
+8. [Cross-cutting systems](#8-cross-cutting-systems): Economy Balance, Playtest Feedback, Onboarding
 9. [Milestone matrix](#9-milestone-matrix)
 10. [Confirmed defaults](#confirmed-defaults)
 11. [M1 tuning notes](#m1-tuning-notes)
@@ -61,7 +61,7 @@ flowchart LR
 | | **Gathering** | Raw materials over time | ✅ M1 |
 | | **Crafting** | Turning inputs into goods | ✅ M1 |
 | | **Focus** | Optional active play that improves crafts | M2 |
-| Exchange | **The Exchange** | Player-facing auction house | ✅ M1; 0-gold fix and Sell to guild in 0.2.2 (#27, #28); direct trades (#32) |
+| Exchange | **The Exchange** | Player-facing auction house | ✅ M1; 0.2.2: deposit from the sale, Sell to guild; direct trades proposed (#32) |
 | | **Market Simulation** | NPC demand and supply that keeps the market alive | ✅ M1 |
 | | **Crafting Orders** | Specific requests with rewards | M2 |
 | Meta | **Workshop & Buildings** | Capacity and speed upgrades | M2 |
@@ -86,7 +86,8 @@ Everything a player can *do*, and which system owns it. If a new feature adds a 
 | **Collect** finished crafts | Crafting | 30 s | M1 |
 | **Tend** active crafts (Focus) | Focus | 30 min | M2 |
 | **List** an item for sale | Exchange | 30 s | M1 |
-| **Sell to guild** instantly (no listing) | Exchange | 30 s | 0.2.2 (#28, proposed) |
+| **Sell to guild** instantly (no listing) | Exchange | 30 s | 0.2.2 |
+| **Send feedback** | Playtest Feedback | 30 s | 0.2.2 |
 | **Offer / accept** a direct trade | Exchange | 5 min | Proposed (#32) |
 | **Browse** players (leaderboard / directory) | Leaderboards | 5 min | Proposed (#31) |
 | **Buy** a listing | Exchange | 5–30 min | M1 |
@@ -296,8 +297,12 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 **Rules** (GDD 6.1)
 - **Buyout only.** A listing has item, quality, quantity, unit price, duration (12/24/48 h [tune]).
 - **Listing** moves the items out of inventory and charges a **deposit** (non-refundable, scaled to duration and reference value [tune]: 1% of value per 12 h).
-  - **Known issue (#27):** the deposit is charged up front, so a player with 0 gold can't list and is soft-locked. Agreed fix: take the deposit out of the sale money instead.
-- **Sell to guild** *(proposed, #28)*: an instant sale with no listing at a low price that drops the more a player uses it (hidden, recovers over time). It's a safety valve so nobody is ever stuck, never the best way to sell.
+  - **The deposit is never charged up front** (0.2.2): it's recorded on the listing and taken out of the sale money in proportion to how much has sold (`listings.deposit_paid`). On cancel or expiry, the unpaid part is charged only if the seller can afford it; otherwise it's waived. A player with 0 gold can always list.
+- **Sell to guild** (0.2.2, `guild_sale.php`): an instant sale with no listing, deposit or cut. The guild consumes the goods (a sink).
+  - Price per unit = R × max(floor, base × (1 − drop)^pressure). `pressure` = units this player sold of this item recently (`guild_sales` table); it halves every `recovery_half_life_hours` × pace. Each unit in a batch is priced one step lower.
+  - Players see the exact total before confirming; the rule is hidden. A flavour hint appears when the offer is well below normal. If the offer drops between quote and sale, the sale is refused with the new total.
+  - Must always pay less than the Traders' quick sale, so listing stays the better choice (enforced by the content validator).
+  - **Tuning knobs** (`economy.json` → `guild_sale`): `base_multiplier` 0.5, `drop_per_unit` 0.03, `floor_multiplier` 0.15, `recovery_half_life_hours` 4, `hint_below` 0.6.
 - **Buying** locks the listing row, checks the buyer's gold, transfers items to the buyer and gold (minus the **5% cut**) to the seller, and records a trade, all in one transaction. Partial buys of a stack are allowed.
 - **Expired or cancelled** listings return items straight to the seller's inventory (M1). A **mailbox** comes when inventory has a cap.
 - Every trade shows who the counterparty was: a named player or an NPC persona ("Bought by a Tournament Squire").
@@ -417,7 +422,11 @@ Not a feature, but a system with its own tools and rules.
 - **Economy simulator [Confirmed, built in M1]:** a small script that runs a simulated week with N virtual players following simple strategies, using the real content numbers and market rules. It reports price curves, gold in circulation, and time-to-rank. We tune numbers there before they reach the live game.
 - **Live watch metrics:** gold in circulation, median price per item, daily gold in vs out, share of sales to NPCs vs players (GDD 7, 13).
 
-### 8.2 Onboarding
+### 8.2 Playtest Feedback *(0.2.2)*
+
+A **Feedback** button in the game header opens a text box (up to 1,000 characters). Each note is saved in the `feedback` table with the player, guild, gold, current screen and build; 10 per player per hour. Marz reads them on a private page (`action=feedback_list&key=…`), whose key lives only in `guildie-private/config.php`; with no key set, the page is off. Setup: [deploy.md](deploy.md#deploying-022-0-gold-fix-sell-to-guild-feedback).
+
+### 8.3 Onboarding
 
 The first three minutes (GDD 9): choose a profession → collect → craft → **guaranteed first sale** → first order → queue a long craft. Uses the other systems; owns only a per-player tutorial step. M2 basic flow, M4 polish.
 

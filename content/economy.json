@@ -23,6 +23,14 @@
     "max_active_listings": 20,
     "max_price_multiple": 20
   },
+  "guild_sale": {
+    "_comment": "Sell to guild (#28): instant sale, no listing. Price per unit = reference x max(floor_multiplier, base_multiplier x (1 - drop_per_unit)^pressure). Pressure = units this player sold of this item recently; it halves every recovery_half_life_hours (scaled by pace). Hint shown when the price is below hint_below x base. Keep base_multiplier below market.trader_buy_below so listing pays better.",
+    "base_multiplier": 0.5,
+    "drop_per_unit": 0.03,
+    "floor_multiplier": 0.15,
+    "recovery_half_life_hours": 4,
+    "hint_below": 0.6
+  },
   "market": {
     "floor_multiplier": 0.6,
     "ceiling_multiplier": 1.5,

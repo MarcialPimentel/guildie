@@ -7,7 +7,9 @@ const CraftTab := preload("res://scripts/ui/tabs/craft_tab.gd")
 const MarketTab := preload("res://scripts/ui/tabs/market_tab.gd")
 const BagTab := preload("res://scripts/ui/tabs/bag_tab.gd")
 
+const TAB_SPECS := [["Workshop", WorkshopTab], ["Craft", CraftTab], ["Market", MarketTab], ["Bag", BagTab]]
 const REFRESH_SECONDS := 20.0
+const FEEDBACK_MAX_CHARS := 1000
 
 ## Emitted once a second so tabs can update countdowns.
 signal second
@@ -23,6 +25,7 @@ var _refresh_timer := 0.0
 var _second_timer := 0.0
 var _message_timer := 0.0
 var _refreshing := false
+var _feedback: Control = null
 
 
 func _ready() -> void:
@@ -43,10 +46,16 @@ func _ready() -> void:
 	root.add_child(header_panel)
 	var header := HBoxContainer.new()
 	header_panel.add_child(header)
+	header.add_theme_constant_override("separation", 10)
 	_name = UI.label("", 20, UI.CREAM)
 	header.add_child(UI.expand(_name))
 	_gold = UI.value("", 24, UI.BRASS)
 	header.add_child(_gold)
+	var feedback := UI.button("Feedback", true, true)
+	feedback.name = "FeedbackButton"
+	feedback.add_theme_font_size_override("font_size", 15)
+	feedback.pressed.connect(open_feedback)
+	header.add_child(feedback)
 
 	# Content
 	_content = Control.new()
@@ -69,7 +78,7 @@ func _ready() -> void:
 	bar.add_theme_constant_override("separation", 6)
 	bar_margin.add_child(bar)
 
-	for spec in [["Workshop", WorkshopTab], ["Craft", CraftTab], ["Market", MarketTab], ["Bag", BagTab]]:
+	for spec in TAB_SPECS:
 		var tab: Control = spec[1].new()
 		tab.set("game", self)
 		tab.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -120,6 +129,94 @@ func show_tab(index: int) -> void:
 func open_market(mode: String) -> void:
 	_tabs[2].set("_mode", mode)
 	show_tab(2)
+
+
+## Open the Market's sell form for one item (used by the Bag's Sell buttons).
+func open_sell_form(item_id: String, quantity: int) -> void:
+	open_market("sell")
+	_tabs[2].call("_show_sell_form", item_id, quantity)
+
+
+## Which screen the player is on, saved with feedback (e.g. "Market/sell_form").
+func current_screen() -> String:
+	if _current < 0:
+		return ""
+	var screen: String = TAB_SPECS[_current][0]
+	var view: Variant = _tabs[_current].get("_view")
+	return screen + ("/" + str(view) if view != null else "")
+
+
+## Feedback pop-up (#29): a text box that sends a note to Marz with the build, screen and gold attached.
+func open_feedback() -> void:
+	if _feedback != null:
+		return
+	var screen := current_screen()
+	_feedback = Control.new()
+	_feedback.name = "FeedbackPopup"
+	_feedback.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_feedback)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.6)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_feedback.add_child(dim)
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, UI.MARGIN)
+	margin.add_theme_constant_override("margin_top", 70)
+	margin.add_theme_constant_override("margin_bottom", 70)
+	_feedback.add_child(margin)
+	var box := UI.card(margin, 10)
+	box.get_parent().size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	box.add_child(UI.label("Send feedback", 24, UI.BRASS))
+	box.add_child(UI.label("What's fun, confusing, broken or boring? Marz reads every note. Your screen, gold and the build number are attached.", 15, UI.MUTED))
+
+	var text := TextEdit.new()
+	text.name = "FeedbackText"
+	text.custom_minimum_size.y = 200
+	text.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	text.placeholder_text = "Type here…"
+	text.add_theme_stylebox_override("normal", UI._box(UI.BG, 8, UI.MUTED))
+	text.add_theme_stylebox_override("focus", UI._box(UI.BG, 8, UI.BRASS))
+	text.add_theme_color_override("font_color", UI.CREAM)
+	text.add_theme_font_size_override("font_size", 18)
+	box.add_child(text)
+	var count := UI.label("0 / %d" % FEEDBACK_MAX_CHARS, 14, UI.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)
+	box.add_child(count)
+	text.text_changed.connect(func():
+		count.text = "%d / %d" % [text.text.length(), FEEDBACK_MAX_CHARS]
+		count.add_theme_color_override("font_color", UI.ERROR if text.text.length() > FEEDBACK_MAX_CHARS else UI.MUTED))
+
+	var error := UI.label("", 15, UI.ERROR)
+	box.add_child(error)
+	var buttons := UI.row(box, 8)
+	var cancel := UI.button("Cancel", true)
+	cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel.pressed.connect(close_feedback)
+	buttons.add_child(cancel)
+	var send := UI.button("Send")
+	send.name = "SendFeedback"
+	send.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	send.pressed.connect(func():
+		var message := text.text.strip_edges()
+		if message == "":
+			error.text = "Write something first."
+			return
+		error.text = ""
+		var response: Dictionary = await run(send, Session.send_feedback.bind(message, screen), "Thanks! Feedback sent.")
+		if response["ok"]:
+			close_feedback()
+		elif is_instance_valid(error):
+			error.text = Api.error_message(response))
+	buttons.add_child(send)
+	text.grab_focus()
+
+
+func close_feedback() -> void:
+	if _feedback != null:
+		_feedback.queue_free()
+		_feedback = null
 
 
 ## Show a short message above the tab bar.

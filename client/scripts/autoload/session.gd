@@ -111,6 +111,15 @@ func my_listings() -> Dictionary:
 	return await _call("my_listings", null)
 
 
+## Instant sale to the guild. expected_total = the total the player was shown; the server refuses if it dropped.
+func sell_to_guild(item_id: String, quantity: int, expected_total: int) -> Dictionary:
+	return await _state_call("sell_to_guild", {"item_id": item_id, "quantity": quantity, "expected_total": expected_total}, "state")
+
+
+func send_feedback(message: String, screen: String) -> Dictionary:
+	return await _call("feedback", {"message": message, "screen": screen})
+
+
 # ---------------------------------------------------------------- internals
 
 ## Call an action; log out locally if the session is no longer valid.

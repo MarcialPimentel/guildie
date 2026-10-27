@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M1 playtest (live build 0.2.1)
+**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M1 playtest (build 0.2.2)
 **Owner:** Marz · **Engine:** Godot 4 (web export) · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -312,10 +312,10 @@ More professions are planned, but the list is deliberately not decided yet. Cand
 
 - **Buyout only** (no bidding). This is simpler and reads better on mobile. Bidding may be revisited much later.
 - A listing has an item, quality, quantity, price, and duration (12h / 24h / 48h [tune]).
-- **Deposit:** a small non-refundable fee to list, scaled to duration and the item's reference value [tune]. *Known issue (#27): charged up front, so a player with 0 gold is soft-locked. Agreed fix: take it from the sale money.*
+- **Deposit:** a small non-refundable fee to list, scaled to duration and the item's reference value [tune]. It is **taken from the sale money**, never charged up front, so a player with 0 gold can always list. On cancel or expiry, the unpaid part is charged only if the player can afford it; otherwise it's waived.
 - **Exchange cut:** 5% of the sale price [tune].
 - Expired or cancelled listings return to the seller's inventory (a mailbox comes once inventory has a cap).
-- **Sell to guild** *(proposed, #28)*: an instant sale with no listing, at a low price that drops the more a player uses it and recovers over time. The rule is hidden, but the exact price is always shown before confirming. It's a safety valve, never the best way to sell.
+- **Sell to guild** *(0.2.2)*: an instant sale with no listing, deposit or cut. It pays 0.5 × R, dropping about 3% with each unit a player sells of that item (never below 0.15 × R) and recovering over time [tune]. The rule is hidden, but the exact total is always shown before confirming, and the sale is refused if the offer dropped in between. The guild consumes the goods (a sink). It's a safety valve, never the best way to sell: it always pays less than the Traders' quick sale.
 
 ### 6.2 Reference value and the liquidity band
 
@@ -623,6 +623,9 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-26 | Guild Workshops persona added; scarcity pricing; NPC demand scales with active players | Economy simulator showed tier-2 goods were never made, undercutting deflated prices, and fixed demand overwhelmed small groups (systems.md M1 tuning notes) |
 | 2026-10-26 | Automatic deploys from GitHub (FTPS, same approach as Pythio) with self-applying migrations | Removes manual uploads and phpMyAdmin imports from every release |
 | 2026-10-26 | Two crafting slots, batches up to 10, 150 starting gold | Lets a player make a component and a finished good at the same time; enough gold to buy a first cross-guild input |
+| 2026-10-27 | Listing deposit is taken from the sale money; on cancel/expiry charged only if affordable | Playtest 1: charging it up front soft-locked a player at 0 gold (#27) |
+| 2026-10-27 | Sell to guild: instant sale at a low price that drops with each unit sold and recovers over time; rule hidden, price always shown | A guaranteed way out of 0 gold that never beats listing on the Exchange (#28) |
+| 2026-10-27 | In-game Feedback button with a private reading page | Playtest notes reach Marz directly, with the screen, gold and build attached (#29) |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---

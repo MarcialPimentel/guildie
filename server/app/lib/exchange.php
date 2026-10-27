@@ -4,6 +4,9 @@ declare(strict_types=1);
 /*
  * The Exchange (systems.md 6.1). Buyout-only auction house shared by players and NPC personas.
  * Listing moves items out of inventory; buying moves gold and items in one transaction.
+ *
+ * The listing deposit is never charged up front (0.2.2, #27): a player with 0 gold can always list.
+ * It comes out of the sale money as the listing sells, and on cancel/expiry only if affordable.
  */
 
 function persona_label(string $persona): string
@@ -69,7 +72,6 @@ function exchange_list(int $playerId, string $itemId, int $quantity, int $unitPr
         }
 
         inventory_remove($pdo, $playerId, $itemId, $quantity);
-        gold_spend($pdo, $playerId, $deposit, 'the listing deposit');
 
         $now = game_now();
         $pdo->prepare(
@@ -100,15 +102,17 @@ function exchange_execute(PDO $pdo, array $listing, int $quantity, ?int $buyerPl
         inventory_add($pdo, $buyerPlayerId, $itemId, $quantity, $quality);
     }
 
+    $remaining = (int) $listing['quantity'] - $quantity;
     $cut = 0;
+    $depositTaken = 0;
     if ($sellerId !== null) {
         $cut = exchange_cut($total);
-        gold_add($pdo, $sellerId, $total - $cut);
+        $depositTaken = min(exchange_deposit_due($listing, $remaining), $total - $cut);
+        gold_add($pdo, $sellerId, $total - $cut - $depositTaken);
     }
 
-    $remaining = (int) $listing['quantity'] - $quantity;
-    $pdo->prepare('UPDATE listings SET quantity = ?, status = ? WHERE id = ?')
-        ->execute([$remaining, $remaining > 0 ? 'active' : 'sold', $listing['id']]);
+    $pdo->prepare('UPDATE listings SET quantity = ?, status = ?, deposit_paid = deposit_paid + ? WHERE id = ?')
+        ->execute([$remaining, $remaining > 0 ? 'active' : 'sold', $depositTaken, $listing['id']]);
 
     $now = game_now();
     $pdo->prepare(
@@ -120,7 +124,8 @@ function exchange_execute(PDO $pdo, array $listing, int $quantity, ?int $buyerPl
     if ($sellerId !== null) {
         activity_log($pdo, $sellerId, 'sold', [
             'item_id' => $itemId, 'quantity' => $quantity, 'buyer' => party_label($names, $buyerPlayerId, $buyerPersona),
-            'buyer_is_player' => $buyerPlayerId !== null, 'earned' => $total - $cut, 'cut' => $cut,
+            'buyer_is_player' => $buyerPlayerId !== null, 'earned' => $total - $cut - $depositTaken, 'cut' => $cut,
+            'deposit' => $depositTaken,
         ]);
     }
     if ($buyerPlayerId !== null) {
@@ -128,7 +133,43 @@ function exchange_execute(PDO $pdo, array $listing, int $quantity, ?int $buyerPl
             'item_id' => $itemId, 'quantity' => $quantity, 'seller' => party_label($names, $sellerId, $sellerPersona), 'total' => $total,
         ]);
     }
-    return ['total' => $total, 'cut' => $cut, 'quantity' => $quantity];
+    return ['total' => $total, 'cut' => $cut, 'deposit' => $depositTaken, 'quantity' => $quantity];
+}
+
+/**
+ * Deposit still owed after a sale leaves $remaining units in the listing. The deposit is collected in
+ * proportion to how much of the listing has sold, so the last unit sold settles it in full.
+ */
+function exchange_deposit_due(array $listing, int $remaining): int
+{
+    $deposit = (int) ($listing['deposit'] ?? 0);
+    $paid = (int) ($listing['deposit_paid'] ?? 0);
+    $original = max(1, (int) $listing['original_quantity']);
+    if ($deposit <= $paid) {
+        return 0;
+    }
+    $sold = $original - $remaining;
+    $dueSoFar = intdiv($deposit * $sold + $original - 1, $original);   // rounded up
+    return max(0, min($deposit, $dueSoFar) - $paid);
+}
+
+/**
+ * On cancel or expiry: collect the rest of the deposit if the seller can afford it, otherwise waive it.
+ * Returns [charged, waived].
+ */
+function exchange_settle_deposit(PDO $pdo, array $listing): array
+{
+    $owed = max(0, (int) $listing['deposit'] - (int) ($listing['deposit_paid'] ?? 0));
+    if ($owed === 0 || $listing['seller_player_id'] === null) {
+        return [0, 0];
+    }
+    $sellerId = (int) $listing['seller_player_id'];
+    if (gold_get($pdo, $sellerId, true) < $owed) {
+        return [0, $owed];
+    }
+    gold_spend($pdo, $sellerId, $owed, 'the listing deposit');
+    $pdo->prepare('UPDATE listings SET deposit_paid = deposit WHERE id = ?')->execute([$listing['id']]);
+    return [$owed, 0];
 }
 
 function exchange_buy(int $playerId, int $listingId, int $quantity): array
@@ -169,8 +210,11 @@ function exchange_cancel(int $playerId, int $listingId): void
         if ((int) $listing['quantity'] > 0) {
             inventory_add($pdo, $playerId, $listing['item_id'], (int) $listing['quantity'], (int) $listing['quality']);
         }
+        [$charged, $waived] = exchange_settle_deposit($pdo, $listing);
         $pdo->prepare("UPDATE listings SET status = 'cancelled' WHERE id = ?")->execute([$listingId]);
-        activity_log($pdo, $playerId, 'listing_cancelled', ['item_id' => $listing['item_id'], 'quantity' => (int) $listing['quantity']]);
+        activity_log($pdo, $playerId, 'listing_cancelled', [
+            'item_id' => $listing['item_id'], 'quantity' => (int) $listing['quantity'], 'deposit' => $charged, 'waived' => $waived,
+        ]);
     });
 }
 
@@ -183,7 +227,10 @@ function exchange_expire(PDO $pdo, int $now): int
     foreach ($stmt->fetchAll() as $listing) {
         if ($listing['seller_player_id'] !== null && (int) $listing['quantity'] > 0) {
             inventory_add($pdo, (int) $listing['seller_player_id'], $listing['item_id'], (int) $listing['quantity'], (int) $listing['quality']);
-            activity_log($pdo, (int) $listing['seller_player_id'], 'listing_expired', ['item_id' => $listing['item_id'], 'quantity' => (int) $listing['quantity']]);
+            [$charged, $waived] = exchange_settle_deposit($pdo, $listing);
+            activity_log($pdo, (int) $listing['seller_player_id'], 'listing_expired', [
+                'item_id' => $listing['item_id'], 'quantity' => (int) $listing['quantity'], 'deposit' => $charged, 'waived' => $waived,
+            ]);
         }
         $pdo->prepare("UPDATE listings SET status = 'expired' WHERE id = ?")->execute([$listing['id']]);
         $count++;
@@ -340,6 +387,8 @@ function exchange_sell_quote(int $playerId, string $itemId, int $quantity): arra
         'trader_price'   => (int) floor($ref * (float) econ('market.trader_buy_below', 0.8)),
         'ceiling'        => (int) ceil($ref * (float) econ('market.ceiling_multiplier', 1.5)),
         'deposits'       => $deposits,
+        'deposit_from_sale' => true,
         'cut_percent'    => (int) round((float) econ('exchange.cut', 0.05) * 100),
+        'guild'          => guild_sale_quote($playerId, $itemId, $quantity),
     ];
 }

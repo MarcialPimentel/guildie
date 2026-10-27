@@ -114,6 +114,13 @@ if economy.get("pace", {}).get("time_multiplier", 0) <= 0:
 m = economy.get("market", {})
 if not (0 < m.get("floor_multiplier", 0) < m.get("trader_buy_below", 0) < 1 < m.get("ceiling_multiplier", 0)):
     err("economy: need 0 < floor_multiplier < trader_buy_below < 1 < ceiling_multiplier")
+g = economy.get("guild_sale", {})
+if not (0 < g.get("floor_multiplier", 0) < g.get("base_multiplier", 0) < m.get("trader_buy_below", 0)):
+    err("economy: need 0 < guild_sale.floor_multiplier < guild_sale.base_multiplier < market.trader_buy_below (listing must pay better)")
+if not (0 <= g.get("drop_per_unit", -1) < 1):
+    err("economy: guild_sale.drop_per_unit must be between 0 and 1")
+if g.get("recovery_half_life_hours", 0) <= 0:
+    err("economy: guild_sale.recovery_half_life_hours must be > 0")
 
 if errors:
     print(f"Content INVALID ({len(errors)} problems):")

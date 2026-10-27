@@ -32,7 +32,11 @@ func render() -> void:
 		var w := UI.value("~" + UI.gold(worth), 16, UI.MUTED)
 		w.custom_minimum_size.x = 90
 		r.add_child(w)
-	_col.add_child(UI.label("Estimated value: %s (at reference prices)" % UI.gold(total), 16, UI.MUTED))
+		var sell_one := UI.button("Sell", true, true)
+		sell_one.custom_minimum_size.x = 64
+		sell_one.pressed.connect(Callable(game, "open_sell_form").bind(item["item_id"], int(item["quantity"])))
+		r.add_child(sell_one)
+	_col.add_child(UI.label("Estimated value: %s (at reference prices). Sell lets you list it or sell it to the guild instantly." % UI.gold(total), 16, UI.MUTED))
 	var sell := UI.button("Sell on the Market", true)
 	sell.pressed.connect(func(): game.open_market("sell"))
 	_col.add_child(sell)

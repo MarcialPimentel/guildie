@@ -17,8 +17,10 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
 3. **Craft:** pick a recipe, choose how many, tap **Craft**. You have **two crafting slots**. Come back to the Workshop to collect finished crafts.
 4. **Market:**
    - **Browse** to see prices. Tap an item to buy it or see who's been selling.
-   - **Sell** to list your goods. You pay a small deposit; the Exchange takes 5% when something sells.
+   - **Sell** to list your goods. A small deposit and a 5% cut come out of the money when something sells, so you can list even with 0 gold.
    - **Quick sale** prices sell to traders within a few minutes, but for less.
+   - **Sell to the guild** for instant gold with no listing. It pays the least, and less the more of one item you sell, so use it when you need gold now.
+6. **Feedback:** tap **Feedback** at the top of the screen anytime to send Marz a note.
 5. **Blue ingredients** come from other guilds. The best goods (swords, tonics, jerkins) need them, so you'll have to buy from other players, or from the Guild Suppliers at a premium.
 
 ## Things to know
