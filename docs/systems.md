@@ -1,6 +1,6 @@
 # Guildie — Systems Design
 
-**Version:** 0.2 · **Date:** 2026-10-26 · **Companion to:** [GDD.md](GDD.md)
+**Version:** 0.3 · **Date:** 2026-10-27 · **Companion to:** [GDD.md](GDD.md)
 
 The GDD describes *what Guildie is*. This document breaks the game into **systems**: self-contained pieces of mechanics, each with one clear job, its own data, and defined connections to the others. Every feature we build should belong to exactly one system (or be explicitly cross-cutting).
 
@@ -45,7 +45,7 @@ flowchart LR
     WORK["Workshop<br/>& Buildings"] -.->|slots, rates, caps| GATH
     WORK -.->|slots, speed| CRAFT
     CAL["Calendar<br/>& Events"] -.->|demand modifiers| MKT
-    TICK(["Market tick<br/>every 10 min"]) -.-> MKT
+    TICK(["Market tick<br/>every 5 min"]) -.-> MKT
 ```
 
 **The core loop in one line:** gather → craft → list → NPCs and players buy (NPCs consume what they buy) → gold → reinvest. Dotted lines are modifiers. Every system also reports into the **Activity Log**.
@@ -53,22 +53,22 @@ flowchart LR
 | Layer | System | One-line job | Status |
 |---|---|---|---|
 | Foundation | **Accounts** | Who the player is | ✅ M0 |
-| | **Time & Timers** | When things happen, including while offline | Tick ✅ M0, timers M1 |
-| | **Content** | What exists (items, recipes, professions) as data | Started M0 |
-| | **Inventory & Wallet** | What the player owns | ✅ basic M0 |
-| | **Activity Log** | What happened, for the return screen and history | New, M1 |
-| Production | **Professions & Progression** | What the player is and how they grow | M1 (choice), M2 (skill) |
-| | **Gathering** | Raw materials over time | M1 |
-| | **Crafting** | Turning inputs into goods | M1 |
+| | **Time & Timers** | When things happen, including while offline | ✅ M0 (tick), ✅ M1 (timers) |
+| | **Content** | What exists (items, recipes, professions) as data | ✅ M1 (launch list + validator) |
+| | **Inventory & Wallet** | What the player owns | ✅ M1 (remove, reserve for listings) |
+| | **Activity Log** | What happened, for the return screen and history | ✅ M1 (table + writes); return screen M2 |
+| Production | **Professions & Progression** | What the player is and how they grow | ✅ M1 (choice); skill M2 (#30) |
+| | **Gathering** | Raw materials over time | ✅ M1 |
+| | **Crafting** | Turning inputs into goods | ✅ M1 |
 | | **Focus** | Optional active play that improves crafts | M2 |
-| Exchange | **The Exchange** | Player-facing auction house | M1 |
-| | **Market Simulation** | NPC demand and supply that keeps the market alive | M1 |
+| Exchange | **The Exchange** | Player-facing auction house | ✅ M1; 0-gold fix and Sell to guild in 0.2.2 (#27, #28); direct trades (#32) |
+| | **Market Simulation** | NPC demand and supply that keeps the market alive | ✅ M1 |
 | | **Crafting Orders** | Specific requests with rewards | M2 |
 | Meta | **Workshop & Buildings** | Capacity and speed upgrades | M2 |
 | | **Calendar & Events** | Weekly rhythm and world events | M2 (week), M4 (events) |
-| | **Leaderboards** | Public rankings | M3 |
+| | **Leaderboards** | Public rankings | M3; player directory may come earlier (#31) |
 | | **Guilds** | Social layer | Later |
-| Cross-cutting | **Economy Balance** | Faucets, sinks, and monitoring | M1 onward |
+| Cross-cutting | **Economy Balance** | Faucets, sinks, and monitoring | ✅ M1 (simulator), ongoing |
 | | **Onboarding** | The first three minutes | M2 (basic), M4 (polish) |
 
 ---
@@ -86,6 +86,9 @@ Everything a player can *do*, and which system owns it. If a new feature adds a 
 | **Collect** finished crafts | Crafting | 30 s | M1 |
 | **Tend** active crafts (Focus) | Focus | 30 min | M2 |
 | **List** an item for sale | Exchange | 30 s | M1 |
+| **Sell to guild** instantly (no listing) | Exchange | 30 s | 0.2.2 (#28, proposed) |
+| **Offer / accept** a direct trade | Exchange | 5 min | Proposed (#32) |
+| **Browse** players (leaderboard / directory) | Leaderboards | 5 min | Proposed (#31) |
 | **Buy** a listing | Exchange | 5–30 min | M1 |
 | **Cancel / relist** | Exchange | 30 s | M1 |
 | **Read** prices, history, news | Exchange, Calendar | 5–30 min | M1 (prices), M2 (news) |
@@ -104,7 +107,7 @@ These rules apply to every system.
 **Time model**
 - Nothing runs per second on the server. Every timed thing stores a **start and end timestamp** and is **resolved lazily** when the player acts or loads state (GDD 11.5).
 - Offline progress is the same calculation as online progress: `elapsed = now − last_resolved`. There's no separate "offline" code path.
-- The **market tick** (every 10 minutes [tune]) is the only scheduled work, and it only touches market and world state, never an individual player's timers.
+- The **market tick** (every 5 minutes [tune]) is the only scheduled work, and it only touches market and world state, never an individual player's timers.
 
 **Actions**
 - Every player action is one server action, in one transaction, that either fully succeeds or changes nothing (GDD 11.2.2).
@@ -142,8 +145,8 @@ These rules apply to every system.
 | **Owns** | `game_state` (tick bookkeeping), `tick_log`; the timestamp convention every timed system uses |
 | **Inputs** | Server clock; cron |
 | **Outputs** | Tick runs for Market Simulation and Calendar; helper functions for "how much time has passed" |
-| **Rules** | Tick every 10 minutes [tune], with catch-up on API requests when overdue. A row lock means only one tick runs at a time. SiteGround allows short cron intervals, so the tick can be shortened if the market needs to move faster. |
-| **Tuning knobs** | `tick_interval_seconds` (config.php, must match the cron schedule) |
+| **Rules** | Tick every 5 minutes [tune] (SiteGround cron), with catch-up on API requests when overdue. A row lock means only one tick runs at a time. |
+| **Tuning knobs** | `tick_interval_seconds` = 300 (config.php, must match the cron schedule); `pace.time_multiplier` in `economy.json` scales every duration (1.0 = fast playtest pace) |
 | **M1 adds** | Shared timer helpers used by Gathering and Crafting |
 
 ### 4.3 Content
@@ -244,14 +247,14 @@ These rules apply to every system.
 
 **Rules**
 - Starting a craft **removes the inputs immediately** (no double-spending) and creates a job with an end time.
-- A job occupies one **queue slot** until collected. Starting slots: 1 [tune]. More come from rank and buildings.
+- A job occupies one **queue slot** until collected. Starting slots: 2 [tune] (so a player can make a component and a finished good at once). More come from rank and buildings.
 - Results are rolled **at collection** on the server: quantity (multicraft), refunds (resourcefulness), quality (inspiration), skill-up.
 - Craft time scales by recipe tier: seconds to minutes for Apprentice recipes, hours for Master recipes (GDD 3, Target pacing).
-- A player can queue a **batch** (craft 5 at once) in one slot, with total time = per-item time × quantity, so short sessions can set up long idle runs.
+- A player can queue a **batch** (up to 10 at once [tune]) in one slot, with total time = per-item time × quantity, so short sessions can set up long idle runs.
 
 **Tuning knobs:** recipe inputs, outputs, time, difficulty; proc chances; starting slots; batch limit.
 
-**Milestones:** M1 = recipes, timers, one slot, batches, collect (Common quality only). M2 = quality tiers, procs, extra slots.
+**Milestones:** M1 = recipes, timers, two slots, batches, collect (Common quality only). M2 = quality tiers, procs, extra slots.
 
 ### 5.4 Focus — active play *(new, Confirmed)*
 
@@ -292,9 +295,11 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 
 **Rules** (GDD 6.1)
 - **Buyout only.** A listing has item, quality, quantity, unit price, duration (12/24/48 h [tune]).
-- **Listing** moves the items out of inventory and charges a **deposit** (non-refundable, scaled to duration and reference value [tune]).
+- **Listing** moves the items out of inventory and charges a **deposit** (non-refundable, scaled to duration and reference value [tune]: 1% of value per 12 h).
+  - **Known issue (#27):** the deposit is charged up front, so a player with 0 gold can't list and is soft-locked. Agreed fix: take the deposit out of the sale money instead.
+- **Sell to guild** *(proposed, #28)*: an instant sale with no listing at a low price that drops the more a player uses it (hidden, recovers over time). It's a safety valve so nobody is ever stuck, never the best way to sell.
 - **Buying** locks the listing row, checks the buyer's gold, transfers items to the buyer and gold (minus the **5% cut**) to the seller, and records a trade, all in one transaction. Partial buys of a stack are allowed.
-- **Expired or cancelled** listings return items to the seller's **mailbox** (M1 can return straight to inventory; the mailbox comes when inventory has a cap).
+- **Expired or cancelled** listings return items straight to the seller's inventory (M1). A **mailbox** comes when inventory has a cap.
 - Every trade shows who the counterparty was: a named player or an NPC persona ("Bought by a Tournament Squire").
 - Listing limit per player [tune] (GDD 6.7).
 
@@ -431,7 +436,7 @@ What each system delivers in each milestone.
 | **Activity Log** | **Table + writes** | Return screen | Metrics | — |
 | Professions | Choice, starter recipes | Skill, colours, ranks, learning | — | Second profession? |
 | Gathering | Rate + cap + collect | Signature decisions, rares | — | — |
-| Crafting | Timers, batches, 1 slot | Quality, procs, more slots | — | — |
+| Crafting | Timers, batches, 2 slots | Quality, procs, more slots | — | — |
 | Focus | — | **Prototype** | Build if it works | Polish |
 | Exchange | Buyout flow, price history | Mailbox | Anti-abuse, limits | — |
 | Market Simulation | R, band, 5 personas, scarcity pricing, active-player scaling | More personas, calendar | Player-volume scaling | — |
@@ -473,5 +478,7 @@ What the economy simulator (`tools/econ_sim.php`) showed while building M1, and 
 | 3 | Fixed NPC demand overwhelmed 6 players: everything hit the 2× price cap | **Demand scales with active players** (reference 8) |
 | 1–3 | Alchemists earned 3–5× more than others (draughts sell constantly) | Draught demand lowered; satchel and jerkin demand raised |
 | Final | 3 players, one week: Blacksmith 4,950 · Alchemist 7,409 · Leatherworker 5,878 gold. Draughts in mild oversupply (price drifting down); Brass Fittings and Steam Tonic scarce (price up). 3 and 6 players behave alike. | Shipped in 0.2.0 |
+
+**Playtest 1 feedback (2026-10-27, Marz as Blacksmith):** reached 0 gold and couldn't list or buy (#27; safety valve #28); wants visible skill points like WoW, e.g. 200/200 (#30); no way to meet or trade with other players outside the Exchange (#31, #32).
 
 **Known gaps for M2:** gold only grows (players had ~6,000 each after a week, with little to spend it on). M2's sinks (recipes, workshop upgrades, coal) are needed before pacing slows down.
