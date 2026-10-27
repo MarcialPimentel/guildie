@@ -190,6 +190,8 @@ These rules apply to every system.
 
 ### 5.1 Professions & Progression
 
+> Skill curve, recipe ladder and the cross-profession web rules: [professions.md](professions.md) (proposal).
+
 | | |
 |---|---|
 | **Job** | The player's identity and long-term growth |

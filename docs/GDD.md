@@ -182,6 +182,8 @@ Apprentice → Journeyman → Expert → Master
 
 ### 5.1 Design principle
 
+> **The profession web** ([professions.md](professions.md), proposal): material families, the rules for how professions need each other (W1–W7), the skill 1–100 curve, the full recipe ladder, and how new professions join.
+
 All professions share **one framework**. Each profession adds **one signature mechanic**. This keeps content cost manageable and lets new professions be added mostly as data.
 
 ### 5.2 Shared systems
