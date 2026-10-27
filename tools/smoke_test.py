@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Guildie API smoke test (M1). Exercises accounts, professions, gathering, crafting, the Exchange,
-and (optionally) the NPC market tick, end to end.
+Guildie API smoke test (M1 + 0.2.2). Exercises accounts, professions, gathering, crafting, the Exchange,
+the 0-gold path, Sell to guild, feedback, and (optionally) the NPC market tick, end to end.
 
-    python3 tools/smoke_test.py URL [--tick "COMMAND"]
+    python3 tools/smoke_test.py URL [--tick "COMMAND"] [--feedback-key KEY]
 
-    URL      e.g. http://127.0.0.1:8080/games/guildie/api/index.php
-    --tick   a shell command that forces one market tick (local testing only), e.g.
-             "php server/app/tick.php --force". Without it, market checks are skipped.
+    URL             e.g. http://127.0.0.1:8080/games/guildie/api/index.php
+    --tick          a shell command that forces one market tick (local testing only), e.g.
+                    "php server/app/tick.php --force". Without it, market checks are skipped.
+    --feedback-key  the server's config.php feedback_key, to check the private feedback page.
 
 Crafting checks wait for real craft timers, so for speed run the server with a content copy whose
 economy.json has a small pace.time_multiplier (e.g. 0.05). Creates throwaway smoke_* players.
@@ -24,6 +25,7 @@ import urllib.request
 args = sys.argv[1:]
 BASE = args[0] if args and not args[0].startswith("--") else "http://127.0.0.1:8080/games/guildie/api/index.php"
 TICK = args[args.index("--tick") + 1] if "--tick" in args else None
+FEEDBACK_KEY = args[args.index("--feedback-key") + 1] if "--feedback-key" in args else None
 failures = 0
 
 
@@ -39,6 +41,15 @@ def call(action, body=None, token=None, method=None, query=""):
             return r.status, json.loads(r.read())
     except urllib.error.HTTPError as e:
         return e.code, json.loads(e.read())
+
+
+def get_raw(query):
+    """GET a non-JSON page; returns (status, text)."""
+    try:
+        with urllib.request.urlopen(f"{BASE}?{query}", timeout=30) as r:
+            return r.status, r.read().decode()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode()
 
 
 def check(label, condition, detail=""):
@@ -172,7 +183,7 @@ check("list draughts at 14", s == 200, r)
 listing_id = r["data"]["listing"]["listing_id"] if r.get("ok") else 0
 state = r["data"]["state"] if r.get("ok") else {}
 check("items left inventory", have(state, "healing_draught") == 0, state.get("inventory"))
-check("deposit charged", state.get("player", {}).get("gold") == gold_a - deposit, (gold_a, deposit, state.get("player")))
+check("no deposit charged up front (#27)", state.get("player", {}).get("gold") == gold_a, (gold_a, deposit, state.get("player")))
 
 s, r = call("market", token=tok_b)
 row = next((i for i in r["data"]["items"] if i["item_id"] == "healing_draught"), {})
@@ -191,8 +202,9 @@ check("B buys 1 draught (partial)", s == 200 and r["data"]["purchase"]["total"] 
 check("B paid 14", r["data"]["state"]["player"]["gold"] == gold_b - 14, r["data"]["state"]["player"])
 check("B has the draught", have(r["data"]["state"], "healing_draught") == 1, r["data"]["state"]["inventory"])
 
+deposit_share = min(-(-deposit // batch), 13)   # deposit taken in proportion to what sold, from the sale
 s, r = call("get_state", token=tok_a)
-check("A got 14 minus 5% cut (13)", r["data"]["player"]["gold"] == gold_a - deposit + 13, r["data"]["player"])
+check(f"A got 14 minus 5% cut minus {deposit_share}g deposit share", r["data"]["player"]["gold"] == gold_a + 13 - deposit_share, (deposit, r["data"]["player"]))
 check("A sees 'sold' activity naming B", any(a["type"] == "sold" and name_b in a["text"] for a in r["data"]["activity"]), r["data"]["activity"][:3])
 
 s, r = call("my_listings", token=tok_a)
@@ -203,8 +215,72 @@ s, r = call("cancel_listing", {"listing_id": listing_id}, token=tok_b)
 check("can't cancel someone else's listing", s == 404, r)
 s, r = call("cancel_listing", {"listing_id": listing_id}, token=tok_a)
 check("A cancels the rest", s == 200 and have(r["data"]["state"], "healing_draught") == batch - 1, r)
+check("cancel collects the rest of the deposit", s == 200 and r["data"]["state"]["player"]["gold"] == gold_a + 13 - deposit,
+      (gold_a, deposit, r.get("data", {}).get("state", {}).get("player")))
 s, r = call("buy_listing", {"listing_id": listing_id, "quantity": 1}, token=tok_b)
 check("cancelled listing can't be bought", s == 409, r)
+
+# ---------------------------------------------------------------- 0 gold: list anyway (#27), sell to guild (#28)
+s, r = call("get_state", token=tok_b)
+gold_b = r["data"]["player"]["gold"]
+s, r = call("list_item", {"item_id": "healing_draught", "quantity": 1, "unit_price": gold_b, "duration_hours": 12}, token=tok_a)
+check(f"A lists 1 draught at {gold_b} (all of B's gold)", s == 200, r)
+drain_id = r["data"]["listing"]["listing_id"] if r.get("ok") else 0
+s, r = call("buy_listing", {"listing_id": drain_id, "quantity": 1}, token=tok_b)
+check("B spends every coin: 0 gold", s == 200 and r["data"]["state"]["player"]["gold"] == 0, r)
+
+s, r = call("collect_station", {}, token=tok_b)
+copper = have(r["data"]["state"], "copper_ore") if r.get("ok") else 0
+check("B collects copper ore", copper >= 6, r)
+s, r = call("list_item", {"item_id": "copper_ore", "quantity": 2, "unit_price": 5, "duration_hours": 12}, token=tok_b)
+check("0-gold player can still list (#27)", s == 200 and r["data"]["state"]["player"]["gold"] == 0, r)
+zero_id = r["data"]["listing"]["listing_id"] if r.get("ok") else 0
+s, r = call("cancel_listing", {"listing_id": zero_id}, token=tok_b)
+check("0-gold cancel works and waives the deposit", s == 200 and r["data"]["state"]["player"]["gold"] == 0
+      and have(r["data"]["state"], "copper_ore") == copper and "waived" in r["data"]["state"]["activity"][0]["text"], r)
+
+s, r = call("sell_quote", {"item_id": "copper_ore", "quantity": 3}, token=tok_b)
+guild = r["data"].get("guild", {}) if r.get("ok") else {}
+check("sell quote includes a guild offer", guild.get("total", 0) > 0 and guild["first_unit"] >= guild["last_unit"], r)
+check("guild pays below the traders' quick sale", guild.get("first_unit", 99) <= r["data"]["trader_price"], (guild, r.get("data", {}).get("trader_price")))
+s, r = call("sell_to_guild", {"item_id": "copper_ore", "quantity": 3, "expected_total": guild.get("total", 0)}, token=tok_b)
+check("0-gold player sells to the guild instantly (#28)", s == 200 and r["data"]["state"]["player"]["gold"] == guild.get("total"), r)
+check("guild sale consumed the ore", s == 200 and have(r["data"]["state"], "copper_ore") == copper - 3, r)
+check("guild sale in activity", s == 200 and r["data"]["state"]["activity"][0]["type"] == "sold_to_guild", r)
+gold_b = r["data"]["state"]["player"]["gold"] if r.get("ok") else 0
+
+s, r = call("sell_quote", {"item_id": "copper_ore", "quantity": 3}, token=tok_b)
+check("guild price drops after selling", s == 200 and r["data"]["guild"]["total"] < guild.get("total", 0), (guild, r))
+s, r = call("sell_to_guild", {"item_id": "copper_ore", "quantity": 1, "expected_total": 999}, token=tok_b)
+check("sale refused if the offer dropped below what was shown", s == 409 and r["error"]["code"] == "price_changed", r)
+s, r = call("get_state", token=tok_b)
+check("refused sale changed nothing", r["data"]["player"]["gold"] == gold_b and have(r["data"], "copper_ore") == copper - 3, r["data"]["player"])
+s, r = call("sell_to_guild", {"item_id": "copper_ore", "quantity": 9999}, token=tok_b)
+check("can't sell more than you have", s == 400 and r["error"]["code"] == "not_enough_items", r)
+s, r = call("sell_to_guild", {"item_id": "dragon_scale", "quantity": 1}, token=tok_b)
+check("unknown item rejected", s == 400, r)
+
+# ---------------------------------------------------------------- feedback (#29)
+s, r = call("feedback", {"message": "   ", "screen": "Workshop"}, token=tok_b)
+check("empty feedback rejected", s == 400, r)
+s, r = call("feedback", {"message": "x" * 1001, "screen": "Workshop"}, token=tok_b)
+check("too-long feedback rejected", s == 400, r)
+s, r = call("feedback", {"message": "Smoke test <b>feedback</b>", "screen": "Market/sell_form"})
+check("feedback needs login", s == 401, r)
+s, r = call("feedback", {"message": "Smoke test <b>feedback</b>", "screen": "Market/sell_form"}, token=tok_b)
+check("feedback saved", s == 200 and r["data"]["saved"], r)
+for _ in range(9):
+    s, r = call("feedback", {"message": "more", "screen": "Bag"}, token=tok_b)
+s, r = call("feedback", {"message": "one too many", "screen": "Bag"}, token=tok_b)
+check("feedback limited to 10 an hour", s == 429 and r["error"]["code"] == "too_much_feedback", r)
+s, page = get_raw("action=feedback_list&key=wrong-key")
+check("feedback page hidden without the right key", s == 404, page[:200])
+if FEEDBACK_KEY:
+    s, page = get_raw(f"action=feedback_list&key={FEEDBACK_KEY}")
+    check("feedback page shows the note, escaped, with player and screen",
+          s == 200 and "Smoke test &lt;b&gt;feedback&lt;/b&gt;" in page and name_b in page and "Market/sell_form" in page, page[:300])
+else:
+    print("SKIP  feedback page (no --feedback-key)")
 
 # ---------------------------------------------------------------- npc market (local only)
 if TICK:
@@ -222,11 +298,11 @@ if TICK:
     check("tick: traders buy underpriced listings", r["data"]["player"]["gold"] > gold_before, (gold_before, r["data"]["player"]))
     check("tick: sale to an NPC shows in activity", any(a["type"] == "sold" and "trader" in a["text"] for a in r["data"]["activity"]), r["data"]["activity"][:3])
 
-    # B buys from the suppliers (always available)
-    s, r = call("market_item", {"item_id": "smelting_flux"}, token=tok_b)
+    # A buys another guild's input from the suppliers (always available). B was drained to ~0 gold above.
+    s, r = call("market_item", {"item_id": "brass_fittings"}, token=tok_a)
     sup = next(l for l in r["data"]["listings"] if l["is_npc"])
-    s, r = call("buy_listing", {"listing_id": sup["id"], "quantity": 1}, token=tok_b)
-    check("buy from guild suppliers", s == 200 and have(r["data"]["state"], "smelting_flux") == 1, r)
+    s, r = call("buy_listing", {"listing_id": sup["id"], "quantity": 1}, token=tok_a)
+    check("buy from guild suppliers", s == 200 and have(r["data"]["state"], "brass_fittings") == 1, r)
 else:
     print("SKIP  market tick checks (no --tick command)")
 

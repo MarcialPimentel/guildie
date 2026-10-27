@@ -93,9 +93,13 @@ func _run() -> void:
 	game.open_market("sell")
 	await frames()
 	check("sell list shown", market._view == "sell")
-	market._show_sell_form("healing_draught", 2)
+	market._show_sell_form("healing_draught", 2)   # crafted 2 draughts above
 	await create_timer(1.5).timeout
 	check("sell form loaded with a quote", market._view == "sell_form" and not market._quote.is_empty(), market._quote)
+	check("sell form offers a guild sale", market._body.find_child("SellToGuild", true, false) != null)
+	var guild: Dictionary = market._quote.get("guild", {})
+	r = await session.sell_to_guild("healing_draught", 1, int(guild.get("first_unit", 0)))
+	check("sell 1 to the guild", r["ok"] and int(r["data"]["sale"]["total"]) == int(guild.get("first_unit", -1)), r)
 	r = await session.list_item("healing_draught", 1, 15, 12)
 	check("list item", r["ok"], r)
 	market.set_mode("mine")
@@ -110,6 +114,18 @@ func _run() -> void:
 	else:
 		r = await session.buy_listing(int(npc[0]["id"]), 1)
 		check("buy brass fittings from suppliers", r["ok"], r)
+
+	# --- feedback pop-up (#29), through the real buttons
+	game.find_child("FeedbackButton", true, false).pressed.emit()
+	await frames()
+	var popup: Node = game.find_child("FeedbackPopup", true, false)
+	check("feedback pop-up opens", popup != null)
+	if popup:
+		popup.find_child("FeedbackText", true, false).text = "Client smoke test feedback"
+		popup.find_child("SendFeedback", true, false).pressed.emit()
+		await create_timer(1.5).timeout
+		await frames()
+		check("feedback sent and pop-up closed", game.find_child("FeedbackPopup", true, false) == null, game._message.text)
 
 	# --- logout
 	await session.logout()

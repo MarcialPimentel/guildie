@@ -203,6 +203,35 @@ Then share the [playtest guide](playtest-m1.md) with your friends.
 
 ---
 
+## Deploying 0.2.2 (0-gold fix, Sell to guild, Feedback)
+
+Automatic: merging the PR deploys it, and the server adds the new database tables by itself (migration `003`). The only manual step is turning on your private feedback page, once.
+
+### 1. Check the deploy
+
+1. Wait for the GitHub Action to finish (about 3–5 minutes after the merge).
+2. Open **https://marz.gg/games/guildie/api/index.php?action=ping**. You should see `"build":"0.2.2 (build …)"` and `"schema":3`.
+
+### 2. Turn on the feedback page (one time, about 3 minutes)
+
+Players' feedback is saved from day one; this step only lets you read it.
+
+1. Make up a long secret phrase with no spaces, for example `brass-otter-lantern-4192`. Anyone who knows it can read the feedback, so don't reuse a password.
+2. SiteGround **Site Tools → Site → File Manager**.
+3. Open the folder **`guildie-private`** (next to `public_html`, not inside it).
+4. Right-click **`config.php`** → **Edit**.
+5. Find the line `'debug' => false,` and add this line **just above it** (keep the quotes and the comma):
+   ```php
+   'feedback_key' => 'brass-otter-lantern-4192',
+   ```
+   (use your own phrase instead of the example).
+6. Click **Save**. Then reload the ping URL: if it still shows `"ok":true`, the edit is fine. If it shows a blank page or an error, a quote or comma is missing: open the file again and check the line.
+7. Open your feedback page and bookmark it:
+   **https://marz.gg/games/guildie/api/index.php?action=feedback_list&key=YOUR-PHRASE**
+   It shows every note, newest first, with the player, guild, gold, screen, build and time. A wrong or missing phrase shows "Unknown action".
+
+---
+
 ## Troubleshooting
 
 | What you see | Most likely cause | Fix |

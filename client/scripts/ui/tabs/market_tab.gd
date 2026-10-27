@@ -259,11 +259,17 @@ func _render_sell_form() -> void:
 	box.add_child(UI.label("Value %s · lowest player price %s · traders buy instantly at %s or less"
 		% [UI.gold(int(q["reference"])), lowest_text, UI.gold(int(q["trader_price"]))], 15, UI.MUTED))
 
-	# Quantity
+	# Quantity (shared by the guild sale and the listing)
 	box.add_child(UI.label("Quantity (you have %d)" % q["you_have"], 16, UI.CREAM))
 	_stepper(box, _sell_qty, 1, int(q["you_have"]), func(n):
 		_sell_qty = n
 		_requote())
+
+	_guild_sale_card()
+
+	box = UI.card(_body, 8)
+	box.add_child(UI.label("Or list it on the Exchange", 20, UI.BRASS))
+	box.add_child(UI.label("Usually pays much more, but you wait for a buyer.", 15, UI.MUTED))
 
 	# Price
 	box.add_child(UI.label("Price each", 16, UI.CREAM))
@@ -299,7 +305,7 @@ func _render_sell_form() -> void:
 	var deposit := int(q["deposits"].get(str(_sell_hours), 0))
 	var summary := UI.card(_body, 4)
 	for line in [["Total if all sell", UI.gold(total)], ["Exchange cut (%d%%)" % q["cut_percent"], "−" + UI.gold(cut)],
-			["Deposit now (not refunded)", "−" + UI.gold(deposit)], ["You'd earn", UI.gold(total - cut - deposit)]]:
+			["Deposit (taken from the sale)", "−" + UI.gold(deposit)], ["You'd earn", UI.gold(max(0, total - cut - deposit))]]:
 		var r := UI.row(summary)
 		r.add_child(UI.expand(UI.label(line[0], 17)))
 		r.add_child(UI.value(line[1], 18, UI.CREAM))
@@ -313,6 +319,31 @@ func _render_sell_form() -> void:
 		if response["ok"] and is_inside_tree():
 			set_mode("mine"))
 	_body.add_child(list)
+
+
+## Instant sale to the guild: low price, paid now, no listing (#28). Shows the exact total before selling.
+func _guild_sale_card() -> void:
+	var g: Dictionary = _quote.get("guild", {})
+	if g.is_empty():
+		return
+	var box := UI.card(_body, 6)
+	box.add_child(UI.label("Sell to the guild now", 20, UI.BRASS))
+	box.add_child(UI.label("Instant gold, no listing and no fees, but a low price.", 15, UI.MUTED))
+	if g.get("hint") != null:
+		box.add_child(UI.label(str(g["hint"]), 15, UI.ERROR))
+	var total := int(g["total"])
+	var sell := UI.button("Sell %d to the guild for %s" % [int(g["quantity"]), UI.gold(total)], true)
+	sell.name = "SellToGuild"
+	sell.pressed.connect(func():
+		var response: Dictionary = await game.run(sell, Session.sell_to_guild.bind(_item_id, int(g["quantity"]), total),
+			"Sold %d %s to the guild for %s." % [int(g["quantity"]), _quote["name"], UI.gold(total)])
+		if not is_inside_tree():
+			return
+		if response["ok"]:
+			_show_sell_list()
+		elif response.get("error", {}).get("code", "") == "price_changed":
+			_requote())
+	box.add_child(sell)
 
 
 func _requote() -> void:

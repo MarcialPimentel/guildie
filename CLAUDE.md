@@ -28,7 +28,7 @@ Guildie is a mobile-first browser crafting and trading game (Godot 4 client, PHP
 /server/api        public entry point  -> public_html/games/guildie/api/
 /server/app        private game logic  -> guildie-private/app/
 /server/config     config template     -> guildie-private/config.php
-/server/migrations SQL, applied in order via phpMyAdmin
+/server/migrations SQL, applied automatically by the server after a deploy
 /server/tools      one-off helpers (upload, use, delete)
 /tools             package.sh (builds upload zips), smoke_test.py (API test)
 /content           JSON game data

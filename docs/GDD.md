@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.4 · **Date:** 2026-10-25 · **Status:** Pre-production
+**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M1 playtest (build 0.2.2)
 **Owner:** Marz · **Engine:** Godot 4 (web export) · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -96,8 +96,8 @@ The theme and the progression arc are the same story. The player begins as a med
 
 | Rank | Skill range [tune] | Feel | Example unlocks |
 |---|---|---|---|
-| Apprentice | 1–25 | Hand tools, manual work, tapping to gather | Basic recipes, one craft slot |
-| Journeyman | 26–50 | Better tools, first mechanical aids | Second craft slot, first powered station |
+| Apprentice | 1–25 | Hand tools, manual work, tapping to gather | Basic recipes, two craft slots (live in M1) |
+| Journeyman | 26–50 | Better tools, first mechanical aids | Third craft slot, first powered station |
 | Expert | 51–75 | Steam machines run while you're away | Automated gathering, longer high-value crafts |
 | Master | 76–100 | Full steam workshop, prestige crafts | Masterwork recipes, second profession unlock |
 
@@ -187,7 +187,7 @@ All professions share **one framework**. Each profession adds **one signature me
 ### 5.2 Shared systems
 
 **Skill and ranks**
-- Skill from 1 to 100, grouped into four ranks (see [Section 3](#progression-as-industrialization)).
+- Skill from 1 to 100, grouped into four ranks (see [Section 3](#progression-as-industrialization)). Shown as "x/100" (max stays 100, decided 2026-10-27). *Under review (#30): skill driven by crafting XP plus a first-craft bonus per recipe, replacing the random skill-up chance below.*
 - Skill rises by crafting recipes that are still challenging.
 
 **Recipe difficulty colors** (inherited from WoW)
@@ -312,9 +312,10 @@ More professions are planned, but the list is deliberately not decided yet. Cand
 
 - **Buyout only** (no bidding). This is simpler and reads better on mobile. Bidding may be revisited much later.
 - A listing has an item, quality, quantity, price, and duration (12h / 24h / 48h [tune]).
-- **Deposit:** a small non-refundable fee to list, scaled to duration and the item's reference value [tune].
+- **Deposit:** a small non-refundable fee to list, scaled to duration and the item's reference value [tune]. It is **taken from the sale money**, never charged up front, so a player with 0 gold can always list. On cancel or expiry, the unpaid part is charged only if the player can afford it; otherwise it's waived.
 - **Exchange cut:** 5% of the sale price [tune].
-- Expired listings return to the seller's mailbox.
+- Expired or cancelled listings return to the seller's inventory (a mailbox comes once inventory has a cap).
+- **Sell to guild** *(0.2.2)*: an instant sale with no listing, deposit or cut. It pays 0.5 × R, dropping about 3% with each unit a player sells of that item (never below 0.15 × R) and recovering over time [tune]. The rule is hidden, but the exact total is always shown before confirming, and the sale is refused if the offer dropped in between. The guild consumes the goods (a sink). It's a safety valve, never the best way to sell: it always pays less than the Traders' quick sale.
 
 ### 6.2 Reference value and the liquidity band
 
@@ -515,7 +516,7 @@ Everything runs on the existing SiteGround hosting, on one domain.
 /server/api         Public entry point      -> public_html/games/guildie/api/
 /server/app         Private game logic       -> guildie-private/app/ (includes tick.php)
 /server/config      Config template          -> guildie-private/config.php (filled in, never committed)
-/server/migrations  SQL files (001_init.sql, ...), applied in order via phpMyAdmin
+/server/migrations  SQL files (001_init.sql, ...), applied automatically by the server after a deploy
 /server/tools       One-off helpers (upload, use, delete)
 /content            JSON definitions: items, recipes, professions, buildings, personas, events
 /docs               GDD, setup and deploy guides
@@ -541,8 +542,8 @@ Each milestone ends with a playtest and a clear exit question.
 
 | Milestone | Scope | Exit criteria |
 |---|---|---|
-| **M0 Foundation** | Repo, Godot project, MySQL database and PHP API on SiteGround (step-by-step setup guide), name + password login, read and write one inventory item through the server, cron job running a test tick, deploy steps, build number | Open on a phone, log in, see server-owned gold and an item |
-| **M1 Market Prototype** | 3 professions (choice + starter recipes), ~16 items, gathering stations, crafting with timers and batches, the Exchange with 3 NPC personas, liquidity band, market tick, Activity Log, economy simulator. Plain text UI. See [systems.md §9](systems.md#9-milestone-matrix). | **"Is making one good trade fun?"** |
+| **M0 Foundation** ✅ | Repo, Godot project, MySQL database and PHP API on SiteGround (step-by-step setup guide), name + password login, read and write one inventory item through the server, cron job running a test tick, deploy steps, build number | Open on a phone, log in, see server-owned gold and an item |
+| **M1 Market Prototype** (live, playtesting) | 3 professions (choice + starter recipes), 18 items, gathering stations, crafting with timers and batches, the Exchange with 3 NPC personas, liquidity band, market tick, Activity Log, economy simulator. Plain text UI. See [systems.md §9](systems.md#9-milestone-matrix). | **"Is making one good trade fun?"** |
 | **M2 Crafting Depth** | Skill ranks and colors, quality tiers, procs, gathering decisions, crafting orders, workshop upgrades, Guild Week, "while you were away" screen, Focus prototype | **"Do I want to come back tomorrow?"** |
 | **M3 Real Players** | Shared market with multiple players, NPC scaling, leaderboards (gold and rank progress), anti-abuse | **"Does trading with real people feel different and better?"** |
 | **M4 Look & Feel** | Isometric workshop art, steam progression visuals, events and news board, onboarding polish, installable web app | **"Would I show this to a stranger?"** |
@@ -575,12 +576,16 @@ Each milestone ends with a playtest and a clear exit question.
 
 ## 14. Open Questions
 
-1. **Gold leaderboard: total gold or net worth?** Total gold is the current decision. Net worth (gold plus inventory and listings at reference value) would avoid punishing players who invest in materials or hold stock. Revisit before M3.
+1. **Gold leaderboard: total gold or net worth?** Total gold is the current decision. Net worth (gold plus inventory and listings at reference value) would avoid punishing players who invest in materials or hold stock. Proposed in #31: net worth, on a board that doubles as the player directory.
 2. **Exact skill curve and craft timers** to hit the pacing targets in [Section 3](#target-pacing). Tune in M1–M2 playtests.
 3. **Active bonus size:** how much more should active play reward than idle without making idle feel bad?
 4. **Second profession carryover:** what transfers from the first profession, if anything?
 5. **Gold sinks before slowing the pace:** players accumulate gold quickly in M1 with little to spend it on. Which M2 sinks come first?
 6. **City name:** "Brassmere" is the working name. Final name to be decided later.
+7. **Skill source (#30):** replace random skill-ups with crafting XP plus a first-craft bonus? How big should the bonus be, and should gathering give XP? The current 12 recipes can't fill the 100-point curve, so more recipes are needed in M2.
+8. **Player interaction beyond the Exchange (#31, #32):** a player directory and asynchronous direct trade offers were requested in playtest 1. Should they come before M3?
+
+**Playtest 1 feedback (2026-10-27):** Marz (Blacksmith) hit 0 gold and could neither list nor buy (#27, safety valve #28); asked for visible WoW-style skill points, e.g. 100/100 (#30); found no way to meet or trade with players outside the Exchange (#31, #32).
 
 ---
 
@@ -618,6 +623,10 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-26 | Guild Workshops persona added; scarcity pricing; NPC demand scales with active players | Economy simulator showed tier-2 goods were never made, undercutting deflated prices, and fixed demand overwhelmed small groups (systems.md M1 tuning notes) |
 | 2026-10-26 | Automatic deploys from GitHub (FTPS, same approach as Pythio) with self-applying migrations | Removes manual uploads and phpMyAdmin imports from every release |
 | 2026-10-26 | Two crafting slots, batches up to 10, 150 starting gold | Lets a player make a component and a finished good at the same time; enough gold to buy a first cross-guild input |
+| 2026-10-27 | Listing deposit is taken from the sale money; on cancel/expiry charged only if affordable | Playtest 1: charging it up front soft-locked a player at 0 gold (#27) |
+| 2026-10-27 | Sell to guild: instant sale at a low price that drops with each unit sold and recovers over time; rule hidden, price always shown | A guaranteed way out of 0 gold that never beats listing on the Exchange (#28) |
+| 2026-10-27 | In-game Feedback button with a private reading page | Playtest notes reach Marz directly, with the screen, gold and build attached (#29) |
+| 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---
 

@@ -18,6 +18,11 @@ return [
     // How often the market tick runs (seconds). Must match the cron schedule (*/5 = 300).
     'tick_interval_seconds' => 300,
 
+    // Private feedback page (docs/deploy.md, "Reading player feedback"): a long random phrase you make up.
+    // Open https://marz.gg/games/guildie/api/index.php?action=feedback_list&key=YOUR_PHRASE
+    // Leave empty to turn the page off.
+    'feedback_key' => '',
+
     // Set to true only while debugging; shows detailed errors in API responses.
     'debug' => false,
 ];

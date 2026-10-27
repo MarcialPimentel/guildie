@@ -28,6 +28,9 @@ function guildie_actions(): array
         'cancel_listing'    => [['POST'],        true,  'action_cancel_listing'],
         'my_listings'       => [['GET'],         true,  'action_my_listings'],
         'activity'          => [['GET'],         true,  'action_activity'],
+        'sell_to_guild'     => [['POST'],        true,  'action_sell_to_guild'],
+        'feedback'          => [['POST'],        true,  'action_feedback'],
+        'feedback_list'     => [['GET'],         false, 'action_feedback_list'],
     ];
 }
 
@@ -144,6 +147,25 @@ function action_activity(array $body, ?int $playerId): array
     return ['activity' => activity_list($playerId, 50)];
 }
 
+function action_sell_to_guild(array $body, ?int $playerId): array
+{
+    $expected = isset($body['expected_total']) ? body_int($body, 'expected_total', 0, 0, PHP_INT_MAX) : null;
+    $sale = guild_sell($playerId, body_string($body, 'item_id'), body_int($body, 'quantity', 1, 1, 10000), $expected);
+    return ['sale' => $sale, 'state' => player_state($playerId)];
+}
+
+function action_feedback(array $body, ?int $playerId): array
+{
+    feedback_save($playerId, body_string($body, 'message'), isset($body['screen']) ? body_string($body, 'screen') : '');
+    return ['saved' => true];
+}
+
+/** Private page for Marz: index.php?action=feedback_list&key=... (key in config.php). Returns HTML. */
+function action_feedback_list(array $body, ?int $playerId): array
+{
+    return ['_html' => feedback_page((string) ($_GET['key'] ?? ''))];
+}
+
 /**
  * Entry point used by api/index.php.
  */
@@ -177,7 +199,16 @@ function guildie_handle_request(): void
         }
 
         $playerId = $needsLogin ? require_player_id() : null;
-        send_json(['ok' => true, 'data' => $handler($body, $playerId)]);
+        $data = $handler($body, $playerId);
+        if (isset($data['_html'])) {
+            http_response_code(200);
+            header('Content-Type: text/html; charset=utf-8');
+            header('Cache-Control: no-store');
+            header('X-Robots-Tag: noindex');
+            echo $data['_html'];
+            return;
+        }
+        send_json(['ok' => true, 'data' => $data]);
     } catch (ApiError $e) {
         send_json(['ok' => false, 'error' => ['code' => $e->errorCode, 'message' => $e->getMessage()]], $e->status);
     } catch (Throwable $e) {

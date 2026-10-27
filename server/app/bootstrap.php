@@ -39,6 +39,8 @@ require __DIR__ . '/lib/gathering.php';
 require __DIR__ . '/lib/crafting.php';
 require __DIR__ . '/lib/exchange.php';
 require __DIR__ . '/lib/market.php';
+require __DIR__ . '/lib/guild_sale.php';
+require __DIR__ . '/lib/feedback.php';
 require __DIR__ . '/lib/state.php';
 require __DIR__ . '/lib/tick.php';
 require __DIR__ . '/router.php';
