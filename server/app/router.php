@@ -31,6 +31,13 @@ function guildie_actions(): array
         'sell_to_guild'     => [['POST'],        true,  'action_sell_to_guild'],
         'feedback'          => [['POST'],        true,  'action_feedback'],
         'feedback_list'     => [['GET'],         false, 'action_feedback_list'],
+        'players'           => [['GET', 'POST'], true,  'action_players'],
+        'player_profile'    => [['POST'],        true,  'action_player_profile'],
+        'trade_offers'      => [['GET'],         true,  'action_trade_offers'],
+        'offer_create'      => [['POST'],        true,  'action_offer_create'],
+        'offer_accept'      => [['POST'],        true,  'action_offer_accept'],
+        'offer_decline'     => [['POST'],        true,  'action_offer_decline'],
+        'offer_cancel'      => [['POST'],        true,  'action_offer_cancel'],
     ];
 }
 
@@ -164,6 +171,54 @@ function action_feedback(array $body, ?int $playerId): array
 function action_feedback_list(array $body, ?int $playerId): array
 {
     return ['_html' => feedback_page((string) ($_GET['key'] ?? ''))];
+}
+
+function action_players(array $body, ?int $playerId): array
+{
+    $sort = isset($body['sort']) ? body_string($body, 'sort') : (string) ($_GET['sort'] ?? 'wealth');
+    return players_directory($playerId, $sort);
+}
+
+function action_player_profile(array $body, ?int $playerId): array
+{
+    return player_profile($playerId, body_int($body, 'player_id', 0, 1, PHP_INT_MAX));
+}
+
+function action_trade_offers(array $body, ?int $playerId): array
+{
+    return offers_list($playerId);
+}
+
+function action_offer_create(array $body, ?int $playerId): array
+{
+    $result = offer_create(
+        $playerId,
+        body_int($body, 'to_player_id', 0, 1, PHP_INT_MAX),
+        $body['give_items'] ?? [],
+        body_int($body, 'give_gold', 0, 0, 100000000),
+        $body['ask_items'] ?? [],
+        body_int($body, 'ask_gold', 0, 0, 100000000),
+        isset($body['note']) ? body_string($body, 'note') : ''
+    );
+    return ['offer' => $result, 'offers' => offers_list($playerId), 'state' => player_state($playerId)];
+}
+
+function action_offer_accept(array $body, ?int $playerId): array
+{
+    $result = offer_accept($playerId, body_int($body, 'offer_id', 0, 1, PHP_INT_MAX));
+    return ['trade' => $result, 'offers' => offers_list($playerId), 'state' => player_state($playerId)];
+}
+
+function action_offer_decline(array $body, ?int $playerId): array
+{
+    offer_decline($playerId, body_int($body, 'offer_id', 0, 1, PHP_INT_MAX));
+    return ['offers' => offers_list($playerId), 'state' => player_state($playerId)];
+}
+
+function action_offer_cancel(array $body, ?int $playerId): array
+{
+    offer_cancel($playerId, body_int($body, 'offer_id', 0, 1, PHP_INT_MAX));
+    return ['offers' => offers_list($playerId), 'state' => player_state($playerId)];
 }
 
 /**

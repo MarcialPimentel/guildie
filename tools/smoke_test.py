@@ -282,6 +282,116 @@ if FEEDBACK_KEY:
 else:
     print("SKIP  feedback page (no --feedback-key)")
 
+# ---------------------------------------------------------------- city: directory and profiles (#31)
+s, r = call("players", {"sort": "wealth"}, token=tok_b)
+golds = [p["gold"] for p in r["data"]["players"]] if r.get("ok") else []
+check("directory sorted by gold", s == 200 and golds == sorted(golds, reverse=True) and r["data"]["me"]["name"] == name_b, r)
+ids = {p["name"]: p["id"] for p in r["data"]["players"]} if r.get("ok") else {}
+id_a, id_b = ids.get(name, 0), ids.get(name_b, 0)
+check("directory lists both players", id_a and id_b, list(ids)[:5])
+s, r = call("players", {"sort": "mastery"}, token=tok_b)
+crafted = [p["crafted"] for p in r["data"]["players"]] if r.get("ok") else []
+check("mastery sorted by crafts made", s == 200 and crafted == sorted(crafted, reverse=True), r)
+s, r = call("players", {"sort": "beauty"}, token=tok_b)
+check("unknown sort rejected", s == 400, r)
+s, r = call("player_profile", {"player_id": id_a}, token=tok_b)
+check("profile of A: guild, crafts, recipes, can trade", s == 200 and r["data"]["profession"] == "Alchemist"
+      and r["data"]["crafted"] >= batch and r["data"]["recipes_known"] == 2 and r["data"]["recipes_total"] == 4 and r["data"]["can_trade"], r)
+s, r = call("player_profile", {"player_id": id_b}, token=tok_b)
+check("own profile: can't trade with yourself", s == 200 and r["data"]["me"] and not r["data"]["can_trade"], r)
+s, r = call("player_profile", {"player_id": 999999999}, token=tok_b)
+check("unknown player -> 404", s == 404, r)
+
+# ---------------------------------------------------------------- direct trades (#32)
+def offer(tok, to, give=(), give_gold=0, ask=(), ask_gold=0, note=""):
+    return call("offer_create", {"to_player_id": to, "give_items": [{"item_id": i, "quantity": q} for i, q in give],
+                                 "give_gold": give_gold, "ask_items": [{"item_id": i, "quantity": q} for i, q in ask],
+                                 "ask_gold": ask_gold, "note": note}, token=tok)
+
+s, r = call("get_state", token=tok_b)
+copper_b = have(r["data"], "copper_ore")
+s, r = call("get_state", token=tok_a)
+sun_a, copper_a = have(r["data"], "sunleaf"), have(r["data"], "copper_ore")
+
+s, r = offer(tok_b, id_a, give=[("copper_ore", 1)])
+check("gifts not allowed (nothing asked)", s == 400 and r["error"]["code"] == "no_gifts", r)
+s, r = offer(tok_b, id_a, ask=[("sunleaf", 1)])
+check("asking for free not allowed (nothing offered)", s == 400 and r["error"]["code"] == "no_gifts", r)
+s, r = offer(tok_b, id_b, give=[("copper_ore", 1)], ask=[("sunleaf", 1)])
+check("can't trade with yourself", s == 400, r)
+s, r = offer(tok_b, id_a, give=[("copper_ore", 9999)], ask=[("sunleaf", 1)])
+check("can't offer more than you have", s == 400 and r["error"]["code"] == "not_enough_items", r)
+s, r = offer(tok_b, id_a, give=[("dragon_scale", 1)], ask=[("sunleaf", 1)])
+check("unknown item rejected", s == 400, r)
+
+s, r = offer(tok_b, id_a, give=[("copper_ore", 2)], ask=[("sunleaf", 2)], note="Copper for herbs?")
+check("B offers 2 copper for 2 sunleaf", s == 200, r)
+offer_id = r["data"]["offer"]["offer_id"] if r.get("ok") else 0
+check("B's copper is held", s == 200 and have(r["data"]["state"], "copper_ore") == copper_b - 2, r)
+check("B sees it under 'your offers'", s == 200 and r["data"]["offers"]["outgoing"][0]["id"] == offer_id, r)
+s, r = call("get_state", token=tok_a)
+check("A has 1 incoming offer (badge)", r["data"]["incoming_offers"] == 1, r["data"].get("incoming_offers"))
+check("A's activity shows the offer", any(a["type"] == "offer_received" for a in r["data"]["activity"]), r["data"]["activity"][:2])
+s, r = call("trade_offers", token=tok_a)
+inc = r["data"]["incoming"][0] if r.get("ok") and r["data"]["incoming"] else {}
+check("A's inbox: gets copper, gives sunleaf, with note", inc.get("you_get") == "2 Copper Ore" and inc.get("you_give") == "2 Sunleaf"
+      and inc.get("note") == "Copper for herbs?", inc)
+s, r = call("offer_accept", {"offer_id": offer_id}, token=tok_b)
+check("sender can't accept own offer", s == 404, r)
+s, r = call("offer_accept", {"offer_id": offer_id}, token=tok_a)
+check("A accepts", s == 200, r)
+check("A got copper and paid sunleaf", s == 200 and have(r["data"]["state"], "copper_ore") == copper_a + 2
+      and have(r["data"]["state"], "sunleaf") == sun_a - 2 and r["data"]["state"]["incoming_offers"] == 0, r)
+s, r = call("get_state", token=tok_b)
+check("B got the sunleaf", have(r["data"], "sunleaf") == 2 and have(r["data"], "copper_ore") == copper_b - 2, r["data"]["inventory"])
+check("B's activity says it was accepted", any(a["type"] == "offer_accepted" for a in r["data"]["activity"]), r["data"]["activity"][:2])
+s, r = call("offer_accept", {"offer_id": offer_id}, token=tok_a)
+check("can't accept twice", s == 409, r)
+
+s, r = offer(tok_b, id_a, give=[("copper_ore", 1)], ask=[("sunleaf", 9999)])
+check("B asks for more than A has", s == 200, r)
+big_id = r["data"]["offer"]["offer_id"] if r.get("ok") else 0
+s, r = call("offer_accept", {"offer_id": big_id}, token=tok_a)
+check("accept refused when A lacks the items", s == 400 and r["error"]["code"] == "not_enough_items", r)
+s, r = call("trade_offers", token=tok_a)
+check("refused offer is still open", any(o["id"] == big_id for o in r["data"]["incoming"]), r["data"])
+s, r = call("offer_decline", {"offer_id": big_id}, token=tok_a)
+check("A declines", s == 200, r)
+s, r = call("get_state", token=tok_b)
+check("declined: B's copper came back", have(r["data"], "copper_ore") == copper_b - 2, r["data"]["inventory"])
+
+s, r = offer(tok_b, id_a, give=[("copper_ore", 1)], ask=[("sunleaf", 1)])
+cancel_id = r["data"]["offer"]["offer_id"] if r.get("ok") else 0
+s, r = call("offer_cancel", {"offer_id": cancel_id}, token=tok_a)
+check("only the sender can cancel", s == 404, r)
+s, r = call("offer_cancel", {"offer_id": cancel_id}, token=tok_b)
+check("B cancels; copper back", s == 200 and have(r["data"]["state"], "copper_ore") == copper_b - 2, r)
+s, r = call("offer_decline", {"offer_id": cancel_id}, token=tok_a)
+check("cancelled offer can't be declined", s == 409, r)
+
+s, r = call("get_state", token=tok_b)
+gold_b = r["data"]["player"]["gold"]
+s, r = call("get_state", token=tok_a)
+gold_a = r["data"]["player"]["gold"]
+s, r = offer(tok_a, id_b, give=[("sunleaf", 1)], ask_gold=1)
+gold_offer = r["data"]["offer"]["offer_id"] if r.get("ok") else 0
+s, r = call("offer_accept", {"offer_id": gold_offer}, token=tok_b)
+check("gold changes hands on accept", s == 200 and r["data"]["state"]["player"]["gold"] == gold_b - 1, r)
+s, r = call("get_state", token=tok_a)
+check("A received the gold", r["data"]["player"]["gold"] == gold_a + 1, r["data"]["player"])
+
+open_ids = []
+for _ in range(5):
+    s, r = offer(tok_b, id_a, give=[("copper_ore", 1)], ask=[("sunleaf", 1)])
+    if r.get("ok"):
+        open_ids.append(r["data"]["offer"]["offer_id"])
+s, r = offer(tok_b, id_a, give=[("copper_ore", 1)], ask=[("sunleaf", 1)])
+check("at most 5 open offers", len(open_ids) == 5 and s == 400 and r["error"]["code"] == "too_many_offers", (len(open_ids), r))
+for oid in open_ids:
+    call("offer_cancel", {"offer_id": oid}, token=tok_b)
+s, r = call("trade_offers", token=tok_b)
+check("all cleaned up", s == 200 and not r["data"]["outgoing"] and len(r["data"]["closed"]) >= 5, r["data"])
+
 # ---------------------------------------------------------------- npc market (local only)
 if TICK:
     subprocess.run(TICK, shell=True, check=True, capture_output=True)

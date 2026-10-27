@@ -6,8 +6,10 @@ const WorkshopTab := preload("res://scripts/ui/tabs/workshop_tab.gd")
 const CraftTab := preload("res://scripts/ui/tabs/craft_tab.gd")
 const MarketTab := preload("res://scripts/ui/tabs/market_tab.gd")
 const BagTab := preload("res://scripts/ui/tabs/bag_tab.gd")
+const CityTab := preload("res://scripts/ui/tabs/city_tab.gd")
 
-const TAB_SPECS := [["Workshop", WorkshopTab], ["Craft", CraftTab], ["Market", MarketTab], ["Bag", BagTab]]
+const TAB_SPECS := [["Workshop", WorkshopTab], ["Craft", CraftTab], ["Market", MarketTab], ["Bag", BagTab], ["City", CityTab]]
+const CITY_TAB := 4
 const REFRESH_SECONDS := 20.0
 const FEEDBACK_MAX_CHARS := 1000
 
@@ -88,6 +90,7 @@ func _ready() -> void:
 		var b := UI.button(spec[0], true, true)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size.y = 48
+		b.add_theme_font_size_override("font_size", 16)   # five tabs on a 540 px wide phone screen
 		b.pressed.connect(show_tab.bind(_tabs.size() - 1))
 		bar.add_child(b)
 		_tab_buttons.append(b)
@@ -253,6 +256,10 @@ func _on_state(state: Dictionary) -> void:
 	var profession: Variant = state.get("profession")
 	_name.text = "%s · %s" % [player["name"], profession["name"] if profession else "No guild"]
 	_gold.text = UI.gold(int(player["gold"]))
+	# Badge on the City tab when trade offers are waiting.
+	var offers := int(state.get("incoming_offers", 0))
+	if _tab_buttons.size() > CITY_TAB:
+		_tab_buttons[CITY_TAB].text = "City (%d)" % offers if offers > 0 else "City"
 	if _current >= 0 and _tabs[_current].has_method("render"):
 		_tabs[_current].call("render")
 

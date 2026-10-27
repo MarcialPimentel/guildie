@@ -234,6 +234,14 @@ Players' feedback is saved from day one; this step only lets you read it.
 
 ---
 
+## Deploying 0.3.0 (City tab and direct trades)
+
+Fully automatic: merging deploys it, and the server adds the new `trade_offers` table by itself (migration `004`). No SiteGround steps.
+
+**Check it:** the ping URL shows `"build":"0.3.0 (build …)"` and `"schema":4`. In the game, the tab bar has a fifth tab, **City**.
+
+---
+
 ## Troubleshooting
 
 | What you see | Most likely cause | Fix |

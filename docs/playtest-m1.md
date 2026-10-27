@@ -20,8 +20,9 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
    - **Sell** to list your goods. A small deposit and a 5% cut come out of the money when something sells, so you can list even with 0 gold.
    - **Quick sale** prices sell to traders within a few minutes, but for less.
    - **Sell to the guild** for instant gold with no listing. It pays the least, and less the more of one item you sell, so use it when you need gold now.
-6. **Feedback:** tap **Feedback** at the top of the screen anytime to send Marz a note.
 5. **Blue ingredients** come from other guilds. The best goods (swords, tonics, jerkins) need them, so you'll have to buy from other players, or from the Guild Suppliers at a premium.
+6. **City:** see every crafter, ranked by gold or by crafts made. Tap someone to see what they're selling, or **Propose a trade**: pick what you give and what you want back. What you offer is held until they accept or decline (or a day passes). Offers waiting for you show as **City (1)**; answer them in **City → Trades**.
+7. **Feedback:** tap **Feedback** at the top of the screen anytime to send Marz a note.
 
 ## Things to know
 
