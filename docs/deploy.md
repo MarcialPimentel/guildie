@@ -24,13 +24,15 @@ The build number shows as e.g. **0.2.1 (build 12)**: the `VERSION` file plus the
 
 Two SiteGround FTP accounts, each limited to the one folder it needs, so neither password can reach WordPress or anything else on the site.
 
+> The actual account names, home folders and server paths are kept out of this public repo. They're in Marz's private hosting doc and in `hosting.private.md` on Marz's PC (git-ignored).
+
 **1. FTP account for the server code (SiteGround).**
 
 1. Site Tools → **Site → FTP Accounts**.
-2. Create `guildie-private` (SiteGround adds `@marz.gg`) with a strong password (save it in your password manager) and home path **`/marz.gg/guildie-private/`**.
+2. Create an account with a strong password (save it in your password manager) whose home path is the **`guildie-private`** folder.
 3. On the account: **⋮ → FTP Credentials**. Note the **Host**.
 
-**2. FTP account for the game files.** Reuse Pythio's `deploy@marz.gg` (home path `/marz.gg/public_html/games/`). Its password is the one in Pythio's `FTP_PASSWORD` secret / your password manager.
+**2. FTP account for the game files.** An account whose home path is **`public_html/games/`** (Guildie shares Pythio's).
 
 **3. Add five secrets to the Guildie repo.**
 
@@ -39,9 +41,9 @@ Repo **Settings → Secrets and variables → Actions → New repository secret*
 | Name | Value |
 |---|---|
 | `FTP_SERVER` | the Host (the same for both accounts) |
-| `FTP_USERNAME` | `guildie-private@marz.gg` |
+| `FTP_USERNAME` | the server-code account's full username |
 | `FTP_PASSWORD` | its password |
-| `FTP_PUBLIC_USERNAME` | `deploy@marz.gg` |
+| `FTP_PUBLIC_USERNAME` | the game-files account's full username |
 | `FTP_PUBLIC_PASSWORD` | its password |
 
 GitHub encrypts them: nobody can read them back, only the deploy job can use them. Until all five exist, merges run the checks and skip the upload (the Deploy job says which secret is missing).
@@ -53,9 +55,9 @@ GitHub encrypts them: nobody can read them back, only the deploy job can use the
 | What you see | Most likely cause | Fix |
 |---|---|---|
 | Deploy job says "Upload skipped: these secrets aren't set yet" | Secrets missing or misspelt | It names the missing ones; add them exactly as written |
-| Upload step: login failed | Wrong username format or password | Username includes `@marz.gg`; re-enter `FTP_PASSWORD` |
+| Upload step: login failed | Wrong username format or password | The username includes the `@` and domain part; re-enter the password secret |
 | Upload step: TLS / certificate error | FTPS handshake | Change both `protocol: ftps` to `protocol: ftp` in `.github/workflows/deploy.yml` |
-| Upload step: "folder not found" / files land in the wrong place | An account's home path differs from the table above | Check the home paths in FTP Accounts, or tell Claude what they are |
+| Upload step: "folder not found" / files land in the wrong place | An account's home path differs from the setup above | Check the home paths in FTP Accounts, or tell Claude what they are |
 | Checks fail on a PR | A real bug caught before it went live | Nothing reached players; Claude fixes the PR |
 
 To **roll back**, revert the PR on GitHub and merge the revert. A database change that already ran is not undone, so migrations must stay backward-compatible.
@@ -128,10 +130,10 @@ You should see something like:
 The market tick runs on its own every 5 minutes, even when nobody is playing.
 
 1. In Site Tools, go to **Devs → Cron Jobs**.
-2. Under **Create New Cron Job**, enter this command (all one line):
+2. Under **Create New Cron Job**, enter this command (all one line), with your site's full folder path in place of `SITE_ROOT` (the exact command is in your private hosting notes):
 
    ```
-   php /home/customer/www/marz.gg/guildie-private/app/tick.php > /dev/null 2>&1
+   php SITE_ROOT/guildie-private/app/tick.php > /dev/null 2>&1
    ```
 
 3. For the interval, choose **every 5 minutes**. If there's no such preset, use the custom fields: Minute `*/5`, and `*` for Hour, Day, Month, and Weekday. (This must match `tick_interval_seconds` = 300 in `config.php`.)

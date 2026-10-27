@@ -2,7 +2,7 @@
 /**
  * Market tick, run by a SiteGround cron job (GDD 11.5, issue #7).
  *
- *   php /home/customer/www/marz.gg/guildie-private/app/tick.php
+ *   php SITE_ROOT/guildie-private/app/tick.php   (exact path: Marz's private hosting notes)
  *   php .../tick.php --force     run one tick now, even if not due (manual test)
  *
  * Lives in guildie-private, so it can't be opened from a browser. Refuses to run outside the command line.
