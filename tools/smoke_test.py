@@ -298,11 +298,11 @@ if TICK:
     check("tick: traders buy underpriced listings", r["data"]["player"]["gold"] > gold_before, (gold_before, r["data"]["player"]))
     check("tick: sale to an NPC shows in activity", any(a["type"] == "sold" and "trader" in a["text"] for a in r["data"]["activity"]), r["data"]["activity"][:3])
 
-    # B buys from the suppliers (always available)
-    s, r = call("market_item", {"item_id": "smelting_flux"}, token=tok_b)
+    # A buys another guild's input from the suppliers (always available). B was drained to ~0 gold above.
+    s, r = call("market_item", {"item_id": "brass_fittings"}, token=tok_a)
     sup = next(l for l in r["data"]["listings"] if l["is_npc"])
-    s, r = call("buy_listing", {"listing_id": sup["id"], "quantity": 1}, token=tok_b)
-    check("buy from guild suppliers", s == 200 and have(r["data"]["state"], "smelting_flux") == 1, r)
+    s, r = call("buy_listing", {"listing_id": sup["id"], "quantity": 1}, token=tok_a)
+    check("buy from guild suppliers", s == 200 and have(r["data"]["state"], "brass_fittings") == 1, r)
 else:
     print("SKIP  market tick checks (no --tick command)")
 
