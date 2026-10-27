@@ -4,7 +4,7 @@
 
 Guildie is a mobile-first browser crafting and trading game. Choose one profession, master it, and trade with every other crafter in a living, persistent market. Your workshop keeps working while you're away.
 
-- **Engine:** Godot 4 (web export)
+- **Client:** TypeScript + Preact web app (built with Vite)
 - **Platform:** Mobile and desktop browsers
 - **Status:** Pre-production (proof of concept)
 

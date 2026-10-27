@@ -13,7 +13,7 @@ Before anything, the [SiteGround setup guide](setup-siteground.md) must be done 
 
 ### What happens on a merge
 
-1. **Checks** (on every pull request too): PHP syntax, the content validator, the API smoke test against a throwaway MySQL database, the headless client test, and the Godot web export. A pull request shows a green check when they pass; its packages can be downloaded under the PR's **Checks → Deploy → Artifacts**.
+1. **Checks** (on every pull request too): PHP syntax, the content validator, the API smoke test against a throwaway MySQL database, the web client build (type check), and a browser test that plays the game on a phone-sized and a desktop-sized screen. A pull request shows a green check when they pass; its packages can be downloaded under the PR's **Checks → Deploy → Artifacts**.
 2. **Upload server code** into `guildie-private/` (`app/`, `content/`, `migrations/`). `config.php` is never touched.
 3. **Upload the game** into `public_html/games/guildie/`.
 4. **Database updates:** the first request or cron tick after the upload applies any new `migrations/NNN_*.sql` file once (protected by a database lock) and records it in `game_state.schema_version`. The ping URL shows `"schema"`.
@@ -73,7 +73,7 @@ Each deploy uses these files. Claude sends them to you in the chat for each vers
 | File | Where it goes | What it is |
 |---|---|---|
 | `guildie-private-<version>.zip` | Extract into `guildie-private/` | Server code (`app/`) and game data (`content/`) |
-| `guildie-public-<version>.zip` | Extract into `public_html/games/guildie/` | The game (Godot web build) and `api/index.php` |
+| `guildie-public-<version>.zip` | Extract into `public_html/games/guildie/` | The game (web client: `index.html`, `assets/`, `.htaccess`) and `api/index.php` |
 | `001_init.sql` (and later migrations) | Import in phpMyAdmin | Database tables. Also in the repo under `server/migrations/`. |
 
 Neither zip contains `config.php`, so extracting them never touches your database settings.
@@ -108,7 +108,7 @@ The file is safe to import twice; it won't duplicate anything.
 3. Right-click → **Extract** into the current folder.
 4. Delete the zip.
 
-The folder should now contain `index.html`, `index.wasm`, `index.pck`, `index.js`, a few icons, and the `api/` folder with `index.php` inside.
+The folder should now contain `index.html`, `.htaccess`, an `assets/` folder, and the `api/` folder with `index.php` inside.
 
 ### Step 4: Check the server
 
@@ -248,6 +248,18 @@ Fully automatic, with no database changes. Check that the ping URL shows `"build
 
 ---
 
+## Deploying 0.4.0 (the new web client)
+
+Fully automatic, with no database changes and no SiteGround steps. The deploy replaces the Godot files (`index.wasm`, `index.pck`, …) with the web client: the upload tool removes files that are no longer part of the game.
+
+**Check it:**
+1. The ping URL shows `"build":"0.4.0 (build …)"`.
+2. Open the game: it should appear almost instantly, with no Godot loading bar. The login screen's footer shows **Client 0.4.0 · Server 0.4.0**.
+3. **Everyone logs in once more**, because the new client keeps the login in a different place. Accounts and progress are unchanged.
+4. On a computer, the game uses the full window: tabs at the top, two columns on the Workshop.
+
+---
+
 ## Troubleshooting
 
 | What you see | Most likely cause | Fix |
@@ -269,8 +281,10 @@ If something else goes wrong, send Claude the exact message from the ping page o
 ## For developers: building the packages
 
 ```
-GODOT=/path/to/godot-4.7 tools/package.sh
+tools/package.sh
 ```
+
+Needs Node.js 20+ (the script runs `npm ci` and `npm run build` in `client/`), plus `python3` and `zip`; CI has all of them.
 
 The build number comes from the `VERSION` file at the repo root (plus `BUILD_NUMBER` if set, as CI does). Bump `VERSION` for each meaningful release; the script stamps it into both the server and the client. The zips are written to `dist/` (not committed).
 
@@ -285,5 +299,6 @@ This creates throwaway `smoke_...` players. Crafting checks wait for real craft 
 ### Local testing
 
 - **API:** run a local PHP server with `GUILDIE_PRIVATE` pointing at a private folder (config + app symlink) and `GUILDIE_CONTENT` at a content copy whose `economy.json` has `pace.time_multiplier` 0.05, then `python3 tools/smoke_test.py URL --tick "php server/app/tick.php --force"`.
-- **Client:** `GUILDIE_API_URL=URL godot --headless --path client -s tests/client_smoke.gd`.
+- **Client (development):** `cd client && npm install`, then `GUILDIE_API_TARGET=http://127.0.0.1:8080 npm run dev` opens the game at http://localhost:5173 and forwards `api/index.php` to that server.
+- **Client (browser test):** build the client, serve `client/dist/` next to the API (like `public_html/games/guildie/`), then `npx playwright install chromium` once and `GUILDIE_URL=http://127.0.0.1:8080/games/guildie/ npx playwright test` in `client/`.
 - **Economy:** `php tools/econ_sim.php --db-name=SCRATCH_DB --db-user=... --db-pass=... --players=6 --days=7` runs bot players through the real server code for a simulated week and prints prices, NPC vs player sales, and gold. It wipes the database you give it, so never point it at the live one.

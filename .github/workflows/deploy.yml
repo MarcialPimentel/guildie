@@ -1,7 +1,8 @@
 # Checks every pull request, and on every merge to main deploys Guildie to marz.gg over FTPS.
 #
 #   checks  (PRs and main): PHP syntax, content validator, API smoke test against a throwaway
-#           MySQL, headless client test, Godot web export -> downloadable packages (Artifacts)
+#           MySQL, web client build (TypeScript), browser test (Playwright, phone + desktop)
+#           -> downloadable packages (Artifacts)
 #   deploy  (main only):    uploads the server code into guildie-private/, then the game into
 #           public_html/games/guildie/. The server applies new migrations itself.
 #
@@ -28,7 +29,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GODOT_VERSION: "4.7.2"
+  NODE_VERSION: "20"
   # Folders relative to each FTP account's home folder.
   PRIVATE_DIR: ./          # the server-code account's home IS guildie-private/
   PUBLIC_DIR: guildie/     # the game-files account's home is public_html/games/
@@ -98,44 +99,40 @@ jobs:
       - name: API smoke test
         run: python3 tools/smoke_test.py http://127.0.0.1:8080/games/guildie/api/index.php --tick "php server/app/tick.php --force" --feedback-key ci-feedback-key
 
-      - name: Cache Godot and web export templates
-        id: cache-godot
-        uses: actions/cache@v4
+      - uses: actions/setup-node@v4
         with:
-          path: |
-            ~/godot
-            ~/.local/share/godot/export_templates
-          key: godot-${{ env.GODOT_VERSION }}-web
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
 
-      - name: Download Godot and web export templates
-        if: steps.cache-godot.outputs.cache-hit != 'true'
-        run: |
-          set -e
-          BASE=https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable
-          T=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-          mkdir -p ~/godot "$T"
-          cd ~/godot
-          wget -q "$BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q Godot_v*.zip && rm Godot_v*.zip && mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot
-          wget -q "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
-          unzip -q -j -o Godot_v*_export_templates.tpz 'templates/web*' 'templates/version.txt' -d "$T"
-          rm Godot_v*_export_templates.tpz
-
-      - name: Client test (plays the real screens against the API)
+      - name: Build the web client (type check + Vite)
         working-directory: client
         run: |
-          ~/godot/godot --headless --import > /dev/null 2>&1 || true
-          GUILDIE_API_URL=http://127.0.0.1:8080/games/guildie/api/index.php \
-            ~/godot/godot --headless -s tests/client_smoke.gd 2>&1 | tee ../client-test.log
-          grep -q "ALL PASSED" ../client-test.log
-          if grep -E "SCRIPT ERROR|Parse Error" ../client-test.log; then exit 1; fi
+          npm ci --no-audit --no-fund
+          GUILDIE_BUILD="$(tr -d '[:space:]' < ../VERSION) (build ${{ github.run_number }})" npm run build
+          # Serve it next to the API, exactly like the live folder layout.
+          cp -r dist/. ../ci/www/games/guildie/
+
+      - name: Browser test (plays the real game against the API, phone + desktop)
+        working-directory: client
+        run: |
+          npx playwright install --with-deps chromium > /dev/null
+          GUILDIE_URL=http://127.0.0.1:8080/games/guildie/ npx playwright test
 
       - name: Build the upload packages
-        run: GODOT=~/godot/godot BUILD_NUMBER=${{ github.run_number }} tools/package.sh
+        run: BUILD_NUMBER=${{ github.run_number }} tools/package.sh
 
       - name: Server log (on failure)
         if: failure()
         run: cat ci/php-server.log || true
+
+      - name: Browser test traces (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: client/test-results/
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:

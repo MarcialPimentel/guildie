@@ -1,0 +1,22 @@
+{
+  "name": "guildie-client",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Guildie web client (TypeScript + Preact, built with Vite). Talks only to the PHP API; the server is authoritative.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "preact": "10.25.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "@preact/preset-vite": "2.9.4",
+    "typescript": "5.7.3",
+    "vite": "6.0.7"
+  }
+}

@@ -1,7 +1,7 @@
 # Guildie — Game Design Document
 
-**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M1 playtest (build 0.3.1)
-**Owner:** Marz · **Engine:** Godot 4 (web export) · **Platform:** Mobile-first browser, desktop browser
+**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M1 playtest (build 0.4.0)
+**Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
 >
@@ -471,14 +471,14 @@ Goal: the player feels the whole loop within about **three minutes**.
 
 ### 11.1 Principle: the server is authoritative
 
-The Godot client is **a view**. It never decides inventory, gold, craft results, procs, timers, or trades. Every state change is a server action that validates and applies it in a single transaction. This is non-negotiable for a persistent, multiplayer economy running in a browser, and it is far cheaper to do from day one than to retrofit.
+The web client is **a view**. It never decides inventory, gold, craft results, procs, timers, or trades. Every state change is a server action that validates and applies it in a single transaction. This is non-negotiable for a persistent, multiplayer economy running in a browser, and it is far cheaper to do from day one than to retrofit.
 
 ### 11.2 Stack (decided): PHP + MySQL on SiteGround
 
 Everything runs on the existing SiteGround hosting, on one domain.
 
 ```
-[ Godot 4 web client ]  ── HTTPS/JSON ──>  [ PHP API ]  ──>  [ MySQL ]
+[ TypeScript web client ] ── HTTPS/JSON ──>  [ PHP API ]  ──>  [ MySQL ]
   marz.gg/games/guildie/                    .../guildie/api/       SiteGround database
                                                  ▲
                               [ SiteGround cron job → tick.php (market tick) ]
@@ -519,16 +519,19 @@ Everything runs on the existing SiteGround hosting, on one domain.
 - **The market tick** runs from a SiteGround cron job (every 5–15 minutes [tune]). It runs NPC buys and sells, updates reference values and bands, expires listings, and advances events.
 - **Catch-up guard:** the server records `last_tick_at`. If a tick is overdue (for example, cron was delayed), the next API request runs the missed tick first, protected by a database lock so it never runs twice at once.
 
-### 11.6 Godot client structure
+### 11.6 Web client structure (0.4.0)
 
-- Control-node UI, data-driven from content definitions.
-- Autoload services: `Api` (HTTP wrapper), `Session` (auth and player state), `Content` (static definitions for display only), `Clock` (server time sync).
-- Modular, so a profession, building, or NPC persona can be added mostly through data, in line with the "systems" approach used in Pythio.
+- **TypeScript + Preact**, built by **Vite** into plain static files (one HTML page, one script, one stylesheet, about 20 KB compressed). It loads in about a second, even on a phone.
+- **Responsive:** one column with a bottom tab bar on phones. From 900 px wide, the tabs move to the top and busy screens (Workshop, sell form, City trades) use two columns.
+- `src/api.ts` (HTTP wrapper), `src/session.ts` (auth, player state, server clock offset; every action goes through it), `src/ui/*` (one file per screen: Login, Profession, GameScreen, Workshop, Market, Bag, City, Feedback).
+- Uses the browser's own text boxes, keyboard, scrolling and password autofill.
+- Data-driven from what the server sends, so a profession, building, or NPC persona can be added mostly through data, in line with the "systems" approach used in Pythio.
+- Tested by a Playwright browser test (`client/tests/play.spec.ts`) that plays every screen on a phone-sized and a desktop-sized screen against a real API.
 
 ### 11.7 Repo layout
 
 ```
-/client             Godot 4 project
+/client             Web client (TypeScript + Preact, Vite)    -> built into public_html/games/guildie/
 /server/api         Public entry point      -> public_html/games/guildie/api/
 /server/app         Private game logic       -> guildie-private/app/ (includes tick.php)
 /server/config      Config template          -> guildie-private/config.php (filled in, never committed)
@@ -540,14 +543,14 @@ Everything runs on the existing SiteGround hosting, on one domain.
 
 **Public versus private:** only the thin entry point in `api/` is reachable from the web. Game logic, `tick.php`, and the config with database credentials live in `guildie-private/`, a folder next to `public_html` that a browser can't open.
 
-`/content` is the single source of truth for static game data. Both the PHP server and the Godot client read the same files.
+`/content` is the single source of truth for static game data. The PHP server reads them and sends the client what it needs to display.
 
 ### 11.8 Hosting & deploy
 
 - Web build and API hosted on SiteGround alongside other projects (proposed path: `marz.gg/games/guildie/`).
 - Deploys are automatic from 0.2.1: a merge to `main` runs the checks, then GitHub uploads the server code to `guildie-private/` and the game to `public_html/games/guildie/` over FTPS. The server applies new database migrations itself. Details and the manual fallback: `docs/deploy.md`.
 - Build number comes from the repo's `VERSION` file, stamped into both server and client, and shown in the client footer.
-- Client engine: Godot 4.7, GL Compatibility renderer, single-threaded web export (no special server headers needed).
+- Client: TypeScript + Preact web app built by Vite (0.4.0; replaced the Godot 4 web export, see the Decision Log).
 - Development environment separate from the demo environment once real players join.
 
 ---
@@ -601,7 +604,7 @@ Each milestone ends with a playtest and a clear exit question.
 7. **Skill source (#30):** replace random skill-ups with crafting XP plus a first-craft bonus? How big should the bonus be, and should gathering give XP? The current 12 recipes can't fill the 100-point curve, so more recipes are needed in M2.
 8. ~~**Player interaction beyond the Exchange**~~ **Decided 2026-10-27:** a player directory and direct trade offers ship in 0.3.0 (6.8, 6.9). Gifts and a trade fee are not decided yet.
 9. **Italian / mercantile flavour?** Inspired by *Largo al factotum*: a mercantile-Italy tone (guilds, merchants, opera-buffa humour) blended with the steam age, a Venice with brass pipes. The first taste is the #1 title, "Il Factotum della Città". A fuller theme pass (names, the city's name, NPC flavour) belongs in M4 (Look & Feel).
-10. **Client engine (#40):** keep Godot, or move the client to a web stack (TypeScript)? Playtest 0.3.0 found the browser UI feels like a phone app on desktop and loads slowly. To decide before more client work.
+10. ~~**Client engine (#40)**~~ **Decided 2026-10-27: TypeScript web client** (0.4.0). Original question: keep Godot, or move the client to a web stack (TypeScript)? Playtest 0.3.0 found the browser UI feels like a phone app on desktop and loads slowly. To decide before more client work.
 
 **Playtest 1 feedback (2026-10-27):** Marz (Blacksmith) hit 0 gold and could neither list nor buy (#27, safety valve #28); asked for visible WoW-style skill points, e.g. 100/100 (#30); found no way to meet or trade with players outside the Exchange (#31, #32).
 
@@ -649,6 +652,7 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-27 | Workshop and Craft merged into one check-in screen; tab bar is Workshop, Market, Bag, City | The 30-second check-in (collect, then queue crafts) shouldn't need a tab switch (#39) |
 | 2026-10-27 | City shows one list with gold and crafts columns; #1 by gold is "Il Factotum della Città" | Two sorted lists repeated the same people; separate columns leave room for skill; a title gives the top a name (#38) |
 | 2026-10-27 | Sell form lists on the Exchange first, guild sale below; raw materials say they have no city buyers | The Exchange is the main way to sell (Pillar 2); answers "will it sell if I'm alone?" (#37) |
+| 2026-10-27 | **Client moves from Godot 4 to a TypeScript + Preact web app** (0.4.0) | Guildie is almost all menus and lists, which browsers do natively: about 20 KB instead of tens of MB, loads in a second, adapts to phone and desktop, real text boxes and keyboard. Only the client was rewritten; server, database, API tests and content are unchanged. Isometric art (M4) can use a canvas library (#40) |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---
