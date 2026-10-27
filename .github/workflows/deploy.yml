@@ -6,15 +6,13 @@
 #           public_html/games/guildie/. The server applies new migrations itself.
 #
 # Two SiteGround FTP accounts, each limited to the folder it needs (see docs/deploy.md):
-#   guildie-private@marz.gg  home = /marz.gg/guildie-private/      -> server code
-#   deploy@marz.gg           home = /marz.gg/public_html/games/    -> the game (shared with Pythio)
+#   server-code account  home = the guildie-private/ folder        -> server code
+#   game-files account   home = public_html/games/                 -> the game
+# Account names and passwords are only in the repository secrets and Marz's private notes.
 #
 # Repository secrets (Settings -> Secrets and variables -> Actions):
-#   FTP_SERVER             FTP host (same for both accounts)
-#   FTP_USERNAME           guildie-private@marz.gg
-#   FTP_PASSWORD           its password
-#   FTP_PUBLIC_USERNAME    deploy@marz.gg
-#   FTP_PUBLIC_PASSWORD    its password (the same one Pythio's FTP_PASSWORD holds)
+#   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD               (server-code account)
+#   FTP_PUBLIC_USERNAME, FTP_PUBLIC_PASSWORD             (game-files account, same host)
 # Until all five are set, checks still run and the upload is skipped.
 name: Deploy
 
@@ -32,8 +30,8 @@ concurrency:
 env:
   GODOT_VERSION: "4.7.2"
   # Folders relative to each FTP account's home folder.
-  PRIVATE_DIR: ./          # guildie-private@marz.gg's home IS guildie-private/
-  PUBLIC_DIR: guildie/     # deploy@marz.gg's home is public_html/games/
+  PRIVATE_DIR: ./          # the server-code account's home IS guildie-private/
+  PUBLIC_DIR: guildie/     # the game-files account's home is public_html/games/
 
 jobs:
   checks:

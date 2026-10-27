@@ -12,6 +12,8 @@
 /config.php
 guildie-private/
 .env
+# Private hosting notes (account names, server paths): never committed.
+*.private.md
 *.log
 
 # --- OS / editors ---
