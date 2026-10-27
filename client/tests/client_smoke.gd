@@ -115,6 +115,27 @@ func _run() -> void:
 		r = await session.buy_listing(int(npc[0]["id"]), 1)
 		check("buy brass fittings from suppliers", r["ok"], r)
 
+	# --- City tab (#31, #32): directory, a profile, the trade form, the trades inbox
+	game.show_tab(4)
+	await create_timer(1.5).timeout
+	var city = game._tabs[4]
+	check("city: player list loaded", city._view == "players" and city._body.get_child_count() >= 3, city._body.get_child_count())
+	r = await session.players("wealth")
+	var others: Array = r["data"]["players"].filter(func(p): return not p["me"]) if r["ok"] else []
+	check("city: directory lists me", r["ok"] and r["data"]["me"] != null, r)
+	if others.is_empty():
+		print("SKIP  city profile and trade form (no other players)")
+	else:
+		city._show_profile(int(others[0]["id"]))
+		await create_timer(1.5).timeout
+		check("city: profile loaded with a Propose trade button", city._view == "profile" and city._body.find_child("ProposeTrade", true, false) != null)
+		city._body.find_child("ProposeTrade", true, false).pressed.emit()
+		await create_timer(1.5).timeout
+		check("city: trade form shows", city._view == "compose" and city._body.find_child("SendOffer", true, false) != null)
+	city.set_mode("trades")
+	await create_timer(1.5).timeout
+	check("city: trades inbox loaded", city._view == "trades" and city._body.get_child_count() >= 2)
+
 	# --- feedback pop-up (#29), through the real buttons
 	game.find_child("FeedbackButton", true, false).pressed.emit()
 	await frames()

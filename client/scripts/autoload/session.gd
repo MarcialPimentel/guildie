@@ -120,6 +120,37 @@ func send_feedback(message: String, screen: String) -> Dictionary:
 	return await _call("feedback", {"message": message, "screen": screen})
 
 
+## City tab (#31): every player, sorted by "wealth" (gold) or "mastery" (crafts made).
+func players(sort: String) -> Dictionary:
+	return await _call("players", {"sort": sort})
+
+
+func player_profile(player_id: int) -> Dictionary:
+	return await _call("player_profile", {"player_id": player_id})
+
+
+## Direct trades (#32). Item lists are [{"item_id": ..., "quantity": n}].
+func trade_offers() -> Dictionary:
+	return await _call("trade_offers", null)
+
+
+func offer_create(to_player_id: int, give_items: Array, give_gold: int, ask_items: Array, ask_gold: int, note: String) -> Dictionary:
+	return await _state_call("offer_create", {"to_player_id": to_player_id, "give_items": give_items, "give_gold": give_gold,
+		"ask_items": ask_items, "ask_gold": ask_gold, "note": note}, "state")
+
+
+func offer_accept(offer_id: int) -> Dictionary:
+	return await _state_call("offer_accept", {"offer_id": offer_id}, "state")
+
+
+func offer_decline(offer_id: int) -> Dictionary:
+	return await _state_call("offer_decline", {"offer_id": offer_id}, "state")
+
+
+func offer_cancel(offer_id: int) -> Dictionary:
+	return await _state_call("offer_cancel", {"offer_id": offer_id}, "state")
+
+
 # ---------------------------------------------------------------- internals
 
 ## Call an action; log out locally if the session is no longer valid.

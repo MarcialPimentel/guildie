@@ -1,6 +1,6 @@
 # Guildie — Systems Design
 
-**Version:** 0.3 · **Date:** 2026-10-27 · **Companion to:** [GDD.md](GDD.md)
+**Version:** 0.4 · **Date:** 2026-10-27 · **Companion to:** [GDD.md](GDD.md)
 
 The GDD describes *what Guildie is*. This document breaks the game into **systems**: self-contained pieces of mechanics, each with one clear job, its own data, and defined connections to the others. Every feature we build should belong to exactly one system (or be explicitly cross-cutting).
 
@@ -18,7 +18,7 @@ The GDD describes *what Guildie is*. This document breaks the game into **system
 3. [Shared conventions](#3-shared-conventions)
 4. [Foundation systems](#4-foundation-systems): Accounts, Time & Timers, Content, Inventory & Wallet, Activity Log
 5. [Production systems](#5-production-systems): Professions & Progression, Gathering, Crafting, Focus (active play)
-6. [Exchange systems](#6-exchange-systems): The Exchange, Market Simulation, Crafting Orders
+6. [Exchange systems](#6-exchange-systems): The Exchange, Market Simulation, Crafting Orders, Direct Trades
 7. [Meta systems](#7-meta-systems): Workshop & Buildings, Calendar & Events, Leaderboards, Guilds
 8. [Cross-cutting systems](#8-cross-cutting-systems): Economy Balance, Playtest Feedback, Onboarding
 9. [Milestone matrix](#9-milestone-matrix)
@@ -61,12 +61,13 @@ flowchart LR
 | | **Gathering** | Raw materials over time | ✅ M1 |
 | | **Crafting** | Turning inputs into goods | ✅ M1 |
 | | **Focus** | Optional active play that improves crafts | M2 |
-| Exchange | **The Exchange** | Player-facing auction house | ✅ M1; 0.2.2: deposit from the sale, Sell to guild; direct trades proposed (#32) |
+| Exchange | **The Exchange** | Player-facing auction house | ✅ M1; 0.2.2: deposit from the sale, Sell to guild |
+| | **Direct Trades** | Player-to-player offers | ✅ 0.3.0 |
 | | **Market Simulation** | NPC demand and supply that keeps the market alive | ✅ M1 |
 | | **Crafting Orders** | Specific requests with rewards | M2 |
 | Meta | **Workshop & Buildings** | Capacity and speed upgrades | M2 |
 | | **Calendar & Events** | Weekly rhythm and world events | M2 (week), M4 (events) |
-| | **Leaderboards** | Public rankings | M3; player directory may come earlier (#31) |
+| | **Leaderboards** | Public rankings | City directory ✅ 0.3.0; full boards M3 |
 | | **Guilds** | Social layer | Later |
 | Cross-cutting | **Economy Balance** | Faucets, sinks, and monitoring | ✅ M1 (simulator), ongoing |
 | | **Onboarding** | The first three minutes | M2 (basic), M4 (polish) |
@@ -88,8 +89,8 @@ Everything a player can *do*, and which system owns it. If a new feature adds a 
 | **List** an item for sale | Exchange | 30 s | M1 |
 | **Sell to guild** instantly (no listing) | Exchange | 30 s | 0.2.2 |
 | **Send feedback** | Playtest Feedback | 30 s | 0.2.2 |
-| **Offer / accept** a direct trade | Exchange | 5 min | Proposed (#32) |
-| **Browse** players (leaderboard / directory) | Leaderboards | 5 min | Proposed (#31) |
+| **Offer / accept / decline / cancel** a direct trade | Direct Trades | 5 min | 0.3.0 |
+| **Browse** players and profiles (City) | Leaderboards | 5 min | 0.3.0 |
 | **Buy** a listing | Exchange | 5–30 min | M1 |
 | **Cancel / relist** | Exchange | 30 s | M1 |
 | **Read** prices, history, news | Exchange, Calendar | 5–30 min | M1 (prices), M2 (news) |
@@ -358,6 +359,26 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 
 **Milestone:** M2.
 
+### 6.4 Direct Trades *(0.3.0)*
+
+| | |
+|---|---|
+| **Job** | Let two players swap goods and gold directly, without both being online |
+| **Owns** | `trade_offers` (sender, recipient, items and gold on each side, note, status, expiry) |
+| **Verbs** | Offer, Accept, Decline, Cancel |
+| **Inputs** | Items and gold from Inventory & Wallet; players from the City directory |
+| **Outputs** | Items and gold moved between players; events to the Activity Log; the City tab badge (`incoming_offers` in state) |
+
+**Rules**
+- Sending an offer **holds the sender's side** (removed from inventory and wallet). Declined, cancelled or expired offers return it. Expiry runs in the market tick.
+- **Accept** locks the offer row, takes the asked-for side from the recipient (refused if they lack it: nothing changes), and gives each side to the other, in one transaction. A second accept finds the offer closed.
+- **Both sides must contain something** (no gifts). **No fee.** Sender and recipient must be different players in a guild.
+- Completed trades are recorded on the offer row and in both players' Activity Logs (not in the Exchange `trades` ledger, which is per listing).
+
+**Tuning knobs** (`economy.json` → `trade_offers`): `duration_hours` 24, `max_open_per_player` 5, `max_items_per_side` 5.
+
+**Later:** gifts, a small fee, and anti-abuse checks for alt-account funnelling (M3).
+
 ---
 
 ## 7. Meta systems
@@ -398,8 +419,9 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 |---|---|
 | **Job** | Public goals and friendly rivalry |
 | **Owns** | Derived views (no data of its own) |
-| **Rules** | Two boards: **total gold** and **rank progress** (GDD decision). Open question: total gold vs net worth (GDD Open Question 1). |
-| **Milestone** | M3 |
+| **Rules** | Two boards: **total gold** (decided: not net worth) and **rank progress**. Until skill points exist, "Mastery" ranks by crafts made. |
+| **0.3.0: City directory** | Every player in a guild, sorted by Wealth (gold) or Mastery (crafts made), with guild and last seen. A profile shows gold, crafts made, recipes discovered, their active Exchange listings (buyable) and **Propose a trade**. Computed on request (`players.php`). |
+| **Milestone** | City directory 0.3.0; full boards with rank progress M3 |
 
 ### 7.4 Guilds
 
@@ -452,7 +474,7 @@ What each system delivers in each milestone.
 | Crafting Orders | — | NPC orders | — | — |
 | Workshop | — | Upgrades, rank caps | — | Isometric art |
 | Calendar & Events | — | Guild Week | — | World events, news |
-| Leaderboards | — | — | Gold + rank | — |
+| Leaderboards | City directory (0.3.0) | — | Gold + rank | — |
 | Economy Balance | **Simulator** | Retune | Live metrics | — |
 | Onboarding | — | Basic flow | — | Polish |
 

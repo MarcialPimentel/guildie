@@ -42,6 +42,7 @@ function player_state(int $playerId): array
         'craft_slots'     => (int) econ('crafting.slots', 1),
         'max_batch'       => (int) econ('crafting.max_batch', 10),
         'active_listings' => (int) $stmt->fetchColumn(),
+        'incoming_offers' => offers_incoming_count($playerId),
         'activity'        => activity_list($playerId, 15),
         'server_time'     => game_now(),
         'build'           => GUILDIE_BUILD,

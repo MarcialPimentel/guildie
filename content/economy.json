@@ -31,6 +31,12 @@
     "recovery_half_life_hours": 4,
     "hint_below": 0.6
   },
+  "trade_offers": {
+    "_comment": "Direct trades (#32): the sender's side is held until accepted, declined, cancelled or expired. No fee for now; both sides must contain something (no gifts).",
+    "duration_hours": 24,
+    "max_open_per_player": 5,
+    "max_items_per_side": 5
+  },
   "market": {
     "floor_multiplier": 0.6,
     "ceiling_multiplier": 1.5,
