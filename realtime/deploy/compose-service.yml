@@ -1,0 +1,18 @@
+# Add this under `services:` in /opt/hub/docker-compose.yml on the droplet (and in the copy in the
+# hormigas repo's deploy/hub/). docs/realtime-setup.md has the steps.
+
+  guildie-realtime:
+    image: ghcr.io/marcialpimentel/guildie-realtime:latest
+    restart: unless-stopped
+    environment:
+      REALTIME_SECRET: ${GUILDIE_REALTIME_SECRET}
+      ALLOWED_ORIGINS: https://marz.gg,https://www.marz.gg
+      CAPACITY: "30"
+    # Players reconnect by themselves after a restart; a short grace period is enough.
+    stop_grace_period: 5s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8788/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

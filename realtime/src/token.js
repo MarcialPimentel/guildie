@@ -1,7 +1,7 @@
 // @ts-check
 // Checks the presence pass the PHP server signs (server/app/lib/city.php city_presence_token):
 //   base64url(JSON claims) "." base64url(HMAC-SHA256(secret, first part))
-// Uses Web Crypto, which both Cloudflare Workers and Node 20 have built in.
+// Uses Web Crypto, which Node 20 has built in.
 
 const enc = new TextEncoder()
 

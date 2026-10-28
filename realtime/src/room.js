@@ -1,6 +1,6 @@
 // @ts-check
-// The rules of one quarter room (docs/living-city.md section 7, systems.md 7.5), shared by the Cloudflare
-// Durable Object (worker.js) and the local test server (dev-server.mjs). Cosmetic only: positions, waves and
+// The rules of one quarter room (docs/living-city.md section 7, systems.md 7.5), used by the realtime server
+// (server.mjs) and tested on their own (test/room.test.mjs). Cosmetic only: positions, waves and
 // slaps. Nothing here knows about gold or items; the PHP server stays the judge of everything with value.
 //
 // A "connection" is whatever the host uses for a socket; the host passes a send(conn, text) function.
@@ -38,7 +38,7 @@ export class Room {
     this.close = close
     this.capacity = opts.capacity ?? CAPACITY
     this.now = opts.now ?? (() => Date.now())
-    /** Called when a player's saved state changes (the Durable Object stores it on the socket for hibernation). */
+    /** Called when a player's saved state changes (a host that sleeps between messages can store it on the socket). */
     this.onSeat = opts.onSeat ?? (() => {})
     /** @type {Map<any, Seat>} */
     this.seats = new Map()

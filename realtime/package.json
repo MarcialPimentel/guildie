@@ -2,13 +2,13 @@
   "name": "guildie-realtime",
   "private": true,
   "version": "0.0.0",
-  "description": "Guildie's realtime rooms (the living city): cosmetic presence only. Cloudflare Durable Objects in production, a small Node server for tests.",
+  "description": "Guildie's realtime rooms (the living city): cosmetic presence only. A small Node server, run as a Docker container on the droplet in production.",
   "type": "module",
   "scripts": {
-    "dev": "node src/dev-server.mjs",
+    "start": "node src/server.mjs",
     "test": "node --test test/"
   },
-  "devDependencies": {
+  "dependencies": {
     "ws": "8.18.0"
   }
 }

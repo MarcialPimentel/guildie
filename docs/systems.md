@@ -481,7 +481,7 @@ Social layer: guild orders needing several professions, a shared guild hall, gui
 | | |
 |---|---|
 | **Job** | Let players see each other move in the guild quarters: positions, waves and slaps. Cosmetic only |
-| **Owns** | `city_prefs` (slaps on/off); the realtime rooms (Cloudflare Durable Objects, `realtime/`), which keep nothing after everyone leaves |
+| **Owns** | `city_prefs` (slaps on/off); the realtime rooms (`realtime/`, a small container on the DigitalOcean droplet), which keep nothing after everyone leaves |
 | **Verbs** | Walk, Visit, Wave, Slap |
 | **Inputs** | A signed presence pass from the PHP server (`presence_token`: player id, name, guild, look, slaps, expiry in 10 min); recent `activity` for echoes |
 | **Outputs** | Nothing that changes game state |

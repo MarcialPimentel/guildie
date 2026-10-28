@@ -116,7 +116,7 @@ One city-wide order that everyone works on together. Server-authoritative, built
     │                    │
     │                    └─ presence_token: a short-lived signed pass (who you are, your guild, your look, slaps on/off)
     │
-    └──WebSocket──> Realtime room on Cloudflare (cosmetic only: positions, waves, slaps)
+    └──WebSocket──> Realtime rooms on the DigitalOcean droplet (cosmetic only: positions, waves, slaps)
                     one room per quarter copy, at most 30 people each
 ```
 
@@ -126,16 +126,18 @@ One city-wide order that everyone works on together. Server-authoritative, built
 
 ### 7.2 Which service, and what it costs
 
-Checked on 2026-10-28 on each provider's pricing page:
+**Chosen (2026-10-28): the DigitalOcean droplet that already runs Hormigas** (`hub`, 1 vCPU, 2 GB). Its Caddy already serves HTTPS and passes WebSockets through, and it has an automatic GitHub deploy. The rooms run as one more container (`guildie-realtime`) at `guildie-live.marz.gg`. No new account and no message quota; the load is tiny (small messages, only while people walk, no game simulation), about 50 MB of memory. If the droplet is down, quarters show "Quiet day" and nothing else is affected.
+
+The hosted services compared first (checked on 2026-10-28 on each provider's pricing page):
 
 | Option | Free plan | Fit for 30-player rooms |
 |---|---|---|
-| **Cloudflare Workers + Durable Objects** (chosen) | 100,000 requests a day; 13,000 GB-s of running time a day; incoming WebSocket messages count 20 to 1 as requests; **outgoing messages are free**; rooms "hibernate" (cost nothing) when idle | Good. Each move is sent once and copied to the room for free. We write the room's rules ourselves (capacity, slap distance, signed passes) |
+| Cloudflare Workers + Durable Objects (runner-up) | 100,000 requests a day; 13,000 GB-s of running time a day; incoming WebSocket messages count 20 to 1 as requests; **outgoing messages are free**; rooms "hibernate" (cost nothing) when idle | Good. Each move is sent once and copied to the room for free. We write the room's rules ourselves (capacity, slap distance, signed passes) |
 | Ably | 6 million messages a month, 200 connections, 50 messages a second per connection | Weak. Ably counts messages sent *and received*, so one move copied to 29 people counts about 30 times. A busy room would use the month's quota in days |
 | Pusher Channels | 200,000 messages a day, 100 connections | Weak for the same reason, and a lower cap |
 | Supabase Realtime | 2 million messages a month, 200 connections; free projects pause after 1 week without use | Possible, but pausing after a quiet week would switch presence off without warning |
 
-**Estimate for Guildie:** a merchant sends at most 5 position updates a second, and only while walking (nothing while standing). Twenty players each playing 30 minutes a day and walking 40% of that time send about 72,000 messages, which Cloudflare counts as about 3,600 requests: under 4% of the free daily allowance. The free plan covers roughly 100 hours of non-stop walking a day before any limit. If Guildie outgrows it, the Workers Paid plan is $5 a month; nothing in the game changes.
+**Estimate for Guildie:** a merchant sends at most 5 position updates a second, and only while walking (nothing while standing). Twenty players each playing 30 minutes a day and walking 40% of that time send about 72,000 messages a day; a full room of 30 walking non-stop is about 4,500 small messages a second going out, which one Node process handles easily. If Guildie ever outgrows the shared droplet, the same container moves to its own droplet (or the room rules move to Cloudflare); nothing in the game changes.
 
 **Why not on SiteGround:** shared PHP hosting runs one short script per request and can't hold a connection open, so WebSockets can't run there.
 
@@ -153,10 +155,10 @@ The room clamps positions to the piazza, drops a client that floods it, refuses 
 
 ### 7.4 Where the code lives
 
-- `realtime/`: the room (`room.js`: plain rules shared by both servers), the Cloudflare Worker (`worker.js`, `wrangler.toml`), and a small local server (`dev-server.mjs`) for tests and local play.
+- `realtime/`: the room rules (`room.js`), the pass check (`token.js`), the server (`server.mjs`: the same program in production, tests and local play), its `Dockerfile`, and the droplet snippets (`deploy/`).
 - `server/app/lib/city.php`: the presence pass, slap setting, friends, and the quarters (stalls and echoes). `server/app/lib/duke.php`: the Duke's order.
 - `client/src/world/`: blob merchants (`blobs.ts`), the quarters (`quarter.ts`) and the engine additions for walking, other players and slaps. `client/src/presence.ts`: the room connection.
-- Setup for Marz: `docs/realtime-setup.md` (create a free Cloudflare account, add two GitHub secrets, paste the shared secret into `config.php`). The worker then deploys automatically with each merge, like the game.
+- Setup for Marz: `docs/realtime-setup.md` (a DNS record, two GitHub secrets copied from Hormigas, a one-time change on the droplet, two lines in `config.php`). After that, each merge rebuilds and restarts the rooms automatically, like the game.
 
 ---
 
@@ -211,7 +213,7 @@ Phones don't show live walkers or slaps. That comes if and when phones get a 3D 
 
 Recommendations are marked; the build follows them unless you say otherwise.
 
-1. **Realtime service: Cloudflare Workers + Durable Objects** (recommended; free). Needs you to create a free Cloudflare account, add three GitHub secrets and two `config.php` lines (`docs/realtime-setup.md`). Until then, the quarters work without live players.
+1. **Realtime service: the existing DigitalOcean droplet** (decided 2026-10-28, instead of Cloudflare). One-time setup in `docs/realtime-setup.md`. Until then, the quarters work without live players.
 2. **Friends are one-way bookmarks** (recommended): no friend requests. Alternative: requests that must be accepted.
 3. **Duke's order pays 1.25 × now plus 0.15 × on completion; 40% cap per player; 72 hours** (all [tune]).
 4. **Slaps are on by default**, with the switch in the world tools (recommended). Alternative: off by default.

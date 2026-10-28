@@ -84,7 +84,7 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
 
 // The living city (0.9.0): walk your merchant, open a place, go up to a guild quarter, see a second player
 // live (two browsers through the realtime room), follow their moves, slap, respect a slap opt-out, and visit
-// their bottega. Needs the realtime test server (realtime/src/dev-server.mjs) and realtime_url in config.php.
+// their bottega. Needs the realtime server running locally (realtime/src/server.mjs) and realtime_url in config.php.
 async function joinAs(page: Page, name: string, guild: string) {
   await page.goto('./?view=3d')
   await page.fill(id('login-name'), name)

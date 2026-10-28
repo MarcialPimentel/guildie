@@ -1,0 +1,6 @@
+# Add this to /opt/hub/Caddyfile on the droplet (and the copy in the hormigas repo's deploy/hub/).
+# Caddy gets the HTTPS certificate by itself and passes WebSockets through.
+
+guildie-live.marz.gg {
+	reverse_proxy guildie-realtime:8788
+}

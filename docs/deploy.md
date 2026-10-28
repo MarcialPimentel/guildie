@@ -264,7 +264,7 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 Automatic. Migration **007** (friends, slap settings, the Duke's order) applies itself; the ping URL shows `"build":"0.9.0 (build …)"` and `"schema":7`. It needs 0.8.0 (migration 006) merged first.
 
-**Optional, any time: live players.** Other merchants only appear live once the realtime rooms are set up on Cloudflare: [realtime-setup.md](realtime-setup.md) (about 15 minutes, free). Until then everything else works, and quarters say "Quiet day".
+**Optional, any time: live players.** Other merchants only appear live once the realtime rooms run on the DigitalOcean droplet: [realtime-setup.md](realtime-setup.md) (about 15 minutes, one time; no new account). Until then everything else works, and quarters say "Quiet day".
 
 What players notice:
 

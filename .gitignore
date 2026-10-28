@@ -4,7 +4,6 @@
 /client/test-results/
 /client/playwright-report/
 /realtime/node_modules/
-/realtime/.wrangler/
 *.tmp
 
 # --- Server secrets ---
