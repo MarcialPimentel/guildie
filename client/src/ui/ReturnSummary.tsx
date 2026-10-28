@@ -4,6 +4,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { duration, gold } from '../format'
 import { session } from '../session'
 import type { Activity, NewsItem } from '../types'
+import { useGame } from './common'
 
 const AWAY_SECONDS = 15 * 60   // [tune]
 const KEY = 'guildie.lastSeen.'
@@ -54,28 +55,47 @@ function summarize(activity: Activity[], away: number, news: NewsItem[]): Summar
   }
 }
 
-/** Shows once per visit when the player has been away at least AWAY_SECONDS. */
+/**
+ * Shows when the player has been away at least AWAY_SECONDS: on opening the game, and (0.5.2) when a
+ * phone brings a backgrounded tab back, which is how most phone visits start.
+ */
 export function ReturnSummary() {
+  const game = useGame()
   const [summary, setSummary] = useState<Summary | null>(null)
   const [busy, setBusy] = useState(false)
   const playerId = session.state!.player.id
 
   useEffect(() => {
-    const last = load(playerId)
-    const away = session.now() - last
-    markSeen(playerId)
-    if (!last || away < AWAY_SECONDS) return
-    Promise.all([session.activitySince(last), session.news()]).then(([a, n]) => {
-      if (!a.ok) return
-      setSummary(summarize(a.data.activity, away, n.ok ? n.data.news : []))
-    })
+    let alive = true
+    const check = async () => {
+      const last = load(playerId)
+      const away = session.now() - last
+      markSeen(playerId)
+      if (!last || away < AWAY_SECONDS) return
+      await session.refresh()   // the bag, station and crafts as they are now
+      const [a, n] = await Promise.all([session.activitySince(last), session.news()])
+      if (alive && a.ok && session.state) setSummary(summarize(a.data.activity, away, n.ok ? n.data.news : []))
+    }
+    const onVisible = () => document.visibilityState === 'visible' && check()
+    check()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      alive = false
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [playerId])
 
   if (!summary) return null
   const collectAll = async () => {
     setBusy(true)
-    await session.collectStation()
-    if (summary.craftsReady) await session.collectCrafts()
+    const texts: string[] = []
+    const station = await game.run(() => session.collectStation(), 'Collected.')
+    if (station.ok) texts.push(...(station.data.surprises ?? []).map((x) => x.text))
+    if (summary.craftsReady) {
+      const crafts = await game.run(() => session.collectCrafts(), 'Collected everything.')
+      if (crafts.ok) texts.push(...(crafts.data.surprises ?? []).map((x) => x.text))
+    }
+    if (texts.length) game.say(texts.join(' · '))
     setBusy(false)
     setSummary(null)
   }
