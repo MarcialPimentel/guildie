@@ -18,6 +18,13 @@ export default defineConfig({
   },
   projects: [
     { name: 'phone', use: { ...devices['Pixel 7'] } },
-    { name: 'desktop', use: { viewport: { width: 1280, height: 860 } } },
+    // Desktop gets the 3D harbor: CI has no GPU, so WebGL runs in software (SwiftShader).
+    {
+      name: 'desktop',
+      use: {
+        viewport: { width: 1280, height: 860 },
+        launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] },
+      },
+    },
   ],
 })

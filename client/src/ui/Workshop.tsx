@@ -20,21 +20,31 @@ export function Workshop() {
         <Station state={state} now={now} />
         <Orders />
         <Crafts state={state} now={now} />
-        <section class="stack tight">
-          <h2>Recent activity</h2>
-          {state.activity.length === 0 && <p class="muted">Nothing yet.</p>}
-          {state.activity.slice(0, 12).map((a) => (
-            <div class="row">
-              <p class={`grow small ${a.type === 'surprise' ? 'surprise' : ['sold', 'sold_to_guild', 'trade_done', 'order_filled'].includes(a.type) ? 'ok' : ''}`}>{a.text}</p>
-              <span class="tiny muted num">{ago(now - a.created_at).replace(' ago', '')}</span>
-            </div>
-          ))}
-        </section>
-        <p class="center tiny muted" data-testid="footer">Client {CLIENT_BUILD} · Server {s.serverBuild}</p>
-        <button class="secondary small" onClick={() => session.logout()} data-testid="logout">Log out</button>
+        <Ledger state={state} now={now} />
       </div>
       <Recipes state={state} />
     </div>
+  )
+}
+
+/** Recent activity, the build numbers and Log out (the 3D view shows this at the bottega door). */
+export function Ledger({ state, now }: { state: GameState; now: number }) {
+  const s = useSession()
+  return (
+    <>
+      <section class="stack tight">
+        <h2>Recent activity</h2>
+        {state.activity.length === 0 && <p class="muted">Nothing yet.</p>}
+        {state.activity.slice(0, 12).map((a) => (
+          <div class="row">
+            <p class={`grow small ${a.type === 'surprise' ? 'surprise' : ['sold', 'sold_to_guild', 'trade_done', 'order_filled'].includes(a.type) ? 'ok' : ''}`}>{a.text}</p>
+            <span class="tiny muted num">{ago(now - a.created_at).replace(' ago', '')}</span>
+          </div>
+        ))}
+      </section>
+      <p class="center tiny muted" data-testid="footer">Client {CLIENT_BUILD} · Server {s.serverBuild}</p>
+      <button class="secondary small" onClick={() => session.logout()} data-testid="logout">Log out</button>
+    </>
   )
 }
 
@@ -48,7 +58,7 @@ function useSurpriseMessage() {
   }
 }
 
-function Station({ state, now }: { state: GameState; now: number }) {
+export function Station({ state, now }: { state: GameState; now: number }) {
   const station = state.profession!.station
   const onCollected = useSurpriseMessage()
   // The server sent counts at server_time; estimate what has been produced since (the server decides on collect).
@@ -84,7 +94,7 @@ function Station({ state, now }: { state: GameState; now: number }) {
   )
 }
 
-function Crafts({ state, now }: { state: GameState; now: number }) {
+export function Crafts({ state, now }: { state: GameState; now: number }) {
   const crafts = state.crafts
   const onCollected = useSurpriseMessage()
   const anyDone = crafts.some((c) => c.ends_at <= now)
@@ -111,7 +121,7 @@ function Crafts({ state, now }: { state: GameState; now: number }) {
   )
 }
 
-function Recipes({ state }: { state: GameState }) {
+export function Recipes({ state }: { state: GameState }) {
   const free = state.craft_slots - state.crafts.length
   return (
     <section class="stack" data-testid="recipes">

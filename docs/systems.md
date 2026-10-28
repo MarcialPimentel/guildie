@@ -412,7 +412,7 @@ Player-posted orders are in the backlog.
 - **Maximum building level is capped by profession rank** [Confirmed], which keeps the two progression tracks aligned (see 5.1).
 - **Machines** (Expert+: water wheels, gear trains, clockwork) automate work and cost **lamp oil and wages** as an ongoing running cost: a sink that scales with how much you automate (replaced coal, 2026-10-28).
 
-**Milestone:** M2 (core upgrades), a 3D test slice beside M2, M4 (final 3D art, machine visuals).
+**Milestone:** M2 (core upgrades), the 3D harbor on desktop (0.7.0), M4 (final 3D art, machine visuals).
 
 ### 7.2 Calendar & Events
 

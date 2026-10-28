@@ -1,6 +1,6 @@
 # Guildie — Art Direction Proposal: Portovela
 
-**Status:** Approved by Marz on 2026-10-28: option A (Renaissance), the name Portovela, React + Three.js, starting now beside M2, and lamp oil plus wages as the machine running cost. The GDD and its Decision Log were updated in 0.6.0, which ships plan step 1 (the new look on today's screens).
+**Status:** Approved by Marz on 2026-10-28: option A (Renaissance), the name Portovela, Three.js (in the end used directly with Preact, see §5), starting now beside M2, and lamp oil plus wages as the machine running cost. The GDD and its Decision Log were updated in 0.6.0, which shipped plan step 1 (the new look on today's screens). **0.7.0 ships step 2 and the start of step 4: the 3D harbor is the desktop home screen**, with every place opening its screen in a side panel; phones keep the classic view.
 
 **Playable mock-up:** open [`docs/art/portovela-mockup.html`](art/portovela-mockup.html) in a browser (it loads Three.js from a CDN). The game's item icons are in [`client/src/icons/`](../client/src/icons/).
 
@@ -93,11 +93,11 @@ The client still decides nothing: the world animates what the server returns.
 
 ## 5. Technology
 
-**Recommendation:** keep TypeScript, Vite, the PHP API and MySQL. Swap Preact for React (same API, about 35 KB more) and add **Three.js via React Three Fiber** for a 3D world layer. Menus stay HTML, layered over the world, so text, forms, accessibility and the Playwright tests keep working.
+**Built (0.7.0):** TypeScript, Vite, the PHP API and MySQL stay. **Three.js is used directly inside the Preact app** (`client/src/world/`), loaded as a separate file only by the 3D view. The original plan was React Three Fiber; plain Three.js turned out simpler for a mostly hand-animated scene and avoids swapping the whole client to React (GDD Decision Log, 2026-10-28). Menus stay HTML, opened as side panels over the world, so text, forms, accessibility and the Playwright tests keep working.
 
 ```
-HTML menus and panels (React)          <- opened by taps in the world
-3D harbor (Three.js / React Three Fiber)
+HTML menus and panels (Preact)         <- opened by clicks in the world
+3D harbor (Three.js, lazily loaded)
 Game state + API client (unchanged)
 PHP + MySQL on SiteGround (unchanged, authoritative)
 ```
@@ -152,6 +152,6 @@ Single object centered on a plain white background, no text, no people.
 
 - Era: **A, Renaissance merchant republic.**
 - City name: **Portovela.**
-- Technology: **switch Preact → React and add Three.js** (with step 2).
+- Technology: **add Three.js** (with step 2). Built with plain Three.js in Preact instead of React Three Fiber; see §5.
 - Timing: **steps 1 and 2 now, beside M2.** Step 1 shipped as 0.6.0.
 - Machine running cost: **lamp oil and wages.** How it maps onto the recipe ladder (`professions.md` §8) is settled when workshop upgrades are built.

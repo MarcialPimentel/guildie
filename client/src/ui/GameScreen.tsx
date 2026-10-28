@@ -1,6 +1,7 @@
-// The main game screen: header (name, guild, ducats, Feedback), the current tab, a message line, and the tab bar.
-// Tabs: Bottega (station, crafts, recipes; the old Workshop), Mercato (the Exchange), Bag, City.
-import { useEffect, useRef, useState } from 'preact/hooks'
+// The main game screen: header (name, guild, ducats, view switch, Feedback), a message line, and either
+// the classic view (tabs: Bottega, Mercato, Bag, City) or the 3D harbor with side panels (desktop, 0.7.0).
+// Both views use the same screens, the same background refresh and the same "While you were away".
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { errorMessage, type ApiResult } from '../api'
 import { Coins } from './art'
 import { useSession, session } from '../session'
@@ -8,9 +9,12 @@ import { Bag } from './Bag'
 import { City } from './City'
 import { GameContext, type Game, type TabName, type TabRequest } from './common'
 import { FeedbackDialog } from './Feedback'
+import { HarborView, type Panel } from './HarborView'
 import { Market } from './Market'
 import { markSeen, ReturnSummary } from './ReturnSummary'
 import { Workshop } from './Workshop'
+import { canOffer3D, initialView, rememberView, type ViewMode } from '../view'
+import type { PickId } from '../world/types'
 
 const REFRESH_MS = 20000
 const TABS: [TabName, string][] = [['workshop', 'Bottega'], ['market', 'Mercato'], ['bag', 'Bag'], ['city', 'City']]
@@ -23,6 +27,8 @@ export function GameScreen() {
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [mode, setMode] = useState<ViewMode>(initialView)
+  const [panel, setPanel] = useState<Panel | null>(null)
   const [view, setView] = useState('')   // the current tab's sub-view, saved with feedback
   const messageTimer = useRef<number>()
   const refreshTimer = useRef<number>()
@@ -85,6 +91,12 @@ export function GameScreen() {
       return r
     },
     openTab(name: TabName, req: TabRequest = {}) {
+      if (mode === '3d') {
+        // In the harbor, a tab is a place: open its panel instead.
+        const id: PickId = name === 'workshop' ? 'workbench' : name === 'bag' ? 'bag' : name === 'city' ? 'city' : req.market === 'mine' ? 'stall' : 'mercato'
+        setPanel({ id, request: req })
+        return
+      }
       setRequest(req)
       setTab(name)
       window.scrollTo(0, 0)
@@ -93,7 +105,22 @@ export function GameScreen() {
   }
 
   const offers = state.incoming_offers ?? 0
-  const screenName = TABS.find(([k]) => k === tab)![1] + (view ? `/${view}` : '')
+  const screenName = mode === '3d' ? `3D/${view || 'harbor'}` : TABS.find(([k]) => k === tab)![1] + (view ? `/${view}` : '')
+
+  const openPanel = useCallback((id: PickId) => {
+    setPanel({ id, request: id === 'stall' ? { market: 'mine' } : id === 'mercato' ? { market: 'browse' } : {} })
+  }, [])
+  const closePanel = useCallback(() => setPanel(null), [])
+  const switchMode = (m: ViewMode) => {
+    rememberView(m)
+    setMode(m)
+    setPanel(null)
+    setView('')
+  }
+  useEffect(() => {
+    document.body.classList.toggle('in-world', mode === '3d')
+    return () => document.body.classList.remove('in-world')
+  }, [mode])
 
   return (
     <GameContext.Provider value={game}>
@@ -101,10 +128,26 @@ export function GameScreen() {
         <div class="header-inner">
           <span class="who" data-testid="who">{state.player.name} · {state.profession?.name ?? 'No guild'}</span>
           <span class="gold num"><Coins n={state.player.gold} testid="gold" /></span>
+          {(mode === '3d' || canOffer3D()) && (
+            <button class="secondary small" onClick={() => switchMode(mode === '3d' ? 'classic' : '3d')} data-testid="view-toggle">
+              {mode === '3d' ? 'Classic view' : '3D view'}
+            </button>
+          )}
           <button class="secondary small" onClick={() => setFeedbackOpen(true)} data-testid="feedback-open">Feedback</button>
         </div>
       </header>
 
+      {mode === '3d' && (
+        <HarborView
+          panel={panel}
+          open={openPanel}
+          close={closePanel}
+          onView={setView}
+          onFail={() => { setMode('classic'); say('The 3D harbor could not start in this browser, so the classic view is on.', true) }}
+        />
+      )}
+
+      {mode === 'classic' && <>
       <nav class="tabbar">
         <div class="tabbar-inner">
           {TABS.map(([key, label]) => (
@@ -125,6 +168,7 @@ export function GameScreen() {
         {tab === 'bag' && <Bag />}
         {tab === 'city' && <City onView={setView} />}
       </main>
+      </>}
 
       {message && (
         <div class="message" role="status" data-testid="message">

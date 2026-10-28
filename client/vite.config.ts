@@ -14,7 +14,9 @@ export default defineConfig({
   plugins: [preact()],
   base: './',   // relative paths: the game is served from /games/guildie/
   define: { __CLIENT_BUILD__: JSON.stringify(build) },
-  build: { outDir: 'dist', emptyOutDir: true, sourcemap: false },
+  // The 3D harbor (three.js) is its own chunk of about 140 KB compressed, loaded only in the 3D view,
+  // so the usual 500 KB warning doesn't apply to it.
+  build: { outDir: 'dist', emptyOutDir: true, sourcemap: false, chunkSizeWarningLimit: 700 },
   server: {
     proxy: {
       '/api': { target: apiTarget, changeOrigin: true, rewrite: (p) => '/games/guildie' + p },
