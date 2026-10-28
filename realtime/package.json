@@ -1,0 +1,14 @@
+{
+  "name": "guildie-realtime",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Guildie's realtime rooms (the living city): cosmetic presence only. Cloudflare Durable Objects in production, a small Node server for tests.",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/dev-server.mjs",
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "ws": "8.18.0"
+  }
+}
