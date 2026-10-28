@@ -5,6 +5,7 @@ import { ago, duration, gold } from '../format'
 import { session, useSession } from '../session'
 import type { Listing, MarketRow, SellQuote } from '../types'
 import { ActionButton, Modes, Stepper, useGame, useLoad, type TabRequest } from './common'
+import { NewsBoard, Sparkline, Trend } from './Ticker'
 
 const PROFESSIONS: [string, string][] = [
   ['blacksmith', 'Blacksmith goods'], ['alchemist', 'Alchemist goods'], ['leatherworker', 'Leatherworker goods'],
@@ -54,9 +55,11 @@ function Browse({ open }: { open: (itemId: string) => void }) {
 
   return (
     <>
+      <NewsBoard news={data.news ?? []} />
       <p class="muted small">
-        Tap an item to buy or see recent sales. Lowest = cheapest anyone sells it for. Players = how many other players have
-        listed. Prices move every few minutes as townsfolk, adventurers and workshops shop.
+        Price = what it's worth today, against its usual price: <span class="up">▲ green</span> is above usual (a good
+        time to sell), <span class="down">▼ red</span> is below (a good time to buy). Lowest = the cheapest listing. Tap an
+        item to buy or see its history.
       </p>
       <div class="cols">
         {order.map((prof) => (
@@ -65,17 +68,24 @@ function Browse({ open }: { open: (itemId: string) => void }) {
             <div class="card tight">
               <div class="list-row list-head">
                 <span class="grow">Item</span>
+                <span class="col-num">Price</span>
                 <span class="col-num narrow">Lowest</span>
-                <span class="col-num narrow">Players</span>
-                <span class="col-num narrow">Value</span>
               </div>
               {(groups[prof] ?? []).map((item) => (
                 <button class="link" onClick={() => open(item.item_id)} data-testid={`browse-item-${item.item_id}`}>
                   <div class="list-row">
-                    <span class="grow">{item.name}</span>
-                    <span class="col-num narrow num">{item.lowest !== null ? gold(item.lowest) : '—'}</span>
-                    <span class="col-num narrow num">{item.from_players > 0 ? item.from_players : '—'}</span>
-                    <span class="col-num narrow num">{gold(item.reference)}</span>
+                    <span class="grow">
+                      {item.name}
+                      <span class="spark-row"><Sparkline points={item.spark} usual={item.usual} width={72} height={16} /></span>
+                    </span>
+                    <span class="col-num num">
+                      {gold(item.reference)}
+                      <span style={{ display: 'block' }} data-testid="trend"><Trend pct={item.change_pct} hot={item.hot} /></span>
+                    </span>
+                    <span class="col-num narrow num">
+                      {item.lowest !== null ? gold(item.lowest) : '—'}
+                      {item.from_players > 0 && <span class="tiny muted" style={{ display: 'block' }}>{item.from_players} by players</span>}
+                    </span>
                   </div>
                 </button>
               ))}
@@ -98,8 +108,14 @@ function ItemDetail({ itemId, back }: { itemId: string; back: () => void }) {
       <section class="card">
         <h1>{data.name}</h1>
         <p class="muted">{data.description}</p>
+        <div class="row">
+          <span class="grow">Today <span class="brass num">{gold(data.reference)}</span> · usual {gold(data.usual)}</span>
+          <Trend pct={data.change_pct} hot={data.hot} />
+        </div>
+        <Sparkline points={data.spark} usual={data.usual} width={300} height={56} />
+        <p class="tiny muted">Last 7 days. The dotted line is the usual price.</p>
         <div class="stats">
-          {[['Value', data.reference], ['Quick sale', data.trader_price], ['Suppliers', data.ceiling]].map(([label, v]) => (
+          {[['Today', data.reference], ['Quick sale', data.trader_price], ['Suppliers', data.ceiling]].map(([label, v]) => (
             <div><div class="label">{label}</div><div class="value num">{gold(v as number)}</div></div>
           ))}
         </div>
