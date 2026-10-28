@@ -29,6 +29,7 @@ export interface Recipe {
 
 export interface CraftJob {
   id: number
+  recipe_id: string
   name: string
   quantity: number
   ends_at: number

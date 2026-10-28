@@ -24,7 +24,7 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(page.locator(id('guild-alchemist'))).toBeVisible()
   await page.click(id('join-alchemist'))
   await expect(page.locator(id('who'))).toContainText(`${name} · Alchemist`)
-  await expect(page.locator(id('gold'))).toHaveText(/\d+g$/)
+  await expect(page.locator(id('gold'))).toHaveText(/^[\d,]+ ducats?$/)
   await expect(page.locator('.tabbar button')).toHaveCount(4)
 
   // --- workshop: collect, then craft from the recipes on the same screen (#39)

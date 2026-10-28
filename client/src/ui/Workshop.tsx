@@ -1,7 +1,8 @@
-// Workshop: the 30-second check-in (GDD 4.1, #39). Collect from the station, collect crafts, queue new crafts
+// Bottega (the Workshop tab): the 30-second check-in (GDD 4.1, #39). Collect from the station, collect crafts, queue new crafts
 // and see what happened, all on one screen. On desktop the recipes sit in a second column.
 import { useState } from 'preact/hooks'
-import { ago, CLIENT_BUILD, duration, gold, trimNumber } from '../format'
+import { ago, CLIENT_BUILD, duration, trimNumber } from '../format'
+import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
 import type { GameState, Recipe } from '../types'
 import type { ApiResult } from '../api'
@@ -64,8 +65,9 @@ function Station({ state, now }: { state: GameState; now: number }) {
         return (
           <div class="stack tight">
             <div class="row">
+              <ItemIcon id={out.item_id} />
               <span class="grow">{out.name}</span>
-              <span class={`num ${full ? 'error' : 'brass'}`} style={{ fontSize: '20px' }}>{estimate} / {out.cap}</span>
+              <span class={`num ${full ? 'error' : 'accent'}`} style={{ fontSize: '20px' }}>{estimate} / {out.cap}</span>
             </div>
             <p class={`small ${full ? 'error' : 'muted'}`}>
               {full
@@ -95,6 +97,7 @@ function Crafts({ state, now }: { state: GameState; now: number }) {
       {crafts.length === 0 && <p class="muted">Nothing crafting. Pick a recipe{window.innerWidth >= 900 ? ' on the right' : ' below'}.</p>}
       {crafts.map((job) => (
         <div class="row">
+          <ItemIcon id={job.recipe_id} />
           <span class="grow">{job.name} ×{job.quantity}</span>
           <span class="ok num">{job.ends_at <= now ? 'Ready!' : duration(job.ends_at - now)}</span>
         </div>
@@ -117,7 +120,7 @@ function Recipes({ state }: { state: GameState }) {
         <span class={`small ${free > 0 ? 'ok' : 'error'}`}>{free} free slot{free === 1 ? '' : 's'}</span>
       </div>
       {state.profession!.recipes.map((r) => <RecipeCard recipe={r} slotFree={free > 0} maxBatch={state.max_batch} />)}
-      <p class="npc small">Blue inputs come from other guilds: buy them on the Market.</p>
+      <p class="npc small">Blue inputs come from other guilds: buy them at the Mercato.</p>
     </section>
   )
 }
@@ -131,8 +134,9 @@ function RecipeCard({ recipe, slotFree, maxBatch }: { recipe: Recipe; slotFree: 
   return (
     <div class="card" data-testid={`recipe-${recipe.id}`}>
       <div class="row">
+        <ItemIcon id={recipe.id} big />
         <h3 class="grow">{recipe.name}</h3>
-        <span class="muted small">value ~{gold(recipe.value)}</span>
+        <span class="muted small">value ~<Coins n={recipe.value} /></span>
       </div>
       {recipe.inputs.map((input) => (
         <div class="row">

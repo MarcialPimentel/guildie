@@ -2,6 +2,7 @@
 // and shop windows, and direct trades. Views: players -> profile -> compose; trades (offers to you, yours, recent).
 import { useEffect, useState } from 'preact/hooks'
 import { duration, gold, seen } from '../format'
+import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
 import type { ItemCount, MarketRow, Offer } from '../types'
 import { ActionButton, Modes, Stepper, useGame, useLoad } from './common'
@@ -59,15 +60,15 @@ function Players({ open }: { open: (id: number) => void }) {
   return (
     <section class="stack" data-testid="players">
       {data.me && (
-        <p class="muted">You are #{data.me.rank} of {data.total} crafters by {sort === 'wealth' ? 'gold' : 'crafts made'}.</p>
+        <p class="muted">You are #{data.me.rank} of {data.total} crafters by {sort === 'wealth' ? 'ducats' : 'crafts made'}.</p>
       )}
-      <p class="muted small">Tap a crafter to see their shop window or propose a trade. Tap Gold or Crafts to sort.</p>
+      <p class="muted small">Tap a crafter to see their shop window or propose a trade. Tap Ducats or Crafts to sort.</p>
       <div class="card tight">
         <div class="list-row list-head">
           <span class="col-rank">#</span>
           <span class="grow">Crafter</span>
           <span class="col-num">
-            <button class={sort === 'wealth' ? 'on small' : 'secondary small'} onClick={() => setSort('wealth')} data-testid="sort-gold">Gold</button>
+            <button class={sort === 'wealth' ? 'on small' : 'secondary small'} onClick={() => setSort('wealth')} data-testid="sort-gold">Ducats</button>
           </span>
           <span class="col-num">
             <button class={sort === 'mastery' ? 'on small' : 'secondary small'} onClick={() => setSort('mastery')} data-testid="sort-crafts">Crafts</button>
@@ -78,11 +79,11 @@ function Players({ open }: { open: (id: number) => void }) {
             <div class="list-row">
               <span class="col-rank num">{p.rank}</span>
               <span class="grow">
-                <span class={p.me ? 'brass' : ''}>{p.name}{p.me ? ' (you)' : ''}</span>
-                {p.title && <span class="brass small" style={{ display: 'block' }} data-testid="title">{p.title}</span>}
+                <span class={p.me ? 'accent' : ''}>{p.name}{p.me ? ' (you)' : ''}</span>
+                {p.title && <span class="accent small" style={{ display: 'block' }} data-testid="title">{p.title}</span>}
                 <span class="muted small" style={{ display: 'block' }}>{p.profession} · {seen(p.seen_ago)}</span>
               </span>
-              <span class={`col-num num ${sort === 'wealth' ? '' : 'muted'}`}>{gold(p.gold)}</span>
+              <span class={`col-num num ${sort === 'wealth' ? '' : 'muted'}`}><Coins n={p.gold} /></span>
               <span class={`col-num num ${sort === 'mastery' ? '' : 'muted'}`}>{p.crafted}</span>
             </div>
           </button>
@@ -102,26 +103,27 @@ function ProfileView({ id, back, trade }: { id: number; back: () => void; trade:
       <button class="secondary small" onClick={back}>‹ All crafters</button>
       <section class="card">
         <h1>{p.name}{p.me ? ' (you)' : ''}</h1>
-        {p.title && <p class="brass">{p.title}: the richest crafter in the city</p>}
+        {p.title && <p class="accent">{p.title}: the richest crafter in the city</p>}
         <p class="muted">{p.profession} · {seen(p.seen_ago)}</p>
         <div class="stats">
-          <div><div class="label">Gold</div><div class="value num">{gold(p.gold)}</div></div>
+          <div><div class="label">Ducats</div><div class="value num"><Coins n={p.gold} /></div></div>
           <div><div class="label">Crafts made</div><div class="value num">{p.crafted}</div></div>
           <div><div class="label">Recipes</div><div class="value num">{p.recipes_known}/{p.recipes_total}</div></div>
         </div>
       </section>
       {p.can_trade && <button onClick={() => trade(p.name)} data-testid="propose-trade">Propose a trade</button>}
       <h2>Shop window</h2>
-      {p.listings.length === 0 && <p class="muted">Nothing listed on the Exchange right now.</p>}
+      {p.listings.length === 0 && <p class="muted">Nothing listed at the Mercato right now.</p>}
       {p.listings.map((l) => (
         <div class="card tight">
           <div class="row">
+            <ItemIcon id={l.item_id} />
             <span class="grow">{l.name} × {l.quantity}</span>
-            <span class="brass num">{gold(l.unit_price)} each</span>
+            <span class="accent num"><Coins n={l.unit_price} /> each</span>
           </div>
           {!p.me && (
             <ActionButton class="secondary small" action={() => session.buyListing(l.id, 1)} success={`Bought 1 ${l.name}.`} after={(ok) => ok && reload()}>
-              Buy 1 for {gold(l.unit_price)}
+              Buy 1 for <Coins n={l.unit_price} />
             </ActionButton>
           )}
         </div>
@@ -175,7 +177,7 @@ function Compose({ to, playerName, back, sent }: { to: number; playerName: strin
               <QtyRow label={`${item.name} (have ${item.quantity})`} value={give[item.item_id] ?? 0} max={item.quantity}
                 onChange={(n) => setIn(setGive, item.item_id, n)} />
             ))}
-            <p class="brass small">Gold (have {gold(state.player.gold)})</p>
+            <p class="accent small">Ducats (have <Coins n={state.player.gold} />)</p>
             <Stepper value={giveGold} min={0} max={state.player.gold} onChange={setGiveGold} steps={[1, 10, 100]} />
           </div>
         </section>
@@ -186,7 +188,7 @@ function Compose({ to, playerName, back, sent }: { to: number; playerName: strin
             {catalog?.items.map((item: MarketRow) => (
               <QtyRow label={item.name} value={ask[item.item_id] ?? 0} max={MAX_ITEM_QTY} onChange={(n) => setIn(setAsk, item.item_id, n)} />
             ))}
-            <p class="brass small">Gold</p>
+            <p class="accent small">Ducats</p>
             <Stepper value={askGold} min={0} max={100000} onChange={setAskGold} steps={[1, 10, 100]} />
           </div>
         </section>
@@ -267,7 +269,7 @@ function OfferCard({ offer, children }: { offer: Offer; children: preact.Compone
   return (
     <div class="card">
       <div class="row">
-        <h3 class="grow cream">{offer.incoming ? 'From' : 'To'} {offer.other}</h3>
+        <h3 class="grow ink">{offer.incoming ? 'From' : 'To'} {offer.other}</h3>
         <span class="muted tiny">ends in {duration(offer.seconds_left)}</span>
       </div>
       <p class="ok">You get: {offer.you_get}</p>

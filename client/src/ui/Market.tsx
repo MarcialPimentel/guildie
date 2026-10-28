@@ -1,7 +1,9 @@
-// Market (the Exchange, systems.md 6.1): browse prices, buy, sell, and manage your listings.
+// The Mercato (the Exchange, systems.md 6.1): browse prices, buy, sell, and manage your listings.
 // Views: browse -> item detail; sell list -> sell form; my listings.
+import type { ComponentChild } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
 import { ago, duration, gold } from '../format'
+import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
 import type { Listing, MarketRow, SellQuote } from '../types'
 import { ActionButton, Modes, Stepper, useGame, useLoad, type TabRequest } from './common'
@@ -47,7 +49,7 @@ export function Market({ request, onView }: { request: TabRequest; onView: (v: s
 function Browse({ open }: { open: (itemId: string) => void }) {
   const s = useSession()
   const [data] = useLoad(() => session.market(), [], true)
-  if (!data) return <p class="muted">Loading the Exchange…</p>
+  if (!data) return <p class="muted">Loading the Mercato…</p>
   const mine = s.state!.profession!.id
   const order = [mine, ...PROFESSIONS.map(([p]) => p).filter((p) => p !== mine)]
   const groups: Record<string, MarketRow[]> = {}
@@ -74,16 +76,17 @@ function Browse({ open }: { open: (itemId: string) => void }) {
               {(groups[prof] ?? []).map((item) => (
                 <button class="link" onClick={() => open(item.item_id)} data-testid={`browse-item-${item.item_id}`}>
                   <div class="list-row">
+                    <ItemIcon id={item.item_id} />
                     <span class="grow">
                       {item.name}
                       <span class="spark-row"><Sparkline points={item.spark} usual={item.usual} width={72} height={16} /></span>
                     </span>
                     <span class="col-num num">
-                      {gold(item.reference)}
+                      <Coins n={item.reference} />
                       <span style={{ display: 'block' }} data-testid="trend"><Trend pct={item.change_pct} hot={item.hot} /></span>
                     </span>
                     <span class="col-num narrow num">
-                      {item.lowest !== null ? gold(item.lowest) : '—'}
+                      {item.lowest !== null ? <Coins n={item.lowest} /> : '—'}
                       {item.from_players > 0 && <span class="tiny muted" style={{ display: 'block' }}>{item.from_players} by players</span>}
                     </span>
                   </div>
@@ -106,17 +109,20 @@ function ItemDetail({ itemId, back }: { itemId: string; back: () => void }) {
     <div class="stack" data-testid="item-detail">
       <button class="secondary small" onClick={back}>‹ Back to all items</button>
       <section class="card">
-        <h1>{data.name}</h1>
+        <div class="row">
+          <ItemIcon id={itemId} big />
+          <h1 class="grow">{data.name}</h1>
+        </div>
         <p class="muted">{data.description}</p>
         <div class="row">
-          <span class="grow">Today <span class="brass num">{gold(data.reference)}</span> · usual {gold(data.usual)}</span>
+          <span class="grow">Today <span class="accent num"><Coins n={data.reference} /></span> · usual <Coins n={data.usual} /></span>
           <Trend pct={data.change_pct} hot={data.hot} />
         </div>
         <Sparkline points={data.spark} usual={data.usual} width={300} height={56} />
         <p class="tiny muted">Last 7 days. The dotted line is the usual price.</p>
         <div class="stats">
           {[['Today', data.reference], ['Quick sale', data.trader_price], ['Suppliers', data.ceiling]].map(([label, v]) => (
-            <div><div class="label">{label}</div><div class="value num">{gold(v as number)}</div></div>
+            <div><div class="label">{label}</div><div class="value num"><Coins n={v as number} /></div></div>
           ))}
         </div>
         <p class="muted small">
@@ -138,7 +144,7 @@ function ItemDetail({ itemId, back }: { itemId: string; back: () => void }) {
               {data.trades.slice(0, 12).map((t) => (
                 <div class="list-row">
                   <span class="grow small">{capitalize(t.seller)} sold {t.quantity} to {t.buyer}</span>
-                  <span class="num">{gold(t.unit_price)}</span>
+                  <span class="num"><Coins n={t.unit_price} /></span>
                   <span class="muted tiny num">{ago(t.ago)}</span>
                 </div>
               ))}
@@ -157,7 +163,7 @@ function ListingRow({ listing, name, reload }: { listing: Listing; name: string;
       <div class="row">
         <span class={`grow ${listing.is_npc ? 'npc' : ''}`}>{listing.mine ? 'You' : capitalize(listing.seller)}</span>
         <span class="muted small">{listing.quantity} left</span>
-        <span class="brass num">{gold(listing.unit_price)} each</span>
+        <span class="accent num"><Coins n={listing.unit_price} /> each</span>
       </div>
       {!listing.mine && (
         <div class="row wrap">
@@ -169,7 +175,7 @@ function ListingRow({ listing, name, reload }: { listing: Listing; name: string;
             after={(ok) => ok && reload()}
             testid={`buy-${listing.id}`}
           >
-            Buy {qty} for {gold(qty * listing.unit_price)}
+            Buy {qty} for <Coins n={qty * listing.unit_price} />
           </ActionButton>
         </div>
       )}
@@ -189,8 +195,9 @@ function SellList({ open }: { open: (itemId: string, qty: number) => void }) {
       {items.map((item) => (
         <div class="card tight">
           <div class="row">
+            <ItemIcon id={item.item_id} />
             <span class="grow">{item.name} × {item.quantity}</span>
-            <span class="muted small">value ~{gold(item.reference)}</span>
+            <span class="muted small">value ~<Coins n={item.reference} /></span>
             <button class="secondary small" onClick={() => open(item.item_id, item.quantity)} data-testid={`sell-${item.item_id}`}>Sell…</button>
           </div>
         </div>
@@ -234,10 +241,13 @@ function SellForm({ itemId, startQty, back, done }: {
     <div class="stack" data-testid="sell-form">
       <button class="secondary small" onClick={back}>‹ Back</button>
       <section class="card">
-        <h1>Sell {q.name}</h1>
+        <div class="row">
+          <ItemIcon id={itemId} big />
+          <h1 class="grow">Sell {q.name}</h1>
+        </div>
         <p class="muted small">
-          Value {gold(q.reference)} · lowest player price {q.lowest_player !== null ? gold(q.lowest_player) : 'none'} · traders buy
-          instantly at {gold(q.trader_price)} or less
+          Value <Coins n={q.reference} /> · lowest player price {q.lowest_player !== null ? <Coins n={q.lowest_player} /> : 'none'} · traders buy
+          instantly at <Coins n={q.trader_price} /> or less
         </p>
         <p>Quantity (you have {q.you_have})</p>
         <Stepper value={qty} min={1} max={q.you_have} onChange={setQty} />
@@ -250,15 +260,15 @@ function SellForm({ itemId, startQty, back, done }: {
       </section>
 
       <div class="cols">
-        {/* The Exchange comes first: it's the main way to sell (#37). */}
+        {/* The Mercato comes first: it's the main way to sell (#37). */}
         <section class="card" data-testid="list-on-exchange">
-          <h2>List on the Exchange</h2>
+          <h2>List at the Mercato</h2>
           <p class="muted small">The best price, but you wait for a buyer. The city shops every few minutes.</p>
           <p>Price each</p>
           <Stepper value={price} min={1} max={q.ceiling * 10} onChange={setPrice} steps={[1, 10]} />
           <div class="btnrow">
             {([['Value', q.reference], ['Undercut', undercut], ['Quick sale', q.trader_price]] as [string, number][]).map(([label, v]) => (
-              <button class={price === v ? 'on small' : 'secondary small'} onClick={() => setPrice(v)}>{label} {gold(v)}</button>
+              <button class={price === v ? 'on small' : 'secondary small'} onClick={() => setPrice(v)}>{label} <Coins n={v} /></button>
             ))}
           </div>
           <p>Listing lasts</p>
@@ -269,29 +279,29 @@ function SellForm({ itemId, startQty, back, done }: {
           </div>
           <div class="stack tight" style={{ marginTop: '4px' }}>
             {([
-              ['Total if all sell', gold(total)],
-              [`Exchange cut (${q.cut_percent}%)`, `−${gold(cut)}`],
-              ['Deposit (taken from the sale)', `−${gold(deposit)}`],
-              ["You'd earn", gold(Math.max(0, total - cut - deposit))],
-            ] as [string, string][]).map(([label, v]) => (
+              ['Total if all sell', <Coins n={total} />],
+              [`Mercato cut (${q.cut_percent}%)`, <>−<Coins n={cut} /></>],
+              ['Deposit (taken from the sale)', <>−<Coins n={deposit} /></>],
+              ["You'd earn", <Coins n={Math.max(0, total - cut - deposit)} />],
+            ] as [string, ComponentChild][]).map(([label, v]) => (
               <div class="row"><span class="grow">{label}</span><span class="num">{v}</span></div>
             ))}
           </div>
-          {price > q.ceiling && <p class="error small">Guild suppliers sell this for {gold(q.ceiling)}, so few will pay more.</p>}
+          {price > q.ceiling && <p class="error small">Guild suppliers sell this for <Coins n={q.ceiling} />, so few will pay more.</p>}
           <ActionButton
             action={() => session.listItem(itemId, qty, price, hours)}
             success={`Listed ${qty} ${q.name}.`}
             after={(ok) => ok && done('mine')}
             testid="list-item"
           >
-            List {qty} for {gold(price)} each
+            List {qty} for <Coins n={price} /> each
           </ActionButton>
         </section>
 
-        {/* The fallback: instant gold from the guild (#28). */}
+        {/* The fallback: instant ducats from the guild (#28). */}
         <section class="card" data-testid="guild-sale">
           <h2>Or sell to the guild now</h2>
-          <p class="muted small">Instant gold, no listing and no fees, but a low price. Handy when you need gold right away.</p>
+          <p class="muted small">Instant ducats, no listing and no fees, but a low price. Handy when you need ducats right away.</p>
           {q.guild.hint && <p class="error small">{q.guild.hint}</p>}
           <ActionButton
             class="secondary"
@@ -303,7 +313,7 @@ function SellForm({ itemId, startQty, back, done }: {
             }}
             testid="sell-to-guild"
           >
-            Sell {q.guild.quantity} to the guild for {gold(q.guild.total)}
+            Sell {q.guild.quantity} to the guild for <Coins n={q.guild.total} />
           </ActionButton>
         </section>
       </div>
@@ -325,8 +335,9 @@ function MyListings() {
       {active.map((l) => (
         <div class="card tight">
           <div class="row">
+            <ItemIcon id={l.item_id} />
             <span class="grow">{l.name} × {l.quantity}</span>
-            <span class="brass num">{gold(l.unit_price)} each</span>
+            <span class="accent num"><Coins n={l.unit_price} /> each</span>
           </div>
           <p class="muted small">Sold {l.sold} of {l.original} · ends in {duration(l.seconds_left)}</p>
           <ActionButton class="secondary small" action={() => session.cancelListing(l.id)} success="Listing cancelled." after={(ok) => ok && reload()}>

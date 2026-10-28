@@ -46,7 +46,7 @@ function offer_parse_items(mixed $list, string $side): array
     return $items;
 }
 
-/** "2 Iron Ingot + 30g" (or "nothing"). */
+/** "2 Iron Ingot + 30 ducats" (or "nothing"). */
 function offer_summary(array $items, int $gold): string
 {
     $parts = [];
@@ -54,7 +54,7 @@ function offer_summary(array $items, int $gold): string
         $parts[] = $qty . ' ' . item_name((string) $id);
     }
     if ($gold > 0) {
-        $parts[] = $gold . 'g';
+        $parts[] = ducats($gold);
     }
     return $parts ? implode(' + ', $parts) : 'nothing';
 }
@@ -101,7 +101,7 @@ function offer_create(int $fromId, int $toId, mixed $giveList, int $giveGold, mi
     $give = offer_parse_items($giveList, 'give_items');
     $ask = offer_parse_items($askList, 'ask_items');
     if ($giveGold < 0 || $askGold < 0 || $giveGold > $s['max_gold'] || $askGold > $s['max_gold']) {
-        throw new ApiError('bad_request', 'Gold amounts must be between 0 and 100,000,000.');
+        throw new ApiError('bad_request', 'Ducat amounts must be between 0 and 100,000,000.');
     }
     if ((!$give && $giveGold === 0) || (!$ask && $askGold === 0)) {
         throw new ApiError('no_gifts', 'A trade needs something on both sides: offer something and ask for something.');

@@ -59,7 +59,7 @@ function feedback_page(string $key): string
     }
     foreach ($rows as $r) {
         $out .= '<div class="f"><div class="meta"><b>' . $h($r['name']) . '</b> · ' . $h($r['profession'] ?: 'no guild')
-            . ' · ' . $h($r['gold']) . 'g · screen: ' . $h($r['screen'] ?: '?') . ' · build ' . $h($r['build'])
+            . ' · ' . $h(ducats((int) $r['gold'])) . ' · screen: ' . $h($r['screen'] ?: '?') . ' · build ' . $h($r['build'])
             . ' · ' . gmdate('Y-m-d H:i', (int) $r['created_at']) . ' UTC</div><div class="m">' . $h($r['message']) . '</div></div>';
     }
     return $out . '</body></html>';

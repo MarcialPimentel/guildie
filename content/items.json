@@ -1,25 +1,25 @@
 {
   "_comment": "Item definitions (GDD 5.5, systems.md 4.3). IDs are permanent once live. reference_value is the starting price R in gold; the market drifts it over time. Tiers: 1 = self-sufficient, 2 = needs another profession.",
   "items": [
-    { "id": "copper_ore",       "name": "Copper Ore",       "type": "raw",       "profession": "blacksmith",    "tier": 1, "reference_value": 4,   "description": "Soft reddish ore from the guild mine." },
+    { "id": "copper_ore",       "name": "Copper Ore",       "type": "raw",       "profession": "blacksmith",    "tier": 1, "reference_value": 4,   "description": "Soft reddish ore from the guild mine in the cliffs." },
     { "id": "iron_ore",         "name": "Iron Ore",         "type": "raw",       "profession": "blacksmith",    "tier": 2, "reference_value": 8,   "description": "Dense grey ore. Won't smelt clean without flux." },
-    { "id": "brass_fittings",   "name": "Brass Fittings",   "type": "component", "profession": "blacksmith",    "tier": 1, "reference_value": 10,  "description": "Clasps, rivets and valves. Every steam-age craft needs them." },
-    { "id": "copper_lantern",   "name": "Copper Lantern",   "type": "finished",  "profession": "blacksmith",    "tier": 1, "reference_value": 18,  "description": "A sturdy lantern for Brassmere's foggy streets." },
+    { "id": "brass_fittings",   "name": "Brass Fittings",   "type": "component", "profession": "blacksmith",    "tier": 1, "reference_value": 10,  "description": "Clasps, rivets and hinges. Every ship and workshop in the harbor needs them." },
+    { "id": "copper_lantern",   "name": "Copper Lantern",   "type": "finished",  "profession": "blacksmith",    "tier": 1, "reference_value": 18,  "description": "A sturdy lantern for Portovela's dark alleys and night boats." },
     { "id": "iron_ingot",       "name": "Iron Ingot",       "type": "component", "profession": "blacksmith",    "tier": 2, "reference_value": 45,  "description": "Clean iron, smelted with alchemical flux." },
-    { "id": "iron_sword",       "name": "Iron Sword",       "type": "finished",  "profession": "blacksmith",    "tier": 2, "reference_value": 140, "description": "A tournament-grade blade with a leather grip." },
+    { "id": "iron_sword",       "name": "Iron Sword",       "type": "finished",  "profession": "blacksmith",    "tier": 2, "reference_value": 140, "description": "A Regatta-grade blade with a leather grip, favoured by ships' guards." },
 
-    { "id": "sunleaf",          "name": "Sunleaf",          "type": "raw",       "profession": "alchemist",     "tier": 1, "reference_value": 4,   "description": "A bright, common herb with gentle healing properties." },
+    { "id": "sunleaf",          "name": "Sunleaf",          "type": "raw",       "profession": "alchemist",     "tier": 1, "reference_value": 4,   "description": "A bright herb from the cliff terraces, with gentle healing properties." },
     { "id": "ember_moss",       "name": "Ember Moss",       "type": "raw",       "profession": "alchemist",     "tier": 2, "reference_value": 8,   "description": "Warm to the touch. Volatile when boiled." },
     { "id": "healing_draught",  "name": "Healing Draught",  "type": "finished",  "profession": "alchemist",     "tier": 1, "reference_value": 12,  "description": "The city's staple remedy. Always in demand." },
     { "id": "smelting_flux",    "name": "Smelting Flux",    "type": "component", "profession": "alchemist",     "tier": 1, "reference_value": 20,  "description": "Draws impurities out of molten iron." },
     { "id": "tanning_solution", "name": "Tanning Solution", "type": "component", "profession": "alchemist",     "tier": 1, "reference_value": 15,  "description": "Cures thick hides into workable leather." },
-    { "id": "steam_tonic",      "name": "Steam Tonic",      "type": "finished",  "profession": "alchemist",     "tier": 2, "reference_value": 36,  "description": "A fizzing restorative sold in brass-capped vials." },
+    { "id": "steam_tonic",      "name": "Lemon Tonic",      "type": "finished",  "profession": "alchemist",     "tier": 2, "reference_value": 36,  "description": "A fizzing lemon restorative sold in brass-capped vials. Sailors swear by it." },
 
     { "id": "raw_hide",         "name": "Raw Hide",         "type": "raw",       "profession": "leatherworker", "tier": 1, "reference_value": 4,   "description": "Common hide from the trappers' short runs." },
     { "id": "thick_hide",       "name": "Thick Hide",       "type": "raw",       "profession": "leatherworker", "tier": 2, "reference_value": 8,   "description": "Heavy hide. Needs tanning solution to cure." },
     { "id": "leather_grip",     "name": "Leather Grip",     "type": "component", "profession": "leatherworker", "tier": 1, "reference_value": 10,  "description": "Wrapped grips for blades and tools." },
     { "id": "hide_satchel",     "name": "Hide Satchel",     "type": "finished",  "profession": "leatherworker", "tier": 1, "reference_value": 18,  "description": "A simple bag every apprentice carries." },
     { "id": "cured_leather",    "name": "Cured Leather",    "type": "component", "profession": "leatherworker", "tier": 2, "reference_value": 40,  "description": "Supple, tough leather ready for armour." },
-    { "id": "rugged_jerkin",    "name": "Rugged Jerkin",    "type": "finished",  "profession": "leatherworker", "tier": 2, "reference_value": 125, "description": "Brass-buckled leather armour favoured by adventurers." }
+    { "id": "rugged_jerkin",    "name": "Rugged Jerkin",    "type": "finished",  "profession": "leatherworker", "tier": 2, "reference_value": 125, "description": "Brass-buckled leather armour favoured by sailors and ships' guards." }
   ]
 }

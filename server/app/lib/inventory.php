@@ -6,6 +6,12 @@ declare(strict_types=1);
  * Every function must be called inside the calling action's transaction.
  */
 
+/** Money as players read it: "1 ducat", "1,250 ducats" (0.6.0). The database and API still call it gold. */
+function ducats(int $n): string
+{
+    return number_format($n) . ($n === 1 ? ' ducat' : ' ducats');
+}
+
 const QUALITY_COMMON = 1;
 const QUALITY_FINE = 2;
 const QUALITY_MASTERWORK = 3;
@@ -75,7 +81,7 @@ function gold_spend(PDO $pdo, int $playerId, int $amount, string $what = 'that')
     }
     $have = gold_get($pdo, $playerId, true);
     if ($have < $amount) {
-        throw new ApiError('not_enough_gold', sprintf('%s costs %d gold; you have %d.', ucfirst($what), $amount, $have));
+        throw new ApiError('not_enough_gold', sprintf('%s costs %s; you have %s.', ucfirst($what), ducats($amount), ducats($have)));
     }
     $pdo->prepare('UPDATE players SET gold = gold - ? WHERE id = ?')->execute([$amount, $playerId]);
 }

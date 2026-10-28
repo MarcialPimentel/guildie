@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cured Leather">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="12" y="30" width="42" height="20" rx="4" fill="#8F4E2B"/>
+  <rect x="10" y="16" width="42" height="20" rx="4" fill="#B5683A"/>
+</g>
+<rect x="15" y="21" width="32" height="10" rx="2" fill="none" stroke="#F3DCC0" stroke-width="1.5" stroke-dasharray="2 3"/>
+<path d="M14 19h10" stroke="#D99566" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

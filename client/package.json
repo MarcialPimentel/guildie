@@ -11,6 +11,8 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "5.1.1",
+    "@fontsource/nunito": "5.1.1",
     "preact": "10.25.4"
   },
   "devDependencies": {

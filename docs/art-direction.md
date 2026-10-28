@@ -1,8 +1,8 @@
 # Guildie — Art Direction Proposal: Portovela
 
-**Status:** Draft 1 for Marz's review (2026-10-28). Nothing here is decided until Marz approves it; then the GDD and its Decision Log get updated in the same PR as the first visual change.
+**Status:** Approved by Marz on 2026-10-28: option A (Renaissance), the name Portovela, React + Three.js, starting now beside M2, and lamp oil plus wages as the machine running cost. The GDD and its Decision Log were updated in 0.6.0, which ships plan step 1 (the new look on today's screens).
 
-**Playable mock-up:** open [`docs/art/portovela-mockup.html`](art/portovela-mockup.html) in a browser (it loads Three.js from a CDN). Starter icons are in [`docs/art/icons/`](art/icons/).
+**Playable mock-up:** open [`docs/art/portovela-mockup.html`](art/portovela-mockup.html) in a browser (it loads Three.js from a CDN). The game's item icons are in [`client/src/icons/`](../client/src/icons/).
 
 ## The request (from Marz)
 
@@ -148,10 +148,10 @@ Single object centered on a plain white background, no text, no people.
 4. **The whole harbor:** Mercato, event ships, NPC buyers, other players' shops, the morning return.
 5. **Final art (M4):** hero models, icons rendered from models, sound, installable app.
 
-## Decisions needed from Marz
+## Decisions (approved 2026-10-28)
 
-- Era: A (Renaissance) or B (steam-age Riviera)?
-- City name: Portovela or another?
-- OK to switch Preact → React and add Three.js?
-- Start steps 1 and 2 now, beside M2?
-- Machine running cost: lamp oil, wages, or both?
+- Era: **A, Renaissance merchant republic.**
+- City name: **Portovela.**
+- Technology: **switch Preact → React and add Three.js** (with step 2).
+- Timing: **steps 1 and 2 now, beside M2.** Step 1 shipped as 0.6.0.
+- Machine running cost: **lamp oil and wages.** How it maps onto the recipe ladder (`professions.md` §8) is settled when workshop upgrades are built.

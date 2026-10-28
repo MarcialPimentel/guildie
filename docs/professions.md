@@ -80,10 +80,10 @@ Prices should move in ways a player can **read and get ahead of**. Then knowing 
 - Every item shows its **price versus usual**, where "usual" is its reference value: `Iron Sword 168g ▲ +20% vs usual`.
 - **Green, up:** above usual, a good time to sell. **Red, down:** below usual, a good time to buy.
 - A small sparkline of the last day or week, and **"Hot" tags** on the biggest movers.
-- A **news board** explaining *why* prices move: "Tournament on Friday: adventurers want swords."
+- A **news board** explaining *why* prices move: "Regatta on Friday: crews want swords."
 
 **What moves prices** (they must have causes; random noise makes the arrows meaningless)
-1. **Guild Week:** a weekly rhythm (Monday restock, Friday tournament, Sunday market day) that players learn and plan around (GDD 6.5).
+1. **Guild Week:** a weekly rhythm (Monday restock, Friday Regatta, Sunday market day) that players learn and plan around (GDD 6.5).
 2. **Events** announced in advance on the news board: mine collapse, plague, royal commission (GDD 6.5).
 3. **Supply:** players flooding or draining an item (scarcity pricing already exists).
 4. **Drift back to usual:** prices pull back toward their reference value over time. That's what makes "buy the dip" work, as in Cookie Clicker and Animal Crossing's turnips.
@@ -94,7 +94,7 @@ With a handful of players, the NPC market has to **author** these swings; there 
 
 ## 4. Learning recipes
 
-**Players choose and buy the recipes they learn.** That creates anticipation ("next I'm saving up for the Tournament Blade"), identity, and the gold sink the economy needs (gold only grows today).
+**Players choose and buy the recipes they learn.** That creates anticipation ("next I'm saving up for the Regatta Blade"), identity, and the gold sink the economy needs (gold only grows today).
 
 **Rules** (decided: no specialization branches for now; maybe later) [tune]
 - **One starter recipe per rank is free:** you learn it when you reach the rank, so progression is never blocked. Today's starter recipes stay known.
@@ -117,7 +117,7 @@ With a handful of players, the NPC market has to **author** these swings; there 
 |---|---|---|---|
 | Apprentice | 1–25 | Hand tools, short crafts | Raws 1–2 (raw 2 at skill 15) |
 | Journeyman | 26–50 | Imports begin | **3rd craft slot**, first workshop upgrade, bundle orders |
-| Expert | 51–75 | Steam machines, longer crafts | Raw 3 (skill 40), steam upgrades that burn Coal |
+| Expert | 51–75 | Water-powered machines, longer crafts | Raw 3 (skill 40), machine upgrades with a running cost (§8) |
 | Master | 76–100 | Prestige goods, planning | Raw 4 (skill 65), prestige upgrade; second profession at 80 (later) |
 
 ### Where skill comes from
@@ -177,13 +177,13 @@ Station raws: **Mine:** Copper Ore (1), Iron Ore (15), Coal (40), Silver Ore (65
 | 38 | Horseshoes | 2 Pig Iron | Staple (no import, W3) |
 | 44 | Iron Lockbox | 1 Iron Ingot + 2 Brass Fittings | Staple |
 | 51 | Gears | 1 Iron Ingot + 1 Brass Fittings + 1 Coal | Export |
-| 57 | Steam Valve | 2 Brass Fittings + 1 Gears + **1 Cured Leather** | Staple |
-| 63 | Tournament Blade | 2 Iron Ingot + 1 Gears + **1 Machine Oil** | Staple |
+| 57 | Pump Valve | 2 Brass Fittings + 1 Gears + **1 Cured Leather** | Staple |
+| 63 | Regatta Blade | 2 Iron Ingot + 1 Gears + **1 Machine Oil** | Staple |
 | 69 | Pressure Gauge | 2 Gears + 1 Brass Fittings | Staple (no import, W3) |
 | 76 | Steel Bar | 2 Iron Ingot + 2 Coal + **1 Smelting Flux** | Export |
 | 82 | Silver Filigree | 2 Silver Ore + 1 Brass Fittings | Export (no import, W3) |
 | 88 | Clockwork Mechanism | 2 Gears + 1 Steel Bar + **1 Drive Belt** | Prestige |
-| 94 | Steam Hammer | 2 Steel Bar + 1 Gears + **1 Drive Belt** + **1 Machine Oil** | Prestige (needs both guilds) |
+| 94 | Trip Hammer | 2 Steel Bar + 1 Gears + **1 Drive Belt** + **1 Machine Oil** | Prestige (needs both guilds) |
 
 ### Alchemist (chemicals and oils)
 
@@ -193,7 +193,7 @@ Station raws: **Mine:** Copper Ore (1), Iron Ore (15), Coal (40), Silver Ore (65
 | 6 | Lamp Oil | 3 Sunleaf | Staple |
 | 15 | Smelting Flux* | 2 Ember Moss (unlocks at 15) | Export |
 | 18 | Tanning Solution* | 1 Sunleaf + 1 Ember Moss | Export |
-| 26 | Steam Tonic* | 2 Ember Moss + **1 Brass Fittings** | Staple |
+| 26 | Lemon Tonic* | 2 Ember Moss + **1 Brass Fittings** | Staple |
 | 32 | Strong Healing Draught | 2 Healing Draught + 1 Ember Moss | Staple (no import, W3) |
 | 38 | Dye Set | 2 Sunleaf + 1 Ember Moss | Export |
 | 44 | Blasting Powder | 2 Ember Moss + **1 Coal** | Staple |
@@ -240,8 +240,8 @@ Station raws: **Mine:** Copper Ore (1), Iron Ore (15), Coal (40), Silver Ore (65
 **Raw unlocks:** no recipe uses a raw before its station unlocks it (e.g. the Alchemist's first two recipes use only Sunleaf; Smelting Flux arrives at 15 with Ember Moss). Today every raw is open from skill 1, so in 0.5.0 existing players get skill for the crafts they've already made, and nobody loses access.
 
 **Notes:**
-- **Brass Fittings is the busiest export,** and that's on purpose. It's the steam age's "nails and bolts", made at skill 1 by every Blacksmith and always cheap. W6 keeps any *one* item from dominating as professions are added.
-- **Raws are exports too:** Coal from the Mine feeds Alchemists (Machine Oil, Blasting Powder, Volatile Spirit) and everyone's steam machines.
+- **Brass Fittings is the busiest export,** and that's on purpose. It's the harbor's "nails and bolts", made at skill 1 by every Blacksmith and always cheap. W6 keeps any *one* item from dominating as professions are added.
+- **Raws are exports too:** Coal from the Mine feeds Alchemists (Machine Oil, Blasting Powder, Volatile Spirit) and every forge.
 
 ---
 
@@ -286,7 +286,7 @@ Pillar 5 (you need other crafters) pulls against Pillar 3 (it works with 5 playe
 1. **Skilling:** from Journeyman on, the best XP path uses imports (trade bonus, §5).
 2. **Bundle orders** ask for another guild's goods (§2).
 3. **Workshop upgrades** need other guilds' parts (§8).
-4. **Coal** is the running cost of steam machines, and only the Mine makes it.
+4. **Coal** is a forge fuel, and only the Mine makes it. *(Machine running costs became lamp oil and wages on 2026-10-28; which guild supplies the lamp oil is decided when §8 is built.)*
 
 ---
 
@@ -296,9 +296,9 @@ Reaching a rank should be **an event**: the Clash of Clans Town Hall feeling. Ea
 
 **Rules** [tune]
 - Each guild's **workstation** and **gathering station** each have upgrade levels. The **highest level is capped by rank** (systems.md 7.1): Journeyman unlocks level 2, Expert level 3, Master level 4.
-- An upgrade costs **gold plus parts from other guilds** (decided: yes). This is the strongest everyday reason to trade, and a large gold sink. It also takes **time to build**: "Your Steam Forge will be ready in 6 h".
+- An upgrade costs **gold plus parts from other guilds** (decided: yes). This is the strongest everyday reason to trade, and a large gold sink. It also takes **time to build**: "Your water-wheel forge will be ready in 6 h".
 - Upgrades unlock **how much and how fast** (systems.md 5.1): more craft slots, faster crafts, bigger station caps, higher station rates. They never unlock *what* you can make; skill and recipes do that.
-- **Steam upgrades** (Expert+) **burn Coal** while running: a small, ongoing cost that keeps the Mine's Coal in demand.
+- **Machine upgrades** (Expert+) **cost lamp oil and wages** while running: a small, ongoing sink (decided 2026-10-28, replacing Coal; the details are settled when this is built).
 
 **Example path: Blacksmith Forge** [tune]
 
@@ -306,8 +306,8 @@ Reaching a rank should be **an event**: the Clash of Clans Town Hall feeling. Ea
 |---|---|---|---|---|
 | 1 | Apprentice | Hand forge | — | 2 craft slots |
 | 2 | Journeyman | Bellows forge | Leather Grip ×10, Cured Leather ×4 (the bellows) | 3rd craft slot, crafts 10% faster |
-| 3 | Expert | **Steam forge** | Drive Belt ×6, Machine Oil ×6, Gears ×10 | 4th slot, 20% faster, burns Coal |
-| 4 | Master | Steam hammer works | Pressure Gasket ×4, Volatile Spirit ×4, Steel Bar ×10 | 5th slot, 30% faster |
+| 3 | Expert | **Water-wheel forge** | Drive Belt ×6, Machine Oil ×6, Gears ×10 | 4th slot, 20% faster, costs lamp oil and wages |
+| 4 | Master | Trip-hammer works | Pressure Gasket ×4, Volatile Spirit ×4, Steel Bar ×10 | 5th slot, 30% faster |
 
 The Herb Garden (Alchemist) and the Trapper's Lodge (Leatherworker) get matching paths, each needing the other two guilds' parts. Visuals are M4 (Look & Feel); in M2, upgrades are text and numbers with a clear "level up" moment.
 
@@ -322,7 +322,7 @@ Built in an order that proves the fun first. If step 1 doesn't make the game fee
 | **1. Fun core** | Order board (§2), market ticker with Guild Week and news events (§3), the "While you were away" screen, small surprises on collect (rich veins, bonus crafts) | Biggest change to how the game feels; works on today's 12 recipes |
 | **2. Progression** | Skill and XP (§5), learning recipes at the trainer, rare recipes from orders (§4) | Gives every craft and gold coin a purpose |
 | **3. Content** | The ladder to 100 (§6), raws 3 and 4, the validator's web rules (§7) | The long road, now with reasons to walk it |
-| **4. Milestones** | Workshop upgrades (§8), Coal running cost | The rank-up moments |
+| **4. Milestones** | Workshop upgrades (§8), machine running costs | The rank-up moments |
 
 Then a simulator pass, slowing the pace (`pace.time_multiplier`, now that gold sinks exist), and the M2 playtest. M2's exit question: **"Do I want to come back tomorrow?"**
 
@@ -351,5 +351,5 @@ Then a simulator pass, slowing the pace (`pace.time_multiplier`, now that gold s
   - have NPC coverage;
   - arrive only once there are enough active players (about 3 per guild [tune]).
 
-  The front-runner is a **Tinker** (machinery, steam engines), the natural steam-age capstone.
+  The front-runner is a **Tinker** (machinery, clockwork), the natural capstone of the age of invention.
 - **Second profession** at skill 80.

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { errorMessage } from '../api'
 import { CLIENT_BUILD } from '../format'
 import { session } from '../session'
+import lantern from '../icons/copper_lantern.svg'
 
 export function Login({ initialError = '' }: { initialError?: string }) {
   const [name, setName] = useState('')
@@ -37,9 +38,10 @@ export function Login({ initialError = '' }: { initialError?: string }) {
 
   return (
     <main class="page narrow" style={{ paddingTop: '8vh', maxWidth: '480px' }}>
-      <h1 class="center" style={{ fontSize: '52px' }}>Guildie</h1>
+      <img class="login-mark" src={lantern} alt="" />
+      <h1 class="center" style={{ fontSize: '56px' }}>Guildie</h1>
       <p class="center muted" style={{ fontSize: '19px' }}>
-        Rise from apprentice to master in a guild city on the edge of the steam age.
+        Rise from apprentice to master in Portovela, a merchant harbor on the edge of the age of invention.
       </p>
       <form
         class="stack"

@@ -308,7 +308,7 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
   - **Tuning knobs** (`economy.json` → `guild_sale`): `base_multiplier` 0.5, `drop_per_unit` 0.03, `floor_multiplier` 0.15, `recovery_half_life_hours` 4, `hint_below` 0.6.
 - **Buying** locks the listing row, checks the buyer's gold, transfers items to the buyer and gold (minus the **5% cut**) to the seller, and records a trade, all in one transaction. Partial buys of a stack are allowed.
 - **Expired or cancelled** listings return items straight to the seller's inventory (M1). A **mailbox** comes when inventory has a cap.
-- Every trade shows who the counterparty was: a named player or an NPC persona ("Bought by a Tournament Squire").
+- Every trade shows who the counterparty was: a named player or an NPC persona ("Bought by a sailor").
 - Listing limit per player [tune] (GDD 6.7).
 
 **Tuning knobs:** deposit rate, cut, durations, listing limit.
@@ -350,7 +350,7 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 - Each tick records prices in `market_history` (kept 8 days).
 - The Market shows each price **versus usual**, with a green ▲ or red ▼, a sparkline, and **Hot** at ±15% (`market.hot_percent`).
 
-**Milestones:** M1 = R, band, five personas, scarcity pricing, demand scaled by active players. 0.5.0 = ticker, calendar hooks. Later = Collectors, Prospectors, Steam Factory personas. M3 = per-item scaling with real-player volume.
+**Milestones:** M1 = R, band, five personas, scarcity pricing, demand scaled by active players. 0.5.0 = ticker, calendar hooks. Later = Collectors, Prospectors, Arsenal personas. M3 = per-item scaling with real-player volume.
 
 ### 6.3 Crafting Orders
 
@@ -401,18 +401,18 @@ Player-posted orders are in the backlog.
 
 | | |
 |---|---|
-| **Job** | The Clash-of-Clans-style base: capacity, speed, and the steam-age arc |
+| **Job** | The Clash-of-Clans-style base: capacity, speed, and the age-of-invention arc |
 | **Owns** | `buildings` (player, type, level, upgrade end time) |
 | **Verbs** | Upgrade |
 | **Outputs** | Modifiers to Gathering (rate, cap), Crafting (slots, speed), Inventory (storage) |
 
 **Rules**
-- Buildings from GDD 8.1: profession workstation, gathering station, Storehouse, Steam Engine (Journeyman+), Mailbox, Guild Board.
+- Buildings from GDD 8.1: profession workstation, gathering station, Storehouse, Water Wheel (Journeyman+), Mailbox, Guild Board.
 - Upgrades cost gold and materials (a sink) and take time.
 - **Maximum building level is capped by profession rank** [Confirmed], which keeps the two progression tracks aligned (see 5.1).
-- **Steam machines** (Expert+) automate work and burn **coal** as an ongoing running cost: a sink that scales with how much you automate.
+- **Machines** (Expert+: water wheels, gear trains, clockwork) automate work and cost **lamp oil and wages** as an ongoing running cost: a sink that scales with how much you automate (replaced coal, 2026-10-28).
 
-**Milestone:** M2 (core upgrades), M4 (isometric visuals, steam visuals).
+**Milestone:** M2 (core upgrades), a 3D test slice beside M2, M4 (final 3D art, machine visuals).
 
 ### 7.2 Calendar & Events
 
@@ -423,7 +423,7 @@ Player-posted orders are in the backlog.
 | **Runs** | On the tick |
 | **Outputs** | Demand and supply modifiers to Market Simulation; special orders; news to the Activity Log |
 
-**Rules:** The **Guild Week** cycle (GDD 6.5): Monday restock, Wednesday tournament announced, Friday tournament, Sunday market day. **World events** (mine collapse, plague, factory strike, royal commission) layer on top and are announced in advance on the news board, so information has value.
+**Rules:** The **Guild Week** cycle (GDD 6.5): Monday restock, Wednesday Regatta announced, Friday Regatta, Sunday market day. **World events** (mine collapse, dock fever, the Libeccio storm, the Doge's commission, a Levant galley) layer on top and are announced in advance on the news board, so information has value.
 
 **0.5.0 (#46):** `content/calendar.json` defines each Guild Week day and the world events.
 - Each day or event can multiply an item's **NPC demand** and set where its **price** drifts toward.
@@ -455,7 +455,7 @@ Social layer: guild orders needing several professions, a shared guild hall, gui
 Not a feature, but a system with its own tools and rules.
 
 **Faucets** (value enters): NPC purchases, order rewards, gathering, rare drops and procs.
-**Sinks** (value leaves): NPC consumption of bought goods, deposits and the 5% cut, recipe purchases, building upgrades, coal, the second profession unlock.
+**Sinks** (value leaves): NPC consumption of bought goods, deposits and the 5% cut, recipe purchases, building upgrades, machine running costs (lamp oil and wages), the second profession unlock.
 
 **Rules**
 - Every new faucet must ship with a matching sink, or a note on which existing sink absorbs it.
@@ -531,4 +531,4 @@ What the economy simulator (`tools/econ_sim.php`) showed while building M1, and 
 
 **Playtest 1 feedback (2026-10-27, Marz as Blacksmith):** reached 0 gold and couldn't list or buy (#27; safety valve #28); wants visible skill points like WoW, e.g. 100/100 (#30); no way to meet or trade with other players outside the Exchange (#31, #32).
 
-**Known gaps for M2:** gold only grows (players had ~6,000 each after a week, with little to spend it on). M2's sinks (recipes, workshop upgrades, coal) are needed before pacing slows down.
+**Known gaps for M2:** gold only grows (players had ~6,000 each after a week, with little to spend it on). M2's sinks (recipes, workshop upgrades, machine running costs) are needed before pacing slows down.

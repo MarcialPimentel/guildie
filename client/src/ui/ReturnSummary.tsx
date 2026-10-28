@@ -1,7 +1,8 @@
 // "While you were away" (#47, GDD 4.1 and 8.2): when a player comes back after a while, show what happened
 // before the Workshop, with one tap to collect everything that's ready. Built on the server's Activity Log.
 import { useEffect, useState } from 'preact/hooks'
-import { duration, gold } from '../format'
+import { duration } from '../format'
+import { Coins } from './art'
 import { session } from '../session'
 import type { Activity, NewsItem } from '../types'
 import { useGame } from './common'
@@ -105,12 +106,12 @@ export function ReturnSummary() {
     <div class="overlay" data-testid="return-summary" onClick={(e) => e.target === e.currentTarget && setSummary(null)}>
       <div class="card" role="dialog" aria-label="While you were away">
         <h2>While you were away</h2>
-        <p class="muted small">You were gone {duration(summary.away)}. You have {gold(goldNow)}.</p>
+        <p class="muted small">You were gone {duration(summary.away)}. You have <Coins n={goldNow} />.</p>
         {summary.lines.length === 0 && <p class="small muted">A quiet spell: nothing sold or arrived.</p>}
         {summary.lines.map((l) => <p class={`small ${l.good ? 'ok' : ''}`}>{l.text}</p>)}
         {summary.stationFull && <p class="small error">Your station is full: production paused until you collect.</p>}
         {summary.craftsReady > 0 && <p class="small ok">{summary.craftsReady} craft{summary.craftsReady === 1 ? ' is' : 's are'} ready.</p>}
-        {summary.news.map((n) => <p class="small brass">{n.status === 'now' ? 'Now' : 'Coming'}: {n.headline}</p>)}
+        {summary.news.map((n) => <p class="small accent">{n.status === 'now' ? 'Now' : 'Coming'}: {n.headline}</p>)}
         <div class="btnrow">
           <button class="secondary" onClick={() => setSummary(null)} data-testid="return-close">Close</button>
           <button disabled={busy} onClick={collectAll} data-testid="return-collect">Collect everything</button>

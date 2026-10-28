@@ -102,7 +102,7 @@ function guild_sell(int $playerId, string $itemId, int $quantity, ?int $expected
 
         $total = array_sum(guild_sale_unit_prices(market_reference_value($itemId), $pressure, $quantity));
         if ($expectedTotal !== null && $total < $expectedTotal) {
-            throw new ApiError('price_changed', sprintf("The guild's offer changed to %dg. Check it and try again.", $total), 409);
+            throw new ApiError('price_changed', sprintf("The guild's offer changed to %s. Check it and try again.", ducats($total)), 409);
         }
 
         inventory_remove($pdo, $playerId, $itemId, $quantity);
