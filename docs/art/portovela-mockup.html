@@ -1,0 +1,1132 @@
+<title>Portovela Art Direction</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: a harbor you can touch first (the 3D mock-up), then the proposal as one readable column
+   with wide tables and swatch grids breaking out where they need room. */
+:root {
+  --bg: #E3F2EF;          /* sea foam: page ground */
+  --panel: #F8FCFB;       /* whitewash: cards and sheets */
+  --panel-2: #EEF7F5;
+  --ink: #10323A;         /* deep-harbor ink: text */
+  --muted: #4A6B6F;
+  --teal: #12706D;        /* Amalfi teal: primary, links */
+  --btn: #177A76;
+  --on-btn: #FFFFFF;
+  --aqua: #9ED9D0;
+  --lemon: #F2C53D;       /* lemons and ducats */
+  --terra: #A9492A;       /* roof tiles: warnings, "hot" */
+  --cobalt: #2A4C9A;      /* majolica blue: NPCs, rare */
+  --olive: #4E6F2C;       /* gains */
+  --line: rgba(16, 50, 58, .14);
+  --shadow: 0 1px 2px rgba(16,50,58,.08), 0 8px 24px rgba(16,50,58,.08);
+  --stage-edge: rgba(16, 50, 58, .18);
+  --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --measure: 68ch;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B2530; --panel: #12333F; --panel-2: #0F2D38; --ink: #E3F3F0; --muted: #93B5B3;
+    --teal: #52C7BD; --btn: #52C7BD; --on-btn: #0B2530; --aqua: #2C6E70; --lemon: #F5CF5A;
+    --terra: #EC8A64; --cobalt: #8EA8F0; --olive: #A9CB78; --line: rgba(227,243,240,.14);
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25); --stage-edge: rgba(227,243,240,.16);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B2530; --panel: #12333F; --panel-2: #0F2D38; --ink: #E3F3F0; --muted: #93B5B3;
+  --teal: #52C7BD; --btn: #52C7BD; --on-btn: #0B2530; --aqua: #2C6E70; --lemon: #F5CF5A;
+  --terra: #EC8A64; --cobalt: #8EA8F0; --olive: #A9CB78; --line: rgba(227,243,240,.14);
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25); --stage-edge: rgba(227,243,240,.16);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 17px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 64px;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 56px; }
+.col { max-width: var(--measure); }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.12; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h1 { font-size: clamp(40px, 7vw, 72px); font-weight: 800; font-optical-sizing: auto; }
+h2 { font-size: clamp(26px, 3.6vw, 36px); }
+h3 { font-size: 20px; }
+p { margin: 0; }
+a { color: var(--teal); }
+.eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--teal); }
+.lead { font-size: 19px; color: var(--ink); max-width: 60ch; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+section { display: grid; gap: 18px; }
+.stack { display: grid; gap: 12px; align-content: start; }
+.num { font-variant-numeric: tabular-nums; }
+code { font-size: .9em; background: var(--panel-2); padding: 1px 5px; border-radius: 5px; }
+:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; border-radius: 6px; }
+
+/* ---------- hero ---------- */
+header.hero { display: grid; gap: 14px; }
+.hero h1 span { color: var(--teal); }
+
+/* ---------- the 3D stage ---------- */
+.stage {
+  position: relative; height: clamp(440px, 74vh, 700px); max-width: 100%;
+  border-radius: 20px; overflow: hidden; background: #BFE6EA;
+  border: 1px solid var(--stage-edge); box-shadow: var(--shadow);
+  font-family: var(--body);
+}
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; cursor: grab; }
+.stage canvas.pointing { cursor: pointer; }
+.stage-fallback { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: #10323A; font-weight: 700; }
+.stage.ready .stage-fallback { display: none; }
+/* HUD sits on the scene, so it uses fixed in-world colors that read on sky in both themes */
+.hud { --h-panel: rgba(248,252,251,.92); --h-ink: #10323A; --h-teal: #177A76; position: absolute; pointer-events: none; }
+.hud * { pointer-events: auto; }
+.hud-top { top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.pill { display: inline-flex; align-items: center; gap: 8px; background: var(--h-panel); color: var(--h-ink); border-radius: 999px; padding: 6px 14px 6px 6px; font-weight: 800; font-size: 15px; box-shadow: 0 2px 8px rgba(16,50,58,.15); font-variant-numeric: tabular-nums; }
+.pill svg { width: 28px; height: 28px; }
+.pill .dot { width: 22px; height: 22px; margin: 3px; border-radius: 50%; background: #C7733E; border: 2.5px solid #10323A; }
+.pill small { font-weight: 600; font-size: 13px; opacity: .75; }
+.hud-top .spacer { flex: 1; }
+.hbtn { font: 800 14px var(--body); color: var(--h-ink); background: var(--h-panel); border: 0; border-radius: 999px; padding: 9px 14px; min-height: 40px; box-shadow: 0 2px 8px rgba(16,50,58,.15); cursor: pointer; }
+.hbtn:hover { background: #FFFFFF; }
+.hud-chips { left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.chip { font: 800 14px var(--body); color: #FFFFFF; background: rgba(16,50,58,.78); border: 0; border-radius: 999px; padding: 9px 14px; min-height: 40px; cursor: pointer; backdrop-filter: blur(4px); }
+.chip:hover { background: rgba(16,50,58,.92); }
+.chip b { color: #F5CF5A; }
+.toast { top: 64px; left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 24px)); background: #10323A; color: #F8FCFB; border-radius: 14px; padding: 12px 16px; font-weight: 700; font-size: 15px; line-height: 1.35; box-shadow: 0 8px 24px rgba(0,0,0,.25); transition: opacity .25s, transform .25s; }
+.toast[data-show="0"] { opacity: 0; transform: translateX(-50%) translateY(-8px); pointer-events: none; }
+.toast em { font-style: normal; color: #F5CF5A; }
+.sheet { left: 12px; right: 12px; bottom: 12px; margin: 0 auto; max-width: 460px; background: var(--h-panel); color: var(--h-ink); border-radius: 18px; padding: 16px; box-shadow: 0 10px 30px rgba(16,50,58,.25); display: grid; gap: 12px; }
+.sheet h3 { font-size: 20px; color: #10323A; }
+.sheet p { font-size: 15px; line-height: 1.4; }
+.sheet .row { display: flex; gap: 10px; align-items: center; }
+.sheet .close { margin-left: auto; font: 800 22px var(--body); width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(16,50,58,.08); color: #10323A; cursor: pointer; flex: none; }
+.big { font: 800 17px var(--body); color: #FFFFFF; background: var(--h-teal); border: 0; border-radius: 14px; min-height: 52px; padding: 12px 18px; cursor: pointer; width: 100%; box-shadow: 0 3px 0 #0E4F4C; }
+.big:active { transform: translateY(2px); box-shadow: 0 1px 0 #0E4F4C; }
+.big:disabled { opacity: .5; cursor: default; }
+.gauge { position: relative; height: 26px; border-radius: 999px; background: linear-gradient(90deg, #5B7F9A, #8FB3A8 35%, #F2C53D 55%, #F29A3A 80%, #C8452C); border: 2.5px solid #10323A; overflow: hidden; }
+.gauge .band { position: absolute; top: 0; bottom: 0; left: 55%; width: 25%; border-left: 2px dashed #10323A; border-right: 2px dashed #10323A; background: rgba(255,255,255,.28); }
+.gauge .needle { position: absolute; top: -2px; bottom: -2px; width: 6px; margin-left: -3px; background: #10323A; border-radius: 3px; left: 50%; }
+.meta { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wlabel { position: absolute; left: 0; top: 0; pointer-events: none; background: rgba(16,50,58,.82); color: #F8FCFB; font: 800 13px var(--body); padding: 4px 10px; border-radius: 999px; white-space: nowrap; font-variant-numeric: tabular-nums; transform: translate(-50%, -100%); }
+.wlabel.gold { background: #F2C53D; color: #10323A; font-size: 16px; }
+.pop { animation: pop 1.3s ease-out forwards; }
+@keyframes pop { 0% { opacity: 0; margin-top: 6px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -46px; } }
+@media (prefers-reduced-motion: reduce) { .pop { animation-duration: .01s; } .toast { transition: none; } }
+
+/* ---------- content blocks ---------- */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+.grid2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.grid3 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.tag { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--teal); color: var(--on-btn); }
+.tag.alt { background: transparent; color: var(--muted); border: 1.5px solid var(--line); }
+ul.clean { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 800; background: var(--panel-2); }
+tr:last-child td { border-bottom: 0; }
+td strong { color: var(--ink); }
+td .was { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* swatches: fixed art colors, each chip sets its own text color */
+.swatches { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.sw { border-radius: 12px; padding: 14px 12px 10px; min-height: 104px; display: grid; align-content: end; gap: 2px; border: 1px solid rgba(16,50,58,.12); }
+.sw b { font-size: 15px; }
+.sw span { font-size: 13px; opacity: .85; font-variant-numeric: tabular-nums; }
+.palette-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; }
+.old { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.old i { width: 34px; height: 34px; border-radius: 8px; display: inline-block; border: 1px solid rgba(0,0,0,.2); }
+
+/* type specimen */
+.specimen { display: grid; gap: 6px; }
+.specimen .d { font-family: var(--display); font-size: clamp(30px, 5vw, 44px); font-weight: 750; line-height: 1.05; }
+.specimen .b { font-size: 17px; }
+
+/* icons on majolica tiles: the tile is always light, so the art reads in both themes */
+.tile { --t: 72px; width: var(--t); height: var(--t); flex: none; border-radius: 16px; background: #FFFDF8; border: 2.5px solid #10323A; box-shadow: inset 0 0 0 4px #FFFDF8, inset 0 0 0 6px #9ED9D0, 0 3px 0 rgba(16,50,58,.25); display: grid; place-items: center; }
+.tile svg { width: 78%; height: 78%; }
+.icons { display: flex; flex-wrap: wrap; gap: 18px; }
+.icons figure { margin: 0; display: grid; justify-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+
+/* sample market rows: built from the page tokens, so they show the UI in both themes */
+.market { display: grid; gap: 10px; }
+.mrow { display: flex; align-items: center; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; box-shadow: var(--shadow); }
+.mrow .tile { --t: 56px; border-radius: 12px; }
+.mrow .info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.mrow .name { font-weight: 800; font-size: 17px; }
+.mrow .sub { font-size: 14px; color: var(--muted); }
+.mrow .price { flex: none; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mrow .price small { white-space: nowrap; }
+@media (max-width: 480px) { .mrow { gap: 10px; padding: 10px; } .mrow .tile { --t: 46px; } .mrow .name { font-size: 16px; } .qual { display: inline-block; margin: 2px 0 0; } }
+.mrow .price small { display: block; font-size: 13px; }
+.up { color: var(--olive); } .down { color: var(--terra); }
+.qual { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; border: 1.5px solid currentColor; margin-left: 6px; vertical-align: 2px; }
+.q-fine { color: var(--cobalt); }
+.buy { font: 800 15px var(--body); background: var(--btn); color: var(--on-btn); border: 0; border-radius: 12px; min-height: 44px; padding: 8px 16px; cursor: pointer; }
+
+/* layered architecture diagram */
+.layers { display: grid; gap: 8px; }
+.layer { border-radius: 12px; padding: 12px 16px; border: 1.5px solid var(--line); background: var(--panel); display: grid; gap: 2px; }
+.layer b { font-size: 16px; }
+.layer span { font-size: 14px; color: var(--muted); }
+.layer.new { border-color: var(--teal); border-width: 2px; }
+.layer.same { background: var(--panel-2); border-style: dashed; }
+.arrow { text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
+
+ol.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; counter-reset: s; }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+ol.steps > li::before { content: counter(s); font-family: var(--display); font-weight: 800; font-size: 22px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--teal); color: var(--on-btn); }
+ol.steps h3 { margin-bottom: 4px; }
+.decide { border: 2px solid var(--teal); }
+.prompt { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px; line-height: 1.5; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+footer { font-size: 14px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <p class="eyebrow">Guildie · art direction proposal · draft for Marz</p>
+  <h1>Welcome to <span>Portovela</span></h1>
+  <p class="lead">Guildie moves from a sooty steam city to a sunlit Italian merchant harbor, and from menus to a small 3D world you can touch. Below is a working mock-up you can play with, then the palette, the setting, the technology and the plan to get there.</p>
+</header>
+
+<div class="stage" id="stage">
+  <canvas id="world" aria-label="A 3D harbor scene: your bottega on the quay, a forge, a mine cart, a market stall, a pier and a merchant galley. Use the buttons at the bottom to interact."></canvas>
+  <div class="stage-fallback" id="fallback">Loading the harbor…</div>
+
+  <div class="hud hud-top">
+    <span class="pill"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <circle cx="32" cy="32" r="23" fill="#F2C53D" stroke="#10323A" stroke-width="3"/>
+  <circle cx="32" cy="32" r="16.5" fill="none" stroke="#B8891A" stroke-width="2"/>
+  <g stroke="#10323A" stroke-width="2" stroke-linejoin="round">
+    <path d="M25 39L35 20L38 39Z" fill="#FFF3C4"/>
+    <path d="M22 41H42L38.5 45.5H25.5Z" fill="#B8891A"/>
+  </g>
+  <path d="M15.5 26a18 18 0 0 1 9-10" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity=".75"/>
+</svg><span id="ducats">150</span><small>ducats</small></span>
+    <span class="pill"><span class="dot"></span><span id="ore">0</span><small>copper ore</small></span>
+    <span class="spacer"></span>
+    <button class="hbtn" id="btn-time" type="button">Night</button>
+    <button class="hbtn" id="btn-reset" type="button">Reset view</button>
+  </div>
+
+  <div class="hud toast" id="toast" role="status" aria-live="polite" data-show="0"></div>
+  <div id="labels" class="hud" style="inset:0;pointer-events:none"></div>
+
+  <div class="hud sheet" id="sheet-forge" hidden>
+    <div class="row"><h3>The forge is cooling</h3><button class="close" type="button" data-close="sheet-forge" aria-label="Close">×</button></div>
+    <p>Keep the heat inside the dashed band for 10 seconds. Tap the button, or the forge itself, to work the bellows.</p>
+    <div class="gauge" aria-hidden="true"><div class="band"></div><div class="needle" id="needle"></div></div>
+    <div class="meta"><span id="focus-time">10.0 s left</span><span id="focus-score">In the band: 0%</span></div>
+    <button class="big" id="btn-bellows" type="button">Work the bellows</button>
+  </div>
+
+  <div class="hud sheet" id="sheet-stall" hidden>
+    <div class="row"><h3>Your stall on the quay</h3><button class="close" type="button" data-close="sheet-stall" aria-label="Close">×</button></div>
+    <div class="row">
+      <span class="tile" style="--t:60px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M26 13a6 6 0 0 1 12 0" fill="none"/>
+    <rect x="21" y="22" width="22" height="25" rx="2" fill="#FFE08A"/>
+    <path d="M32 27c-4.5 5-4.5 9.5 0 13c4.5-3.5 4.5-8 0-13z" fill="#F29A3A" stroke-width="2"/>
+    <path d="M18 22L32 12L46 22Z" fill="#C8743E"/>
+    <rect x="17" y="46" width="30" height="7" rx="2.5" fill="#C8743E"/>
+  </g>
+  <path d="M24 25h3v18h-3z" fill="#FFFFFF" opacity=".6"/>
+  <path d="M22 18l6-4" stroke="#F4B07E" stroke-width="2" stroke-linecap="round"/>
+</svg></span>
+      <div style="flex:1;min-width:0"><b>Copper Lantern</b><br><span style="font-size:14px"><span id="stall-left">3</span> on the counter · 24 ducats each</span></div>
+    </div>
+    <button class="big" id="btn-open-stall" type="button">Call out to buyers</button>
+  </div>
+
+  <div class="hud hud-chips" id="chips">
+    <button class="chip" type="button" data-act="forge">Tend the <b>forge</b></button>
+    <button class="chip" type="button" data-act="cart">Empty the <b>mine cart</b></button>
+    <button class="chip" type="button" data-act="stall">Open the <b>stall</b></button>
+    <button class="chip" type="button" data-act="ship">Hail the <b>galley</b></button>
+  </div>
+</div>
+<p class="small muted" style="margin-top:-44px">Drag sideways to turn the harbor, pinch or use the mouse wheel with Ctrl to zoom. You can also tap the objects themselves. Everything here is made from plain shapes in code; real models replace them later. Numbers are fake: in the game the server decides every result.</p>
+
+<section>
+  <p class="eyebrow">The short version</p>
+  <h2>Five changes, one direction</h2>
+  <div class="grid2">
+    <div class="card stack"><h3>1. A new setting</h3><p>Portovela, a merchant republic on a cliff coast. Guilds, workshops and a busy harbor market, around 1500, in the age of invention.</p></div>
+    <div class="card stack"><h3>2. A new palette</h3><p>Sea teal, whitewash, lemon and roof-tile terracotta. It is light, sunny and nothing like Hormiga's brass and soot.</p></div>
+    <div class="card stack"><h3>3. A world, not a spreadsheet</h3><p>Every system becomes a place with a verb: you pump the forge, empty the cart, set out your stall and meet the ships.</p></div>
+    <div class="card stack"><h3>4. 3D in the browser</h3><p>Keep TypeScript and the server. Add Three.js for the world and keep HTML for menus. No Unity, no rewrite of the game logic.</p></div>
+    <div class="card stack"><h3>5. Art we can actually make</h3><p>Chunky low-poly models sharing one palette texture, from free kits and AI 3D tools, cleaned up and wired in by me.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Setting</p>
+  <h2>Two ways to go Italian</h2>
+  <p class="col">Today the game's story is "medieval apprentice rises into the steam age". Steam is built into the rank names, the Steam Engine building, coal as a cost, and item names like Steam Tonic. An Italian merchant theme can either replace steam or keep it.</p>
+  <div class="grid2">
+    <div class="card stack decide">
+      <div><span class="tag">Recommended</span></div>
+      <h3>A. Renaissance merchant republic</h3>
+      <p>Around 1500, a city like Amalfi, Venice or Genoa. Steam is replaced by <strong>the age of invention</strong>: water wheels, gear trains and Leonardo-style machines that keep working while you're away.</p>
+      <ul class="clean small">
+        <li>Guilds, workshops and the apprentice-to-master path are Italian history. Florence's guilds were literally called <em>Arti</em>, and the <em>bottega</em> was the workshop where apprentices trained.</li>
+        <li>Merchant republics invented banking, bookkeeping and the trading exchange. Venice's Rialto is the auction-house fantasy.</li>
+        <li>Costs a flavor pass over names and the rank story. Game rules stay the same.</li>
+      </ul>
+    </div>
+    <div class="card stack">
+      <div><span class="tag alt">Low-change option</span></div>
+      <h3>B. Riviera in the age of steam</h3>
+      <p>Around 1890, a pastel coastal town with steamships in the harbor. Everything about steam, coal and brass stays as written.</p>
+      <ul class="clean small">
+        <li>Fewest changes to the GDD and content.</li>
+        <li>Weaker guild flavor: guilds were fading by then.</li>
+        <li>Steamships and iron look less cozy than sails and lemon terraces.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="col">With option A, only names and flavor text change. Item IDs are permanent, so <code>steam_tonic</code> keeps its ID even if players see "Lemon Tonic". Suggested renames:</p>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>Today</th><th>Portovela (option A)</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Brassmere</td><td><strong>Portovela</strong> ("port of sails")</td><td>Working name. Alternatives: Calarossa, Portocorallo.</td></tr>
+        <tr><td>Gold</td><td><strong>Ducats</strong></td><td>The coin of Venetian trade. Display name only; the server keeps <code>gold</code>.</td></tr>
+        <tr><td>The Exchange</td><td><strong>The Mercato</strong> (the Exchange)</td><td>A covered market hall on the piazza, like the Rialto.</td></tr>
+        <tr><td>Workshop</td><td><strong>Your Bottega</strong></td><td>The home screen: a shop on the harbor quay.</td></tr>
+        <tr><td>Steam Engine (Journeyman+)</td><td><strong>Water Wheel</strong>, later <strong>the Great Contraption</strong></td><td>Same unlock, same job. Machines run overnight.</td></tr>
+        <tr><td>Coal (running cost of machines)</td><td><strong>Lamp oil and wages</strong> for hired hands</td><td>Still a sink that grows with automation. Needs your decision.</td></tr>
+        <tr><td>Rank story: hand tools → steam</td><td>Hand tools → water power → gears and clockwork</td><td>Same four ranks and the same pacing.</td></tr>
+        <tr><td>Brassmere Tournament (Wed–Fri)</td><td><strong>The Regatta</strong></td><td>The real regatta of the old maritime republics. Same demand spike.</td></tr>
+        <tr><td>Airship fair</td><td><strong>A galley from the Levant</strong></td><td>Ships arriving become the visible face of market events.</td></tr>
+        <tr><td>The Great Fog</td><td><strong>The Libeccio</strong> (a sea storm)</td><td>Same effect: everyone wants lanterns.</td></tr>
+        <tr><td>Steam Tonic</td><td><strong>Lemon Tonic</strong></td><td>Amalfi lemons. ID stays <code>steam_tonic</code>.</td></tr>
+        <tr><td>Blacksmith / Alchemist / Leatherworker</td><td>Same names in the game, with Italian flavor: <em>fabbro</em>, <em>speziale</em>, <em>cuoiaio</em></td><td>English stays the main language. Italian is seasoning, not a costume.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="col small muted">Tone rule: warm and lightly funny, never a caricature. No "mamma mia" jokes. Italian words appear in place names and a few craft terms, always next to plain English.</p>
+</section>
+
+<section>
+  <p class="eyebrow">Palette</p>
+  <h2>Sea, whitewash and lemons</h2>
+  <div class="palette-head">
+    <p class="col">Today Guildie shares Hormiga's dark brown and brass. The new palette is the Amalfi coast at midday: a light, sea-teal world with whitewashed panels. Night mode is the same harbor after sunset, and the game can follow real time. Every text color here passes WCAG AA contrast on its background.</p>
+    <div class="old small"><span class="muted">Retired:</span><i style="background:#1b1816"></i><i style="background:#2a211b"></i><i style="background:#c9963f"></i><i style="background:#e8d5a8"></i></div>
+  </div>
+  <h3>Day</h3>
+  <div class="swatches">
+    <div class="sw" style="background:#E3F2EF;color:#10323A"><b>Sea foam</b><span>#E3F2EF · ground</span></div>
+    <div class="sw" style="background:#F8FCFB;color:#10323A"><b>Whitewash</b><span>#F8FCFB · panels</span></div>
+    <div class="sw" style="background:#10323A;color:#E3F3F0"><b>Harbor ink</b><span>#10323A · text 11.8:1</span></div>
+    <div class="sw" style="background:#177A76;color:#FFFFFF"><b>Amalfi teal</b><span>#177A76 · buttons</span></div>
+    <div class="sw" style="background:#9ED9D0;color:#10323A"><b>Shallows</b><span>#9ED9D0 · highlights</span></div>
+    <div class="sw" style="background:#F2C53D;color:#10323A"><b>Lemon</b><span>#F2C53D · ducats, rewards</span></div>
+    <div class="sw" style="background:#A9492A;color:#FFFFFF"><b>Roof tile</b><span>#A9492A · warnings, price down</span></div>
+    <div class="sw" style="background:#2A4C9A;color:#FFFFFF"><b>Majolica</b><span>#2A4C9A · NPCs, Fine quality</span></div>
+    <div class="sw" style="background:#4E6F2C;color:#FFFFFF"><b>Olive</b><span>#4E6F2C · gains, price up</span></div>
+  </div>
+  <h3>Night</h3>
+  <div class="swatches">
+    <div class="sw" style="background:#0B2530;color:#E3F3F0"><b>Night sea</b><span>#0B2530 · ground</span></div>
+    <div class="sw" style="background:#12333F;color:#E3F3F0"><b>Lantern shade</b><span>#12333F · panels</span></div>
+    <div class="sw" style="background:#E3F3F0;color:#0B2530"><b>Moonlit plaster</b><span>#E3F3F0 · text 13.9:1</span></div>
+    <div class="sw" style="background:#52C7BD;color:#0B2530"><b>Glow teal</b><span>#52C7BD · buttons</span></div>
+    <div class="sw" style="background:#F5CF5A;color:#0B2530"><b>Lantern</b><span>#F5CF5A · ducats</span></div>
+    <div class="sw" style="background:#EC8A64;color:#0B2530"><b>Ember</b><span>#EC8A64 · warnings</span></div>
+  </div>
+  <p class="col small muted">In the 3D world, buildings are pastel plaster (peach, lemon, rose, white) under terracotta roofs, the sea runs from shallow aqua to deep teal, and greenery is olive and umbrella pine. The UI never uses those building pastels for text.</p>
+</section>
+
+<section>
+  <p class="eyebrow">Type and icons</p>
+  <h2>Chunky, warm, readable on a phone</h2>
+  <div class="grid2">
+    <div class="card specimen">
+      <span class="tag alt" style="justify-self:start">Headings: Fraunces</span>
+      <span class="d">The Regatta starts Friday</span>
+      <span class="tag alt" style="justify-self:start;margin-top:10px">Everything else: Nunito</span>
+      <span class="b">Fill the spice merchant's order for 4 Healing Draughts before the galley sails. <span class="num">1,250</span> ducats in the till.</span>
+      <p class="small muted" style="margin-top:6px">Both are free Google fonts. The game would bundle them so it never depends on an outside server.</p>
+    </div>
+    <div class="card stack">
+      <span class="tag alt" style="justify-self:start">Item icons on majolica tiles</span>
+      <div class="icons">
+        <figure><span class="tile"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M26 13a6 6 0 0 1 12 0" fill="none"/>
+    <rect x="21" y="22" width="22" height="25" rx="2" fill="#FFE08A"/>
+    <path d="M32 27c-4.5 5-4.5 9.5 0 13c4.5-3.5 4.5-8 0-13z" fill="#F29A3A" stroke-width="2"/>
+    <path d="M18 22L32 12L46 22Z" fill="#C8743E"/>
+    <rect x="17" y="46" width="30" height="7" rx="2.5" fill="#C8743E"/>
+  </g>
+  <path d="M24 25h3v18h-3z" fill="#FFFFFF" opacity=".6"/>
+  <path d="M22 18l6-4" stroke="#F4B07E" stroke-width="2" stroke-linecap="round"/>
+</svg></span>Copper Lantern</figure>
+        <figure><span class="tile"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="27" y="14" width="10" height="12" fill="#DDF3EF"/>
+    <circle cx="32" cy="40" r="16" fill="#DDF3EF"/>
+    <path d="M16.13 38H47.87A16 16 0 1 1 16.13 38Z" fill="#2FB59D" stroke-width="0"/>
+    <circle cx="32" cy="40" r="16" fill="none"/>
+    <rect x="25" y="8" width="14" height="7" rx="2.5" fill="#B07A4A"/>
+  </g>
+  <circle cx="38" cy="45" r="2" fill="#FFFFFF" opacity=".7"/>
+  <circle cx="33" cy="50" r="1.4" fill="#FFFFFF" opacity=".7"/>
+  <ellipse cx="24.5" cy="34" rx="3" ry="5" transform="rotate(30 24.5 34)" fill="#FFFFFF" opacity=".8"/>
+</svg></span>Healing Draught</figure>
+        <figure><span class="tile"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M19 26C19 9 45 9 45 26" fill="none"/>
+    <rect x="11" y="24" width="42" height="29" rx="6" fill="#B5683A"/>
+    <path d="M11 31Q11 24 18 24H46Q53 24 53 31V38Q32 47 11 38Z" fill="#8F4E2B"/>
+    <rect x="28" y="36" width="8" height="9" rx="1.5" fill="#F2C53D"/>
+  </g>
+  <path d="M15 33Q15 28 19 28H45Q49 28 49 33" fill="none" stroke="#F3DCC0" stroke-width="1.5" stroke-dasharray="2 3" stroke-linecap="round"/>
+  <path d="M15 46h6" stroke="#D99566" stroke-width="2.5" stroke-linecap="round"/>
+</svg></span>Hide Satchel</figure>
+        <figure><span class="tile"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <circle cx="32" cy="32" r="23" fill="#F2C53D" stroke="#10323A" stroke-width="3"/>
+  <circle cx="32" cy="32" r="16.5" fill="none" stroke="#B8891A" stroke-width="2"/>
+  <g stroke="#10323A" stroke-width="2" stroke-linejoin="round">
+    <path d="M25 39L35 20L38 39Z" fill="#FFF3C4"/>
+    <path d="M22 41H42L38.5 45.5H25.5Z" fill="#B8891A"/>
+  </g>
+  <path d="M15.5 26a18 18 0 0 1 9-10" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity=".75"/>
+</svg></span>Ducat</figure>
+      </div>
+      <p class="small muted">Rules: thick ink outline, two flat tones per material, one white highlight, seen slightly from above. The tile is always light, so icons read in both day and night. Later, icons can be rendered straight from the 3D models so the two always match.</p>
+    </div>
+  </div>
+  <h3>How a menu looks now</h3>
+  <div class="market" style="max-width:560px">
+    <div class="mrow"><span class="tile"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M26 13a6 6 0 0 1 12 0" fill="none"/>
+    <rect x="21" y="22" width="22" height="25" rx="2" fill="#FFE08A"/>
+    <path d="M32 27c-4.5 5-4.5 9.5 0 13c4.5-3.5 4.5-8 0-13z" fill="#F29A3A" stroke-width="2"/>
+    <path d="M18 22L32 12L46 22Z" fill="#C8743E"/>
+    <rect x="17" y="46" width="30" height="7" rx="2.5" fill="#C8743E"/>
+  </g>
+  <path d="M24 25h3v18h-3z" fill="#FFFFFF" opacity=".6"/>
+  <path d="M22 18l6-4" stroke="#F4B07E" stroke-width="2" stroke-linecap="round"/>
+</svg></span><div class="info"><span class="name">Copper Lantern<span class="qual q-fine">Fine</span></span><span class="sub">Sold by Lucia · 6 left</span></div><div class="price">26 <small class="up">▲ storm coming</small></div><button class="buy" type="button">Buy</button></div>
+    <div class="mrow"><span class="tile"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="27" y="14" width="10" height="12" fill="#DDF3EF"/>
+    <circle cx="32" cy="40" r="16" fill="#DDF3EF"/>
+    <path d="M16.13 38H47.87A16 16 0 1 1 16.13 38Z" fill="#2FB59D" stroke-width="0"/>
+    <circle cx="32" cy="40" r="16" fill="none"/>
+    <rect x="25" y="8" width="14" height="7" rx="2.5" fill="#B07A4A"/>
+  </g>
+  <circle cx="38" cy="45" r="2" fill="#FFFFFF" opacity=".7"/>
+  <circle cx="33" cy="50" r="1.4" fill="#FFFFFF" opacity=".7"/>
+  <ellipse cx="24.5" cy="34" rx="3" ry="5" transform="rotate(30 24.5 34)" fill="#FFFFFF" opacity=".8"/>
+</svg></span><div class="info"><span class="name">Healing Draught</span><span class="sub">Sold by a Spice Merchant · 12 left</span></div><div class="price">18 <small class="down">▼ plenty</small></div><button class="buy" type="button">Buy</button></div>
+    <div class="mrow"><span class="tile"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M19 26C19 9 45 9 45 26" fill="none"/>
+    <rect x="11" y="24" width="42" height="29" rx="6" fill="#B5683A"/>
+    <path d="M11 31Q11 24 18 24H46Q53 24 53 31V38Q32 47 11 38Z" fill="#8F4E2B"/>
+    <rect x="28" y="36" width="8" height="9" rx="1.5" fill="#F2C53D"/>
+  </g>
+  <path d="M15 33Q15 28 19 28H45Q49 28 49 33" fill="none" stroke="#F3DCC0" stroke-width="1.5" stroke-dasharray="2 3" stroke-linecap="round"/>
+  <path d="M15 46h6" stroke="#D99566" stroke-width="2.5" stroke-linecap="round"/>
+</svg></span><div class="info"><span class="name">Hide Satchel</span><span class="sub">Sold by Marz · 2 left</span></div><div class="price">31 <small class="muted">steady</small></div><button class="buy" type="button">Buy</button></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Interaction</p>
+  <h2>Every system gets a place and a verb</h2>
+  <p class="col">The rule: if the player does it, it happens somewhere in the harbor and their hands do something. Menus stay for reading numbers and making choices, but they open from the world. All of it sits on the server actions we already have, so the server still decides every result.</p>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>System</th><th>Where it lives</th><th>What the player does</th><th>Builds on</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Gathering</strong></td><td>The mine cart, the herb terraces on the cliff, the trappers' boat</td><td>Watch them fill while away. Tap to empty: goods fly into the storehouse.</td><td><code>collect_station</code></td></tr>
+        <tr><td><strong>Crafting</strong></td><td>Forge, alembic or tanning bench in your bottega</td><td>Drag ingredients onto the bench. The work animates, with a timer above it.</td><td><code>start_craft</code>, <code>collect_craft</code></td></tr>
+        <tr><td><strong>Focus</strong></td><td>The same stations, live</td><td>Pump the bellows, stir the pot, pull the stitch at the right moment for better quality. Ignoring it is never punished.</td><td>Focus design in <code>systems.md</code> 5 (prototype planned for M2)</td></tr>
+        <tr><td><strong>The Exchange</strong></td><td>The Mercato on the piazza, plus your own stall on the quay</td><td>Set goods on your stall. NPC buyers and other players walk up and buy; coins pop over the counter.</td><td><code>list_item</code>, <code>buy_listing</code>, trade log</td></tr>
+        <tr><td><strong>Market news</strong></td><td>The harbor and the town crier</td><td>Ships arrive with events; banners go up for the Regatta. Price arrows live on a chalk board.</td><td>Calendar, events, ticker</td></tr>
+        <tr><td><strong>Orders</strong></td><td>Customers at your door, letters by messenger boat</td><td>Hand the package over and get paid on the spot.</td><td><code>fulfill_order</code></td></tr>
+        <tr><td><strong>Upgrades</strong></td><td>Your bottega itself</td><td>Scaffolding goes up, then a new floor, a water wheel, a bigger forge. Rank-ups you can see from across the bay.</td><td><code>upgrade_building</code></td></tr>
+        <tr><td><strong>City and players</strong></td><td>The quay and the cliff streets</td><td>Other players' bottegas line the harbor. Visit one, see their stall, trade directly.</td><td>City tab, direct trades (#31, #32)</td></tr>
+        <tr><td><strong>While you were away</strong></td><td>The morning harbor</td><td>Open the game to boats unloading, a full cart and a ledger of last night's sales.</td><td><code>get_state</code> summary</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Technology</p>
+  <h2>Three.js on top of what we have</h2>
+  <p class="col">My recommendation is to keep TypeScript, Vite, the PHP server and the database exactly as they are, and add a 3D layer in the browser. The menus stay as HTML because text, forms and keyboards work best there, and our phone and desktop tests keep working.</p>
+  <div class="grid2">
+    <div class="layers">
+      <div class="layer"><b>Menus and panels</b><span>HTML, React (a drop-in swap for Preact). Lists, forms, the sell screen, numbers.</span></div>
+      <div class="arrow">open from taps in the world ↕ show results</div>
+      <div class="layer new"><b>The 3D harbor</b><span>Three.js through React Three Fiber. Buildings, people, ships, timers in the world, Focus moments.</span></div>
+      <div class="arrow">both read the same game state</div>
+      <div class="layer"><b>Game state and API client</b><span>The current client code, unchanged.</span></div>
+      <div class="arrow">HTTPS / JSON</div>
+      <div class="layer same"><b>PHP + MySQL on SiteGround</b><span>Unchanged. Still decides every result.</span></div>
+    </div>
+    <div class="stack">
+      <div class="tablebox">
+        <table style="min-width:440px">
+          <thead><tr><th>Option</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Three.js + React Three Fiber</strong></td><td>Recommended. The most used web 3D library, small, fast on phones, works with our build. AI sessions know it well, which matters because I'm the one writing it.</td></tr>
+            <tr><td>Babylon.js</td><td>Good full engine with built-in tools. About ten times heavier, and its own UI system fights with HTML menus.</td></tr>
+            <tr><td>PlayCanvas</td><td>Excellent on phones and has a visual editor, but projects live in its cloud editor, which is hard to review in pull requests.</td></tr>
+            <tr><td>Godot 4 (web)</td><td>We left it in 0.4.0: large download and weak at menus.</td></tr>
+            <tr><td>Unity</td><td>Ruled out.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted">Swapping Preact for React is about 35 KB more and almost no code change, because Preact copies React's API. React Three Fiber only runs on real React.</p>
+    </div>
+  </div>
+  <h3>Budgets that keep it fast on a phone</h3>
+  <div class="grid3">
+    <div class="card stack"><b>Loads in two steps</b><p class="small">Menus are usable in about a second, as today. The harbor streams in behind them, around 2–4 MB the first time, then cached.</p></div>
+    <div class="card stack"><b>Low-poly, one texture</b><p class="small">Props up to 1,500 triangles, buildings up to 6,000. Most models share one small palette texture, so the colors stay on-brand and the phone draws the scene in few steps.</p></div>
+    <div class="card stack"><b>Kind to batteries</b><p class="small">60 fps on a mid-range phone, 30 fps and no shadows on older ones. The scene stops drawing when nothing moves or the tab is hidden.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Making the art</p>
+  <h2>How assets get made</h2>
+  <p class="col">You don't need Blender. The style is chunky low-poly with flat colors, which free kits and AI 3D tools already do well. I prepare every file (shrink it, recolor it to our palette, compress it) and wire it into the game.</p>
+  <div class="grid3">
+    <div class="card stack"><span class="tag alt" style="justify-self:start">Placeholders now</span><p class="small">Free CC0 low-poly kits from Kenney (kenney.nl) and Quaternius (quaternius.com): harbor, pirate, nature and furniture sets. Free for commercial use, no credit needed. I can add these myself.</p></div>
+    <div class="card stack"><span class="tag alt" style="justify-self:start">Hero pieces</span><p class="small">Your bottega, the Mercato and the ships. Made in an AI image-to-3D tool such as Meshy, Tripo or Rodin from a concept image, then cleaned up by me.</p></div>
+    <div class="card stack"><span class="tag alt" style="justify-self:start">Later, if the game grows</span><p class="small">Hire a low-poly 3D artist for a final pass, using this page as the brief.</p></div>
+  </div>
+  <h3>Your steps for one hero model</h3>
+  <ol class="steps">
+    <li><div><h3>Make a concept image</h3><p>In any image generator, paste the prompt below and change the first line to the thing you want. Pick the image you like best.</p></div></li>
+    <li><div><h3>Turn it into 3D</h3><p>In Meshy, Tripo or Rodin, choose "Image to 3D", upload the picture, and pick the low-poly or "stylized" option if there is one. Download the result as a <strong>.glb</strong> file.</p></div></li>
+    <li><div><h3>Hand it to me</h3><p>Drag the .glb into a new GitHub issue (or our chat) and name it after the object, like <code>bottega_level1.glb</code>. I'll shrink, recolor and place it, and you'll see it in a pull request preview.</p></div></li>
+  </ol>
+  <div class="prompt" id="prompt">A small Italian Renaissance craftsman's shop on a harbor quay.
+Low-poly 3D game asset, stylized and chunky like a cozy mobile builder game, isometric 3/4 view from above.
+Flat colors, no textures, soft daylight, simple shapes with bevelled edges.
+Palette: pastel peach plaster walls, terracotta roof tiles, sea-teal shutters and awning with white stripes, warm stone base, small lemon tree in a pot.
+Single object centered on a plain white background, no text, no people.</div>
+  <p class="small muted">Before your tool's terms allow commercial use, check its plan: free tiers of some AI 3D tools only allow personal use.</p>
+</section>
+
+<section>
+  <p class="eyebrow">Where this conflicts with the GDD</p>
+  <h2>What would change in the design documents</h2>
+  <p class="col">These are the places where this direction disagrees with the GDD today. If you approve, I'll update the GDD and its Decision Log in the same pull request as the first visual change.</p>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>Section</th><th>Says today</th><th>Would say</th></tr></thead>
+      <tbody>
+        <tr><td>§1 Non-goals</td><td>"3D. The game is 2D and UI-driven."</td><td>3D world with HTML menus.</td></tr>
+        <tr><td>§3 Setting and tone</td><td>Brassmere, industrial revolution, brass and soot</td><td>Portovela, merchant republic, sea and sunlight</td></tr>
+        <tr><td>§3 Progression as industrialization</td><td>Hand tools rise into steam</td><td>Hand tools rise into water power and clockwork (option A)</td></tr>
+        <tr><td>§3 Visual direction</td><td>2D, art out of scope until M4</td><td>Low-poly 3D, palette above, a first 3D slice before M4</td></tr>
+        <tr><td>§8.1 and systems 7.1</td><td>Steam Engine building, machines burn coal</td><td>Water Wheel, machines cost oil and wages</td></tr>
+        <tr><td>§11 and the 0.4.0 decision</td><td>"About 20 KB, loads in a second"</td><td>Menus still load in about a second; the 3D world streams in after</td></tr>
+        <tr><td>§12 Milestones</td><td>All art in M4</td><td>A small 3D slice now, beside M2; the final art pass stays in M4</td></tr>
+        <tr><td>Content flavor text</td><td>Brassmere, airships, the Crown, steam</td><td>Renamed display text; IDs unchanged</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Plan</p>
+  <h2>Getting there without stopping M2</h2>
+  <ol class="steps">
+    <li><div><h3>New look for the current menus</h3><p>Palette, fonts, icons and the Portovela names applied to today's screens. One small pull request, and the game stops looking like Hormiga right away. Also updates the GDD.</p></div></li>
+    <li><div><h3>3D test slice</h3><p>Your bottega on the quay with the forge, the mine cart and the stall, using free placeholder models and the real game API. It is hidden behind a switch so the current game keeps working. You test it on your phone: does it feel good, and is it fast enough?</p></div></li>
+    <li><div><h3>Focus in 3D</h3><p>The bellows, stirring and stitching moments from the mock-up, with the server issuing and checking them. This is the M2 Focus prototype, done in the world instead of a menu.</p></div></li>
+    <li><div><h3>The whole harbor</h3><p>The Mercato, ships for events, NPC buyers walking the quay, other players' shops, and the morning return scene.</p></div></li>
+    <li><div><h3>Final art (M4)</h3><p>Hero models, item icons rendered from the models, sound, and the installable app.</p></div></li>
+  </ol>
+  <div class="card stack decide">
+    <h3>What I need from you</h3>
+    <ul class="clean">
+      <li><strong>Era:</strong> A (Renaissance, no steam) or B (steam age Riviera)?</li>
+      <li><strong>City name:</strong> Portovela, or another?</li>
+      <li><strong>Technology:</strong> OK to switch Preact to React and add Three.js?</li>
+      <li><strong>Timing:</strong> start steps 1 and 2 now, beside M2, or wait?</li>
+      <li><strong>Machine running cost:</strong> lamp oil, wages, or both?</li>
+    </ul>
+  </div>
+  <p class="small muted">Risks: 3D takes more work per feature than menus, and art is the slowest part. That's why step 2 is a test you can say no to after playing it. The menus never go away, so a phone that can't run 3D still plays the whole game.</p>
+</section>
+
+<footer>Guildie art direction · draft 1 · 28 October 2026 · Mock-up built from plain shapes in Three.js 0.160.</footer>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js';
+
+const $ = (s) => document.querySelector(s);
+const stage = $('#stage'), canvas = $('#world'), labelsEl = $('#labels');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)').matches;
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+} catch (e) {
+  $('#fallback').textContent = 'This browser cannot show 3D, so the harbor mock-up is unavailable here.';
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
+
+// ---------- helpers ----------
+let seed = 7;
+const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const rr = (a, b) => a + (b - a) * rnd();
+const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+const matCache = new Map();
+function mat(hex, extra) {
+  const key = hex + (extra ? JSON.stringify(extra) : '');
+  if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial({ color: hex, roughness: 0.9, metalness: 0, flatShading: true, ...extra }));
+  return matCache.get(key);
+}
+function add(mesh, parent = scene, cast = true) { mesh.castShadow = cast; mesh.receiveShadow = true; parent.add(mesh); return mesh; }
+// box with its bottom at y
+function box(w, h, d, m, x, y, z, parent = scene, cast = true) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof m === 'string' ? mat(m) : m);
+  mesh.position.set(x, y + h / 2, z); return add(mesh, parent, cast);
+}
+function cyl(rt, rb, h, m, x, y, z, parent = scene, seg = 8) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), typeof m === 'string' ? mat(m) : m);
+  mesh.position.set(x, y + h / 2, z); return add(mesh, parent);
+}
+function stripes(a, b, n = 8, w = 256, h = 32) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? b : a; g.fillRect(i * w / n, 0, w / n + 1, h); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function hipRoof(w, d, h, m, x, y, z, parent = scene) {
+  const g = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4); g.rotateY(Math.PI / 4); g.translate(0, 0.5, 0);
+  const mesh = new THREE.Mesh(g, typeof m === 'string' ? mat(m) : m);
+  mesh.scale.set(w, h, d); mesh.position.set(x, y, z); return add(mesh, parent);
+}
+
+// ---------- palette for the world ----------
+const C = {
+  stone: '#E7D7B9', stoneDark: '#D2BD98', rock: '#D9C29A', rock2: '#C9AE86', grass: '#9DBB6A', pine: '#4F7A3A', leaf: '#6E9B48',
+  roof: '#C4623A', roofDark: '#A9492A', wood: '#A9784A', woodDark: '#6E4A2C', teal: '#1F8A87', tealLight: '#5FBDB4',
+  lemon: '#F2C53D', copper: '#C7733E', iron: '#4B5257', cream: '#F6EEDC', ink: '#10323A',
+  plaster: ['#F2B98B', '#F3D27A', '#EFA9A0', '#F5F0E4', '#BFE3D9', '#F6C9A2', '#F5F0E4', '#E9D5F0'],
+};
+const windowMat = new THREE.MeshStandardMaterial({ color: '#27444C', emissive: '#FFC765', emissiveIntensity: 0, roughness: 0.6, flatShading: true });
+const darkWinMat = mat('#2B4750');
+const lampMat = new THREE.MeshStandardMaterial({ color: '#FFE7A6', emissive: '#FFC24D', emissiveIntensity: 0.25, flatShading: true });
+
+// ---------- lights and sky ----------
+const hemi = new THREE.HemisphereLight('#E6F7F7', '#E8D3B0', 1.3); scene.add(hemi);
+const sun = new THREE.DirectionalLight('#FFF0D2', 2.4);
+sun.position.set(-22, 34, 26); sun.castShadow = true;
+sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
+Object.assign(sun.shadow.camera, { left: -36, right: 36, top: 36, bottom: -36, near: 1, far: 110 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+scene.add(sun);
+scene.background = new THREE.Color('#BFE6EA');
+scene.fog = new THREE.Fog('#BFE6EA', 90, 220);
+
+// ---------- sea ----------
+const seaGeo = new THREE.PlaneGeometry(260, 260, 96, 96); seaGeo.rotateX(-Math.PI / 2);
+const seaPos = seaGeo.attributes.position; const seaBase = Float32Array.from(seaPos.array);
+{
+  const cols = []; const shallow = new THREE.Color('#86D8CC'), deep = new THREE.Color('#1F8F8D'), far = new THREE.Color('#17707A'); const tmp = new THREE.Color();
+  for (let i = 0; i < seaPos.count; i++) {
+    const z = seaBase[i * 3 + 2], x = seaBase[i * 3];
+    const near = THREE.MathUtils.smoothstep(z, 4, 26) * (1 - THREE.MathUtils.smoothstep(Math.abs(x), 20, 40)) + THREE.MathUtils.smoothstep(Math.abs(x), 20, 40);
+    tmp.copy(shallow).lerp(deep, Math.min(1, near)); tmp.lerp(far, THREE.MathUtils.smoothstep(Math.hypot(x, z), 60, 120));
+    cols.push(tmp.r, tmp.g, tmp.b);
+  }
+  seaGeo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+}
+const seaMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.28, metalness: 0.05, flatShading: true });
+const sea = new THREE.Mesh(seaGeo, seaMat); sea.receiveShadow = true; scene.add(sea);
+const foam = box(34, 0.08, 0.5, new THREE.MeshStandardMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.7 }), 0, 0.02, 4.3, scene, false);
+
+// ---------- land: quay and terraced cliff ----------
+box(36, 3.2, 10.4, C.stone, 0, -2.2, -1);                    // quay, top at y=1
+box(36, 0.25, 0.7, C.stoneDark, 0, 1, 3.85);                  // edge stones
+box(38, 6.2, 9, C.rock, 0, -2.2, -10.5);                      // terrace 1, top 4
+box(38, 10.2, 8.5, C.rock2, 0, -2.2, -19);                    // terrace 2, top 8
+box(38, 14.2, 8.5, C.rock, 0, -2.2, -27);                     // terrace 3, top 12
+box(40, 18.2, 14, C.grass, 0, -2.2, -37.5);                   // hill, top 16
+for (let i = 0; i < 6; i++) box(1.8, (i + 1) * 0.5, 0.6, C.stoneDark, 14.5, 1, -2.9 - i * 0.55); // stairs up the cliff
+for (const x of [-15, -11, 6, 13]) cyl(0.25, 0.3, 0.6, C.iron, x, 1, 3.3, scene, 6);          // bollards
+
+// houses on the terraces
+function house(x, y, z, w, h, d) {
+  const g = new THREE.Group(); scene.add(g);
+  box(w, h, d, pick(C.plaster), x, y, z, g);
+  if (rnd() < 0.5) hipRoof(w * 1.08, d * 1.08, rr(1, 1.6), rnd() < 0.5 ? C.roof : C.roofDark, x, y + h, z, g);
+  else { box(w + 0.2, 0.35, d + 0.2, '#F7F3EA', x, y + h, z, g); if (rnd() < 0.4) box(w * 0.5, 1.4, d * 0.5, pick(C.plaster), x - w * 0.15, y + h + 0.35, z - d * 0.1, g); }
+  const floors = Math.max(1, Math.floor(h / 1.8)), cols = Math.max(1, Math.floor(w / 1.3));
+  for (let f = 0; f < floors; f++) for (let c = 0; c < cols; c++) {
+    const wx = x - w / 2 + (c + 0.5) * (w / cols), wy = y + 0.6 + f * 1.75;
+    box(0.5, 0.75, 0.08, rnd() < 0.55 ? windowMat : darkWinMat, wx, wy, z + d / 2 + 0.02, g, false);
+    if (rnd() < 0.6) { box(0.16, 0.75, 0.06, C.teal, wx - 0.36, wy, z + d / 2 + 0.05, g, false); box(0.16, 0.75, 0.06, C.teal, wx + 0.36, wy, z + d / 2 + 0.05, g, false); }
+  }
+  return g;
+}
+function row(y, zFront, skip) {
+  let x = -18;
+  while (x < 17) {
+    const w = rr(2.6, 4.4), d = rr(3.2, 4.4), h = rr(2.8, 6);
+    if (rnd() < 0.12 || skip.some(([a, b]) => x + w > a && x < b)) { x += w * 0.6; continue; }
+    house(x + w / 2, y, zFront - d / 2 - rr(0, 0.6), w, h, d);
+    x += w + rr(0.05, 0.5);
+  }
+}
+row(4, -6.4, [[12.6, 16.5], [-13, -9]]);
+row(8, -15, [[8, 12.2]]);
+row(12, -23.2, [[-18, -6]]);
+// lemon pergola on terrace 3
+for (let i = 0; i < 4; i++) {
+  const lz = -24.5 - i * 1.6;
+  box(11, 0.9, 0.8, C.leaf, -12, 12, lz);
+  for (let k = 0; k < 9; k++) { const s = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), mat(C.lemon)); s.position.set(-17 + k * 1.2 + rr(-0.2, 0.2), 12.6 + rr(0, 0.3), lz + 0.42); scene.add(s); }
+}
+// bell tower with a majolica dome
+box(2.4, 11, 2.4, '#F4EBD8', 10, 8, -17.5);
+box(2.6, 0.3, 2.6, '#E5D7BC', 10, 19, -17.5);
+for (const dx of [-0.6, 0.6]) box(0.5, 1.4, 0.1, '#2B4750', 10 + dx, 16.5, -16.27, scene, false);
+{ const dome = new THREE.Mesh(new THREE.SphereGeometry(1.25, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat('#2F9C8A')); dome.position.set(10, 19.3, -17.5); add(dome);
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), mat(C.lemon)); cap.position.set(10, 20.7, -17.5); add(cap); }
+// umbrella pines
+function pine(x, y, z, s = 1) {
+  cyl(0.14 * s, 0.2 * s, 3.2 * s, C.woodDark, x, y, z, scene, 5);
+  const c = new THREE.Mesh(new THREE.SphereGeometry(1.7 * s, 8, 5), mat(C.pine)); c.scale.y = 0.42; c.position.set(x, y + 3.4 * s, z); add(c);
+}
+[[-14, -33], [-6, -35], [4, -32.5], [12, -34], [17, -31], [-18, -38]].forEach(([x, z], i) => pine(x, 16, z, 1 + (i % 3) * 0.15));
+pine(16, 12, -24.5, 0.9);
+
+// ---------- your bottega ----------
+const bottega = new THREE.Group(); scene.add(bottega);
+box(7.6, 5.4, 4.2, '#F2B98B', -3, 1, -3.6, bottega);
+hipRoof(8.2, 4.8, 1.8, C.roof, -3, 6.4, -3.6, bottega);
+box(7.9, 0.25, 4.5, '#F7F3EA', -3, 6.4, -3.6, bottega);
+const doorMat = new THREE.MeshStandardMaterial({ color: '#4A2E1E', emissive: '#FFB45A', emissiveIntensity: 0.25, flatShading: true });
+box(2.3, 2.9, 0.1, doorMat, -3, 1, -1.47, bottega, false);
+{ const arch = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.1, 12, 1, false, 0, Math.PI), doorMat); arch.rotation.set(Math.PI / 2, 0, -Math.PI / 2); arch.position.set(-3, 3.9, -1.47); bottega.add(arch); }
+for (const wx of [-5.7, -0.3]) { box(1.1, 1.5, 0.1, windowMat, wx, 1.6, -1.47, bottega, false); }
+for (const wx of [-4.8, -1.2]) {
+  box(1, 1.3, 0.1, windowMat, wx, 4.4, -1.47, bottega, false);
+  box(0.4, 1.3, 0.08, C.teal, wx - 0.75, 4.4, -1.42, bottega, false); box(0.4, 1.3, 0.08, C.teal, wx + 0.75, 4.4, -1.42, bottega, false);
+}
+box(4.6, 0.15, 0.9, '#F7F3EA', -3, 4.1, -1.05, bottega);   // balcony
+for (let i = 0; i < 7; i++) box(0.07, 0.6, 0.07, C.iron, -5.1 + i * 0.7, 4.25, -0.65, bottega, false);
+box(4.6, 0.07, 0.07, C.iron, -3, 4.85, -0.65, bottega, false);
+for (let i = 0; i < 4; i++) { const p = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 4), mat('#D7457A')); p.position.set(-4.6 + i * 1.1, 4.4, -0.85); bottega.add(p); } // flower boxes
+{ // striped awning over the door
+  const aw = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.4), new THREE.MeshStandardMaterial({ map: stripes('#1F8A87', '#F6F2E8', 10), side: THREE.DoubleSide, flatShading: true }));
+  aw.rotation.x = -Math.PI / 2 + 0.55; aw.position.set(-3, 3.75, -0.95); add(aw, bottega);
+}
+{ // hanging sign
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
+  const draw = () => { g.fillStyle = '#10323A'; g.fillRect(0, 0, 512, 128); g.strokeStyle = '#F2C53D'; g.lineWidth = 8; g.strokeRect(10, 10, 492, 108);
+    g.fillStyle = '#F6EEDC'; let fs = 56; do { g.font = `700 ${fs}px Fraunces, Georgia, serif`; fs -= 2; } while (g.measureText('Bottega di Marz').width > 440 && fs > 20); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Bottega di Marz', 256, 68); tex.needsUpdate = true; };
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; draw();
+  document.fonts?.load('700 52px Fraunces').then(draw).catch(() => {});
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.1), new THREE.MeshStandardMaterial({ map: tex, flatShading: true }));
+  sign.position.set(-3, 5.7, -1.44); bottega.add(sign);
+}
+const doorLamp = box(0.35, 0.5, 0.35, lampMat, -1.3, 3.2, -1.3, bottega, false);
+const doorLight = new THREE.PointLight('#FFB45A', 0, 9, 2); doorLight.position.set(-1.3, 3.2, -0.8); bottega.add(doorLight);
+// lemon tree in a pot by the door
+cyl(0.55, 0.4, 0.8, C.roof, -6.4, 1, -0.6, bottega, 10);
+cyl(0.08, 0.1, 1.2, C.woodDark, -6.4, 1.8, -0.6, bottega, 5);
+{ const c = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9, 0), mat(C.leaf)); c.position.set(-6.4, 3.3, -0.6); add(c, bottega);
+  for (let i = 0; i < 7; i++) { const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0), mat(C.lemon)); const a = i * 0.9; l.position.set(-6.4 + Math.cos(a) * 0.8, 3.1 + (i % 3) * 0.25, -0.6 + Math.sin(a) * 0.8); bottega.add(l); } }
+
+// ---------- the forge (open-air shed beside the shop) ----------
+const forge = new THREE.Group(); scene.add(forge);
+box(2.4, 1.3, 2, '#8E8378', 3.4, 1, -2.6, forge);
+const coalMat = new THREE.MeshStandardMaterial({ color: '#3A1A0A', emissive: '#FF6A1A', emissiveIntensity: 0.6, flatShading: true });
+box(1.9, 0.14, 1.5, coalMat, 3.4, 2.3, -2.6, forge, false);
+box(1, 5.6, 1, '#7C7167', 3.4, 2.3, -3.4, forge);         // chimney
+box(1.9, 0.6, 1.7, '#6E655C', 3.4, 3.9, -2.9, forge);      // hood
+box(4.2, 0.25, 3.4, C.roof, 3.6, 5.1, -2.5, forge);         // lean-to roof
+for (const [x, z] of [[1.7, -1.0], [5.5, -1.0], [5.5, -4.0]]) box(0.25, 4.1, 0.25, C.woodDark, x, 1, z, forge);
+// bellows
+box(0.9, 0.5, 1.2, '#7A4E2D', 1.95, 1.3, -2.6, forge);
+const bellowsTop = box(0.9, 0.12, 1.2, '#5A3720', 1.95, 1.8, -2.6, forge);
+// anvil on a stump
+cyl(0.38, 0.42, 0.8, C.woodDark, 5.4, 1, -0.5, forge, 8);
+box(1.1, 0.35, 0.5, C.iron, 5.4, 1.8, -0.5, forge);
+{ const horn = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.55, 6), mat(C.iron)); horn.rotation.z = -Math.PI / 2; horn.position.set(6.2, 1.98, -0.5); add(horn, forge); }
+const forgeLight = new THREE.PointLight('#FF8A3D', 6, 10, 2); forgeLight.position.set(3.4, 3, -1.6); forge.add(forgeLight);
+// spark particles
+const SPARKS = 60;
+const sparkGeo = new THREE.BufferGeometry(); sparkGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(SPARKS * 3), 3));
+const sparkMat = new THREE.PointsMaterial({ color: '#FFC24D', size: 0.22, transparent: true, opacity: 0.95, depthWrite: false });
+const sparks = new THREE.Points(sparkGeo, sparkMat); sparks.frustumCulled = false; scene.add(sparks);
+const sparkV = Array.from({ length: SPARKS }, () => ({ life: 0, x: 0, y: -99, z: 0, vx: 0, vy: 0, vz: 0 }));
+function burst(n = 14) {
+  let k = 0;
+  for (const s of sparkV) { if (s.life > 0) continue; Object.assign(s, { life: rr(0.6, 1.1), x: 3.4 + rr(-0.6, 0.6), y: 2.5, z: -2.4 + rr(-0.4, 0.4), vx: rr(-1.2, 1.2), vy: rr(2.5, 5), vz: rr(-0.5, 1.5) }); if (++k >= n) break; }
+}
+
+// ---------- the mine (gathering station) ----------
+const mine = new THREE.Group(); scene.add(mine);
+box(2.8, 2.8, 0.2, '#2A2420', -12.5, 1, -5.95, mine, false);
+box(0.35, 3.1, 0.4, C.woodDark, -14, 1, -5.8, mine); box(0.35, 3.1, 0.4, C.woodDark, -11, 1, -5.8, mine); box(3.5, 0.4, 0.5, C.woodDark, -12.5, 4, -5.8, mine);
+for (const dx of [-0.45, 0.45]) box(0.1, 0.08, 4.4, C.iron, -12.5 + dx, 1, -3.6, mine, false);
+for (let i = 0; i < 6; i++) box(1.4, 0.06, 0.2, C.woodDark, -12.5, 0.99, -5.4 + i * 0.75, mine, false);
+const cart = new THREE.Group(); mine.add(cart); cart.position.set(-12.5, 1, -3.2);
+{ const g = new THREE.CylinderGeometry(0.95, 0.7, 0.9, 4, 1); g.rotateY(Math.PI / 4); const body = new THREE.Mesh(g, mat('#7A6A5C')); body.scale.set(1, 1, 1.25); body.position.y = 0.75; add(body, cart);
+  for (const [x, z] of [[-0.55, -0.6], [0.55, -0.6], [-0.55, 0.6], [0.55, 0.6]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.12, 10), mat(C.iron)); w.rotation.z = Math.PI / 2; w.position.set(x, 0.22, z); add(w, cart); } }
+const oreLumps = [];
+for (let i = 0; i < 12; i++) { const o = new THREE.Mesh(new THREE.IcosahedronGeometry(rr(0.18, 0.28), 0), mat(C.copper)); o.position.set(rr(-0.55, 0.55), 1.2 + rr(0, 0.25), rr(-0.7, 0.7)); add(o, cart); oreLumps.push(o); }
+
+// ---------- market stall ----------
+const stall = new THREE.Group(); scene.add(stall);
+box(3.2, 0.95, 1.3, C.wood, -8.2, 1, 1.9, stall);
+for (const [x, z] of [[-9.7, 1.3], [-6.7, 1.3], [-9.7, 2.5], [-6.7, 2.5]]) box(0.12, 2.6, 0.12, C.woodDark, x, 1, z, stall);
+{ const aw = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.9), new THREE.MeshStandardMaterial({ map: stripes('#C4623A', '#F6F2E8', 9), side: THREE.DoubleSide, flatShading: true }));
+  aw.rotation.x = -Math.PI / 2 + 0.25; aw.position.set(-8.2, 3.75, 1.9); add(aw, stall); }
+const stallLanterns = [];
+for (let i = 0; i < 3; i++) {
+  const g = new THREE.Group(); g.position.set(-9.1 + i * 0.9, 1.95, 1.9); stall.add(g);
+  box(0.36, 0.45, 0.36, lampMat, 0, 0, 0, g); hipRoof(0.5, 0.5, 0.25, C.copper, 0, 0.45, 0, g);
+  stallLanterns.push(g);
+}
+box(0.5, 0.35, 0.5, '#2FB59D', -6.9, 1.95, 1.6, stall); // a jar of something
+
+// ---------- pier and boats ----------
+box(2.8, 0.3, 12.5, C.wood, 9.5, 0.55, 10.2);
+for (let i = 0; i < 6; i++) for (const dx of [-1.3, 1.3]) cyl(0.16, 0.16, 2.4, C.woodDark, 9.5 + dx, -1.2, 4.6 + i * 2.3);
+cyl(0.08, 0.08, 2.4, C.woodDark, 10.6, 0.85, 16);
+const pierLamp = box(0.35, 0.45, 0.35, lampMat, 10.6, 3.25, 16, scene, false);
+const pierLight = new THREE.PointLight('#FFB45A', 0, 10, 2); pierLight.position.set(10.6, 3.4, 16.4); scene.add(pierLight);
+
+function hullShape(L, W) {
+  const s = new THREE.Shape();
+  s.moveTo(-L * 0.45, -W * 0.45); s.lineTo(L * 0.2, -W * 0.5);
+  s.quadraticCurveTo(L * 0.45, -W * 0.42, L * 0.55, 0); s.quadraticCurveTo(L * 0.45, W * 0.42, L * 0.2, W * 0.5);
+  s.lineTo(-L * 0.45, W * 0.45); s.quadraticCurveTo(-L * 0.52, 0, -L * 0.45, -W * 0.45); return s;
+}
+function hullPart(L, W, depth, color, y) {
+  const g = new THREE.ExtrudeGeometry(hullShape(L, W), { depth, bevelEnabled: false, curveSegments: 6 });
+  g.rotateX(-Math.PI / 2); const m = new THREE.Mesh(g, mat(color)); m.position.y = y; return m;
+}
+function sail(points, color) {
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(points.flat(), 3)); g.computeVertexNormals();
+  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, flatShading: true }));
+}
+function makeShip(L, W, hullColor, bandColor, sails) {
+  const ship = new THREE.Group(); const inner = new THREE.Group(); ship.add(inner);
+  add(hullPart(L, W, 1.0, hullColor, -0.6), inner);
+  add(hullPart(L * 1.01, W * 1.01, 0.32, bandColor, 0.35), inner);
+  add(hullPart(L * 0.92, W * 0.86, 0.1, '#C89A64', 0.62), inner);
+  for (const s of sails) {
+    cyl(0.07, 0.09, s.h, C.woodDark, s.x, 0.7, 0, inner, 6);
+    const rig = new THREE.Group(); rig.position.x = s.x; rig.rotation.y = 0.6; inner.add(rig);
+    add(sail([[s.a, 1.3, 0.08], [-s.b, 0.7 + s.h, 0.08], [-s.b * 0.3, 1.2, 0.08]], C.cream), rig);
+    const yard = cyl(0.04, 0.04, Math.hypot(s.a + s.b, s.h - 0.6), C.woodDark, 0, 0, 0, rig, 5);
+    yard.position.set((s.a - s.b) / 2, 1.0 + s.h / 2, 0.12); yard.rotation.z = Math.atan2(s.a + s.b, s.h - 0.6);
+  }
+  scene.add(ship); return ship;
+}
+const galley = makeShip(8, 2.4, '#7A4E2D', '#1F8A87', [{ x: 1, h: 6.5, a: 2.8, b: 2.2 }, { x: -2, h: 4.8, a: 2, b: 1.6 }]);
+{ const flag = sail([[0, 0, 0], [0, 0.6, 0], [0.9, 0.3, 0]], '#C4623A'); flag.position.set(1, 7.2, 0); galley.children[0].add(flag); }
+const gozzo = makeShip(3.4, 1.3, '#F5F0E4', '#1F8A87', []);
+gozzo.position.set(12.5, 0, 9); gozzo.rotation.y = -Math.PI / 2 + 0.1;
+
+// galley path: open sea -> alongside the pier
+const seaSpot = new THREE.Vector3(23, 0, 9), dockSpot = new THREE.Vector3(5.3, 0, 11.5);
+const shipCurve = new THREE.QuadraticBezierCurve3(seaSpot, new THREE.Vector3(14, 0, 26), dockSpot);
+const ship = { state: 'sea', u: 0 };
+function placeShip() {
+  const p = shipCurve.getPoint(ship.u), d = shipCurve.getTangent(Math.min(0.999, Math.max(0.001, ship.u)));
+  galley.position.set(p.x, 0, p.z); galley.rotation.y = Math.atan2(-d.z, d.x);
+}
+placeShip();
+
+// ---------- an NPC buyer ----------
+const npc = new THREE.Group(); scene.add(npc);
+{ const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.6, 3, 8), mat('#2A4C9A')); body.position.y = 0.75; add(body, npc);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), mat('#E7B98F')); head.position.y = 1.62; add(head, npc);
+  const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.33, 0.18, 10), mat('#B83A3A')); hat.position.set(0.04, 1.86, 0); hat.rotation.z = 0.2; add(hat, npc); }
+npc.position.set(-22, 1, 3.4); npc.visible = false;
+
+// ---------- gulls ----------
+const gulls = [];
+for (let i = 0; i < 4; i++) {
+  const g = new THREE.Group(); const wm = mat('#FFFFFF', { side: THREE.DoubleSide });
+  const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, -0.15, 0, 0, 0.15, 0.9, 0, 0], 3)); wg.computeVertexNormals();
+  const l = new THREE.Mesh(wg, wm), r = new THREE.Mesh(wg, wm); r.rotation.y = Math.PI; g.add(l, r);
+  g.userData = { l, r, rad: rr(8, 15), h: rr(10, 14), sp: rr(0.18, 0.3) * (i % 2 ? 1 : -1), ph: rnd() * 6.28 };
+  scene.add(g); gulls.push(g);
+}
+
+// ---------- camera rig ----------
+const target = new THREE.Vector3(-1, 2.5, 1);
+const view = { yaw: 0.32, pitch: 0.5, dist: 50 };
+const goal = { ...view };
+const home = () => { const portrait = stage.clientWidth / stage.clientHeight < 0.9; return { yaw: 0.3, pitch: portrait ? 0.58 : 0.52, dist: portrait ? 92 : 62 }; };
+function placeCamera() {
+  const cp = Math.cos(view.pitch);
+  camera.position.set(target.x + view.dist * cp * Math.sin(view.yaw), target.y + view.dist * Math.sin(view.pitch), target.z + view.dist * cp * Math.cos(view.yaw));
+  camera.lookAt(target);
+}
+const resize = () => {
+  const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+};
+let first = true;
+new ResizeObserver(() => { resize(); if (first) { Object.assign(goal, home()); Object.assign(view, goal); first = false; } }).observe(stage);
+
+// pointer controls: drag sideways to orbit (vertical swipes scroll the page on phones), pinch or ctrl+wheel to zoom
+const pointers = new Map(); let pinch0 = 0, dist0 = 0, downAt = null;
+const clampGoal = () => { goal.yaw = THREE.MathUtils.clamp(goal.yaw, -1.0, 1.15); goal.pitch = THREE.MathUtils.clamp(goal.pitch, 0.3, 1.05); goal.dist = THREE.MathUtils.clamp(goal.dist, 22, 95); };
+canvas.addEventListener('pointerdown', (e) => {
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); dist0 = goal.dist; downAt = null; }
+});
+canvas.addEventListener('pointermove', (e) => {
+  const p = pointers.get(e.pointerId);
+  if (!p) { hover(e); return; }
+  const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinch0) goal.dist = dist0 * pinch0 / d; clampGoal(); return; }
+  goal.yaw -= dx * 0.005; if (e.pointerType === 'mouse') goal.pitch += dy * 0.004; clampGoal();
+});
+const up = (e) => {
+  const was = pointers.get(e.pointerId); pointers.delete(e.pointerId);
+  if (e.type === 'pointerup' && was && downAt && pointers.size === 0 && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 9 && performance.now() - downAt.t < 500) tapAt(e);
+  if (pointers.size < 2) pinch0 = 0;
+};
+canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); canvas.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') up(e); });
+canvas.addEventListener('wheel', (e) => { if (!e.ctrlKey) return; e.preventDefault(); goal.dist *= 1 + e.deltaY * 0.004; clampGoal(); }, { passive: false });
+$('#btn-reset').addEventListener('click', () => Object.assign(goal, home()));
+
+// ---------- tapping things ----------
+const tappables = { forge, cart: mine, stall, ship: galley, bottega };
+for (const [id, obj] of Object.entries(tappables)) obj.traverse((o) => { o.userData.tap = id; });
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function pickAt(e) {
+  const r = canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(Object.values(tappables), true)[0];
+  return hit?.object.userData.tap || null;
+}
+function hover(e) { if (e.pointerType !== 'mouse') return; canvas.classList.toggle('pointing', !!pickAt(e)); }
+function tapAt(e) { const id = pickAt(e); if (id) act(id); }
+document.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => act(b.dataset.act)));
+document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { $('#' + b.dataset.close).hidden = true; if (b.dataset.close === 'sheet-forge') endFocus(true); showChips(); }));
+const showChips = () => { $('#chips').hidden = !$('#sheet-forge').hidden || !$('#sheet-stall').hidden; };
+
+// tiny tween system
+const tweens = [];
+function tween(dur, fn, done) { tweens.push({ t: 0, dur: reduceMotion ? Math.min(dur, 0.05) : dur, fn, done }); }
+const ease = (k) => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+function bounce(obj) { tween(0.3, (k) => { obj.scale.set(1, 1 + Math.sin(k * Math.PI) * 0.04, 1); }); }
+
+let toastTimer;
+function toast(html, ms = 3800) { const t = $('#toast'); t.innerHTML = html; t.dataset.show = '1'; clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.dataset.show = '0'), ms); }
+
+// screen-space labels that follow 3D points
+const tmpV = new THREE.Vector3();
+function toScreen(p) { tmpV.copy(p).project(camera); return { x: (tmpV.x + 1) / 2 * stage.clientWidth, y: (1 - tmpV.y) / 2 * stage.clientHeight, ok: tmpV.z < 1 }; }
+function pop(text, at, gold = true) {
+  const el = document.createElement('div'); el.className = 'wlabel pop' + (gold ? ' gold' : ''); el.textContent = text; labelsEl.appendChild(el);
+  const s = toScreen(at); el.style.left = s.x + 'px'; el.style.top = s.y + 'px'; setTimeout(() => el.remove(), 1400);
+}
+const fixedLabels = [
+  { el: null, at: new THREE.Vector3(3.4, 6.4, -2.4), text: () => focus.on ? 'Tending…' : `Copper Lantern · 0:${String(Math.ceil(craftLeft)).padStart(2, '0')}` },
+  { el: null, at: new THREE.Vector3(-12.5, 4.3, -3.2), text: () => `Mine cart ${oreInCart}/12` },
+];
+for (const l of fixedLabels) { l.el = document.createElement('div'); l.el.className = 'wlabel'; labelsEl.appendChild(l.el); }
+
+// ---------- game-ish state (all fake; the server decides in the real game) ----------
+let ducats = 150, ore = 0, oreInCart = 12, lanternsLeft = 3, craftLeft = 42, mineRefill = 0;
+const setHud = () => { $('#ducats').textContent = ducats; $('#ore').textContent = ore; $('#stall-left').textContent = lanternsLeft; };
+
+const focus = { on: false, heat: 0.5, left: 10, inBand: 0, total: 0 };
+function startFocus() {
+  $('#sheet-stall').hidden = true; $('#sheet-forge').hidden = false; showChips();
+  Object.assign(focus, { on: true, heat: 0.5, left: 10, inBand: 0, total: 0 });
+  $('#btn-bellows').disabled = false; $('#btn-bellows').textContent = 'Work the bellows';
+}
+function pump() {
+  if (!focus.on) return; focus.heat = Math.min(1, focus.heat + 0.15); burst(10);
+  tween(0.25, (k) => { bellowsTop.position.y = 1.86 - Math.sin(k * Math.PI) * 0.3; });
+}
+function endFocus(cancelled) {
+  if (!focus.on) return; focus.on = false;
+  if (cancelled) return;
+  const pct = focus.total ? focus.inBand / focus.total : 0;
+  const q = pct >= 0.7 ? ['Fine', 'Masterfully tended'] : pct >= 0.4 ? ['Good', 'Well tended'] : ['Standard', 'Left to itself'];
+  $('#btn-bellows').disabled = true; $('#btn-bellows').textContent = `${q[1]}: ${q[0]} quality`;
+  pop(q[0] + ' quality', new THREE.Vector3(3.4, 4.5, -2.4));
+  toast(`${q[1]}. The lantern comes out <em>${q[0]}</em>. Skipping this is fine too: the craft still finishes at base quality.`, 5200);
+  setTimeout(() => { $('#sheet-forge').hidden = true; showChips(); }, 1800);
+}
+$('#btn-bellows').addEventListener('click', pump);
+
+function emptyCart() {
+  if (oreInCart === 0) { toast('The cart is empty. The mine keeps digging while you are away; it refills in a few seconds here.'); return; }
+  const n = oreInCart; oreInCart = 0; mineRefill = 0;
+  oreLumps.forEach((o, i) => {
+    const fly = o.clone(); scene.add(fly); o.visible = false;
+    const from = new THREE.Vector3(); o.getWorldPosition(from); const to = new THREE.Vector3(-3 + rr(-0.6, 0.6), 2, -1.4);
+    setTimeout(() => tween(0.75, (k) => { fly.position.lerpVectors(from, to, ease(k)); fly.position.y += Math.sin(k * Math.PI) * 3; },
+      () => { scene.remove(fly); ore += 1; setHud(); if (i === oreLumps.length - 1) { pop(`+${n} copper ore`, new THREE.Vector3(-3, 6.5, -1.4), false); } }), i * 55);
+  });
+  toast('Copper ore goes into your storehouse. Gathering stations <em>fill up while you are away</em>, so every return starts with something to collect.');
+}
+
+const npcState = { phase: 'idle', t: 0 };
+function openStall() {
+  $('#sheet-stall').hidden = true; showChips();
+  if (npcState.phase !== 'idle') return;
+  if (lanternsLeft === 0) { toast('Sold out. Forge more lanterns, or restock from the Mercato.'); return; }
+  npc.visible = true; npc.position.set(-22, 1, 3.4); npcState.phase = 'in'; npcState.t = 0;
+  toast('You call out from your stall. A <em>spice merchant</em> strolls over…', 2600);
+}
+$('#btn-open-stall').addEventListener('click', openStall);
+
+function hailShip() {
+  if (ship.state === 'sea') {
+    ship.state = 'arriving';
+    toast('A galley from the Levant is coming in…', 2600);
+    tween(7, (k) => { ship.u = ease(k); placeShip(); }, () => {
+      ship.state = 'docked';
+      toast('The Levant galley has docked. <em>Spice merchants want Healing Draughts</em>: demand is up for 12 hours. In the game, every market event arrives like this.', 6000);
+    });
+  } else if (ship.state === 'docked') {
+    ship.state = 'leaving'; toast('The galley sets sail again.', 2200);
+    tween(7, (k) => { ship.u = 1 - ease(k); placeShip(); }, () => { ship.state = 'sea'; });
+  }
+}
+
+function act(id) {
+  const obj = tappables[id]; if (obj) bounce(obj);
+  if (id === 'forge') { if (focus.on) pump(); else startFocus(); }
+  else if (id === 'cart') emptyCart();
+  else if (id === 'stall') { $('#sheet-forge').hidden = true; endFocus(true); $('#sheet-stall').hidden = false; showChips(); }
+  else if (id === 'ship') hailShip();
+  else if (id === 'bottega') toast('Your <em>bottega</em>. Upgrades show here: scaffolding, then a new floor, a water wheel, a bigger forge.');
+}
+
+// ---------- day and night ----------
+const DAY = { sky: '#BFE6EA', hemiSky: '#E6F7F7', hemiGround: '#E8D3B0', hemi: 1.3, sun: 2.4, sunCol: '#FFF0D2', sea: '#FFFFFF', win: 0, lamp: 0.25, lampLight: 0, door: 0.25 };
+const NIGHT = { sky: '#0F2B3A', hemiSky: '#3C6585', hemiGround: '#1B2B33', hemi: 0.55, sun: 0.55, sunCol: '#9FB8E8', sea: '#3E6F86', win: 1.6, lamp: 2.4, lampLight: 14, door: 1.2 };
+let night = 0, nightGoal = 0;
+const pageDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+nightGoal = night = pageDark() ? 1 : 0;
+$('#btn-time').addEventListener('click', () => { nightGoal = nightGoal ? 0 : 1; });
+const cA = new THREE.Color(), cB = new THREE.Color();
+const mix = (a, b, k) => cA.set(a).lerp(cB.set(b), k);
+function applyTime(k) {
+  const L = (a, b) => a + (b - a) * k;
+  scene.background.copy(mix(DAY.sky, NIGHT.sky, k)); scene.fog.color.copy(scene.background);
+  hemi.color.copy(mix(DAY.hemiSky, NIGHT.hemiSky, k)); hemi.groundColor.copy(mix(DAY.hemiGround, NIGHT.hemiGround, k)); hemi.intensity = L(DAY.hemi, NIGHT.hemi);
+  sun.intensity = L(DAY.sun, NIGHT.sun); sun.color.copy(mix(DAY.sunCol, NIGHT.sunCol, k));
+  seaMat.color.copy(mix(DAY.sea, NIGHT.sea, k));
+  windowMat.emissiveIntensity = L(DAY.win, NIGHT.win); lampMat.emissiveIntensity = L(DAY.lamp, NIGHT.lamp);
+  doorMat.emissiveIntensity = L(DAY.door, NIGHT.door); doorLight.intensity = L(0, NIGHT.lampLight); pierLight.intensity = L(0, NIGHT.lampLight);
+  stage.style.background = '#' + scene.background.getHexString();
+  $('#btn-time').textContent = nightGoal ? 'Day' : 'Night';
+}
+applyTime(night);
+
+// ---------- loop ----------
+let visible = true;
+new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(stage);
+const clock = new THREE.Clock(); let t = 0;
+function frame() {
+  requestAnimationFrame(frame);
+  if (!visible || document.hidden) { clock.getDelta(); return; }
+  const dt = Math.min(clock.getDelta(), 0.05); t += reduceMotion ? 0 : dt;
+
+  for (const k of ['yaw', 'pitch', 'dist']) view[k] += (goal[k] - view[k]) * Math.min(1, dt * 8);
+  placeCamera();
+
+  // sea
+  const a = seaPos.array;
+  for (let i = 0; i < seaPos.count; i++) {
+    const x = seaBase[i * 3], z = seaBase[i * 3 + 2];
+    a[i * 3 + 1] = 0.1 * (Math.sin(x * 0.22 + t * 1.1) + 0.8 * Math.sin(z * 0.31 - t * 0.8) + 0.5 * Math.sin((x + z) * 0.13 + t * 0.6));
+  }
+  seaPos.needsUpdate = true;
+  foam.material.opacity = 0.45 + Math.sin(t * 1.6) * 0.25;
+
+  // boats bob
+  galley.position.y = Math.sin(t * 1.3) * 0.08 - 0.1; galley.children[0].rotation.x = Math.sin(t * 0.9) * 0.03;
+  gozzo.position.y = Math.sin(t * 1.7 + 1) * 0.08 - 0.25; gozzo.children[0].rotation.x = Math.sin(t * 1.2) * 0.05;
+
+  // gulls
+  for (const g of gulls) { const u = g.userData, ang = u.ph + t * u.sp; g.position.set(Math.cos(ang) * u.rad, u.h + Math.sin(t + u.ph) * 0.6, 6 + Math.sin(ang) * u.rad); g.rotation.y = -ang + (u.sp > 0 ? 0 : Math.PI); const f = Math.sin(t * 7 + u.ph) * 0.5; u.l.rotation.x = f; u.r.rotation.x = -f; }
+
+  // forge heat and focus
+  if (focus.on) {
+    focus.heat = Math.max(0, focus.heat - dt * (0.16 + 0.05 * Math.sin(t * 2.3)));
+    focus.left -= dt; focus.total += dt; if (focus.heat >= 0.55 && focus.heat <= 0.8) focus.inBand += dt;
+    $('#needle').style.left = (focus.heat * 100).toFixed(1) + '%';
+    $('#focus-time').textContent = Math.max(0, focus.left).toFixed(1) + ' s left';
+    $('#focus-score').textContent = 'In the band: ' + Math.round(100 * focus.inBand / focus.total) + '%';
+    if (focus.left <= 0) endFocus(false);
+  }
+  const heat = focus.on ? focus.heat : 0.45 + Math.sin(t * 3) * 0.05;
+  coalMat.emissiveIntensity = 0.3 + heat * 2.2; forgeLight.intensity = 2 + heat * 16;
+  if (!reduceMotion && Math.random() < dt * (focus.on ? 2 : 0.7)) burst(3);
+  const sp = sparkGeo.attributes.position.array;
+  sparkV.forEach((s, i) => { if (s.life > 0) { s.life -= dt; s.vy -= 9 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; if (s.life <= 0) s.y = -99; } sp[i * 3] = s.x; sp[i * 3 + 1] = s.y; sp[i * 3 + 2] = s.z; });
+  sparkGeo.attributes.position.needsUpdate = true;
+
+  // craft timer loops; the mine refills
+  craftLeft -= dt; if (craftLeft <= 0) { craftLeft = 42; pop('Copper Lantern ready', new THREE.Vector3(3.4, 5.5, -2.4), false); }
+  if (oreInCart < 12) { mineRefill += dt; if (mineRefill > 0.8) { mineRefill = 0; oreLumps[oreInCart].visible = true; oreInCart++; } }
+
+  // the NPC buyer walks to the stall, buys, and leaves
+  if (npcState.phase !== 'idle') {
+    npcState.t += dt; const stallFront = -8.2;
+    if (npcState.phase === 'in') { npc.position.x = Math.min(stallFront, npc.position.x + dt * 4.2); npc.rotation.y = Math.PI / 2; npc.position.y = 1 + Math.abs(Math.sin(npcState.t * 9)) * 0.08;
+      if (npc.position.x >= stallFront) { npcState.phase = 'buy'; npcState.t = 0; npc.rotation.y = Math.PI; npc.position.y = 1; } }
+    else if (npcState.phase === 'buy' && npcState.t > 0.9) {
+      lanternsLeft--; stallLanterns[lanternsLeft].visible = false; ducats += 24; setHud();
+      pop('+24 ducats', new THREE.Vector3(-8.2, 3.6, 2.2)); toast('A <em>spice merchant</em> bought a Copper Lantern for 24 ducats.'); npcState.phase = 'out'; npcState.t = 0;
+    } else if (npcState.phase === 'out') { npc.position.x -= dt * 4.2; npc.rotation.y = -Math.PI / 2; npc.position.y = 1 + Math.abs(Math.sin(npcState.t * 9)) * 0.08;
+      if (npc.position.x < -22) { npc.visible = false; npcState.phase = 'idle'; } }
+  }
+
+  for (let i = tweens.length - 1; i >= 0; i--) { const tw = tweens[i]; tw.t += dt; const k = Math.min(1, tw.t / tw.dur); tw.fn(k); if (k >= 1) { tweens.splice(i, 1); tw.done?.(); } }
+
+  if (Math.abs(nightGoal - night) > 0.001) { night += Math.sign(nightGoal - night) * Math.min(Math.abs(nightGoal - night), dt * 0.9); applyTime(night); }
+
+  for (const l of fixedLabels) { const s = toScreen(l.at); l.el.hidden = !s.ok; l.el.style.left = s.x + 'px'; l.el.style.top = s.y + 'px'; l.el.textContent = l.text(); }
+
+  renderer.render(scene, camera);
+}
+setHud(); stage.classList.add('ready'); frame();
+</script>

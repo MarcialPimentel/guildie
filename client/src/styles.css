@@ -1,39 +1,69 @@
-/* Guildie web client: placeholder brass-and-soot look until M4 (GDD 3, Visual direction).
+/* Guildie web client: the Portovela look (docs/art-direction.md, GDD 3 Visual direction).
+   Day palette by default; the night palette follows the phone's dark mode.
    Mobile-first: one column with a bottom tab bar. From 900px wide: tabs move to the top and
-   busy screens (Workshop, sell form) use two columns. */
+   busy screens (Bottega, sell form) use two columns. */
 
 :root {
-  --bg: #1b1816;
-  --panel: #2a211b;
-  --panel-light: #3a2e25;
-  --brass: #c9963f;
-  --brass-dark: #8a6427;
-  --cream: #e8d5a8;
-  --muted: #9c8b74;
-  --error: #e07a5f;
-  --ok: #8fbf7a;
-  --npc: #8fb3c9;
-  --radius: 10px;
+  --bg: #E3F2EF;          /* sea foam */
+  --panel: #F8FCFB;       /* whitewash */
+  --panel-light: #EAF5F3; /* raised or pressed panels, dividers */
+  --line: rgba(16, 50, 58, 0.14);
+  --ink: #10323A;         /* harbor ink: text */
+  --muted: #4A6B6F;
+  --heading: #0E5754;
+  --accent: #12706D;      /* Amalfi teal: highlights, prices */
+  --btn: #177A76;
+  --btn-press: #0E4F4C;
+  --on-btn: #FFFFFF;
+  --lemon: #F2C53D;       /* ducats, rewards (a fill, never text on light) */
+  --error: #A9492A;       /* roof tile */
+  --ok: #4E6F2C;          /* olive */
+  --npc: #2A4C9A;         /* majolica: NPCs, other guilds' goods */
+  --shadow: 0 1px 2px rgba(16, 50, 58, 0.08), 0 6px 18px rgba(16, 50, 58, 0.07);
+  --display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius: 14px;
   --gap: 12px;
   --gutter: 16px;
   --tabbar-h: 64px;
-  color-scheme: dark;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0B2530;          /* night sea */
+    --panel: #12333F;       /* lantern shade */
+    --panel-light: #1A4250;
+    --line: rgba(227, 243, 240, 0.14);
+    --ink: #E3F3F0;         /* moonlit plaster */
+    --muted: #93B5B3;
+    --heading: #7FD6CD;
+    --accent: #52C7BD;
+    --btn: #52C7BD;
+    --btn-press: #2E8F88;
+    --on-btn: #0B2530;
+    --lemon: #F5CF5A;
+    --error: #EC8A64;       /* ember */
+    --ok: #A9CB78;
+    --npc: #8EA8F0;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.2);
+    color-scheme: dark;
+  }
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
   background: var(--bg);
-  color: var(--cream);
-  font: 17px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  font: 17px/1.45 var(--body);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
 #app { min-height: 100vh; min-height: 100dvh; }
 .boot { text-align: center; color: var(--muted); padding-top: 40vh; font-size: 20px; }
 
-h1, h2, h3 { margin: 0; color: var(--brass); font-weight: 650; line-height: 1.2; }
-h1 { font-size: 26px; }
+h1, h2, h3 { margin: 0; color: var(--heading); font-family: var(--display); font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: 28px; }
 h2 { font-size: 21px; }
 h3 { font-size: 18px; }
 p { margin: 0; }
@@ -43,8 +73,9 @@ p { margin: 0; }
 .error { color: var(--error); }
 .ok { color: var(--ok); }
 .npc { color: var(--npc); }
-.brass { color: var(--brass); }
-.cream { color: var(--cream); }
+.accent { color: var(--accent); }
+.ink { color: var(--ink); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .right { text-align: right; }
 .center { text-align: center; }
@@ -68,7 +99,9 @@ p { margin: 0; }
 .cols { display: flex; flex-direction: column; gap: var(--gap); }
 .card {
   background: var(--panel);
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -85,7 +118,7 @@ p { margin: 0; }
 .header {
   position: sticky; top: 0; z-index: 10;
   background: var(--panel);
-  border-bottom: 1px solid var(--panel-light);
+  border-bottom: 1px solid var(--line);
 }
 .header-inner {
   max-width: 1100px; margin: 0 auto;
@@ -93,7 +126,7 @@ p { margin: 0; }
   display: flex; align-items: center; gap: 10px;
 }
 .header .who { flex: 1 1 auto; min-width: 0; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.header .gold { color: var(--brass); font-size: 22px; font-weight: 650; }
+.header .gold { color: var(--ink); font-size: 21px; font-weight: 800; }
 
 .message {
   position: fixed; left: 0; right: 0; z-index: 20;
@@ -102,15 +135,15 @@ p { margin: 0; }
   padding: 0 var(--gutter);
 }
 .message span {
-  background: var(--panel-light); border-radius: 8px; padding: 8px 14px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); max-width: 640px;
+  background: var(--ink); border-radius: 12px; padding: 10px 16px; font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); max-width: 640px;
 }
-.message .ok { color: var(--ok); }
-.message .error { color: var(--error); }
+.message .ok { color: var(--bg); }
+.message .error { color: var(--bg); box-shadow: inset 4px 0 0 var(--error), 0 6px 20px rgba(0, 0, 0, 0.25); }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  background: var(--panel); border-top: 1px solid var(--panel-light);
+  background: var(--panel); border-top: 1px solid var(--line);
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
 }
 .tabbar-inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 6px; }
@@ -120,33 +153,36 @@ p { margin: 0; }
 
 button {
   font: inherit; cursor: pointer;
-  border-radius: 8px; border: 2px solid transparent;
+  border-radius: 12px; border: 2px solid transparent;
   min-height: 48px; padding: 8px 14px;
-  background: var(--brass); color: var(--bg); font-weight: 600;
+  background: var(--btn); color: var(--on-btn); font-weight: 800;
+  box-shadow: 0 3px 0 var(--btn-press);
   touch-action: manipulation;
 }
 button:hover:not(:disabled) { filter: brightness(1.1); }
-button:active:not(:disabled) { filter: brightness(0.8); }
-button:disabled { background: var(--panel-light); color: var(--muted); cursor: default; border-color: transparent; }
-button:focus-visible { outline: 2px solid var(--cream); outline-offset: 2px; }
-button.secondary { background: var(--panel); color: var(--cream); border-color: var(--brass-dark); font-weight: 500; }
-button.secondary:hover:not(:disabled) { border-color: var(--brass); filter: none; background: var(--panel-light); }
-button.on { background: var(--brass); color: var(--bg); border-color: var(--brass); font-weight: 600; }
+button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--btn-press); }
+button:disabled { background: var(--panel-light); color: var(--muted); cursor: default; border-color: transparent; box-shadow: none; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button.secondary { background: var(--panel); color: var(--accent); border-color: var(--accent); font-weight: 700; box-shadow: none; }
+button.secondary:hover:not(:disabled) { filter: none; background: var(--panel-light); }
+button.secondary:active:not(:disabled) { box-shadow: none; }
+button.on { background: var(--btn); color: var(--on-btn); border-color: var(--btn); font-weight: 800; box-shadow: none; }
 button.small { min-height: 40px; padding: 6px 12px; font-size: 16px; }
 button.step { min-width: 46px; padding: 6px 8px; }
 button.block { width: 100%; }
 button.link {
-  background: none; border: none; color: inherit; font-weight: inherit;
+  background: none; border: none; color: inherit; font-weight: inherit; box-shadow: none;
   padding: 0; min-height: 0; text-align: left; width: 100%;
 }
-button.link:hover { background: rgba(255, 255, 255, 0.03); }
+button.link:hover:not(:disabled) { filter: none; background: var(--panel-light); }
+button.link:active:not(:disabled) { transform: none; box-shadow: none; }
 
 input, textarea {
-  font: inherit; color: var(--cream);
-  background: var(--panel); border: 2px solid var(--muted); border-radius: 8px;
+  font: inherit; color: var(--ink);
+  background: var(--panel); border: 2px solid var(--muted); border-radius: 12px;
   padding: 10px 12px; min-height: 48px; width: 100%;
 }
-input:focus, textarea:focus { outline: none; border-color: var(--brass); }
+input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 input::placeholder, textarea::placeholder { color: var(--muted); }
 textarea { resize: vertical; min-height: 160px; background: var(--bg); }
 
@@ -156,7 +192,7 @@ textarea { resize: vertical; min-height: 160px; background: var(--bg); }
 .btnrow { display: flex; gap: 6px; flex-wrap: wrap; }
 .btnrow > button { flex: 1 1 0; }
 
-.list-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-top: 1px solid var(--panel-light); }
+.list-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-top: 1px solid var(--line); }
 .list-row:first-child { border-top: none; }
 .list-head { color: var(--muted); font-size: 14px; }
 .col-rank { width: 40px; flex: none; color: var(--muted); text-align: right; }
@@ -166,7 +202,7 @@ textarea { resize: vertical; min-height: 160px; background: var(--bg); }
 /* ---------------------------------------------------------------- modal */
 
 .overlay {
-  position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.6);
+  position: fixed; inset: 0; z-index: 50; background: rgba(11, 37, 48, 0.55);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 70px var(--gutter) var(--gutter); overflow-y: auto;
 }
@@ -178,7 +214,7 @@ textarea { resize: vertical; min-height: 160px; background: var(--bg); }
   :root { --tabbar-h: 0px; }
   .page { max-width: 1100px; padding-bottom: 48px; }
   .page.narrow { max-width: 760px; }
-  .tabbar { position: sticky; top: 61px; bottom: auto; border-top: none; border-bottom: 1px solid var(--panel-light); padding: 8px; }
+  .tabbar { position: sticky; top: 61px; bottom: auto; border-top: none; border-bottom: 1px solid var(--line); padding: 8px; }
   .tabbar button { flex: 0 1 160px; }
   .message { bottom: 24px; }
   .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
@@ -193,13 +229,34 @@ textarea { resize: vertical; min-height: 160px; background: var(--bg); }
 .spark-up { stroke: var(--ok); stroke-width: 1.8; }
 .spark-down { stroke: var(--error); stroke-width: 1.8; }
 .spark-empty { display: inline-block; width: 80px; }
-.news { border-left: 4px solid var(--brass); }
-.order { border-left: 4px solid var(--brass-dark); }
+.news { border-left: 5px solid var(--accent); }
+.order { border-left: 5px solid var(--accent); }
 .order.bundle { border-left-color: var(--npc); }
-.order.collector { border-left-color: var(--brass); background: var(--panel-light); }
-.tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--panel-light); color: var(--cream); margin-left: 6px; vertical-align: middle; }
-.tag.collector { background: var(--brass); color: var(--bg); }
+.order.collector { border-left-color: var(--lemon); background: var(--panel-light); }
+.tag { display: inline-block; font-family: var(--body); font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; background: var(--panel-light); color: var(--ink); margin-left: 6px; vertical-align: middle; }
+.tag.collector { background: var(--lemon); color: #10323A; }
 .tag.bundle { background: var(--npc); color: var(--bg); }
-.surprise { color: var(--brass); font-weight: 600; }
+.surprise { color: var(--accent); font-weight: 800; }
 .spark-row { display: block; margin-top: 2px; }
 .card .spark { max-width: 100%; }
+
+/* ---------------------------------------------------------------- 0.6.0: Portovela look (icons, ducats) */
+
+/* Item icons sit on a light "majolica tile" in both themes, so the art always reads. */
+.tile {
+  --t: 40px;
+  width: var(--t); height: var(--t); flex: none;
+  display: inline-grid; place-items: center;
+  background: #FFFDF8; border: 2px solid #10323A; border-radius: 10px;
+  box-shadow: inset 0 0 0 2px #FFFDF8, inset 0 0 0 3.5px #9ED9D0;
+}
+.tile img { width: 80%; height: 80%; display: block; }
+.tile.big { --t: 64px; border-radius: 14px; border-width: 2.5px; box-shadow: inset 0 0 0 3px #FFFDF8, inset 0 0 0 5px #9ED9D0; }
+.tile.blank::after { content: ""; width: 40%; height: 40%; border-radius: 50%; background: #9ED9D0; }
+
+/* Ducats: a number with the coin, e.g. 1,250 (coin). Screen readers hear "1,250 ducats". */
+.coins { display: inline-flex; align-items: center; gap: 0.18em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.coin { width: 1em; height: 1em; flex: none; display: inline-block; background: center / contain no-repeat url("./icons/ducat.svg"); }
+.header .coin { width: 22px; height: 22px; }
+.login-mark { width: 88px; height: 88px; margin: 0 auto; display: block; }
+.title { font-family: var(--display); }

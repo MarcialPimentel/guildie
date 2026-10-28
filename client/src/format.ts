@@ -4,8 +4,9 @@ export function number(n: number): string {
   return Math.trunc(n).toLocaleString('en-US')
 }
 
+/** Money in text, e.g. "1,250 ducats" (the server still calls it gold). On screen, prefer <Coins> (ui/art.tsx). */
 export function gold(n: number): string {
-  return `${number(n)}g`
+  return `${number(n)} ${Math.trunc(n) === 1 ? 'ducat' : 'ducats'}`
 }
 
 /** 75 -> "1m 15s", 3700 -> "1h 1m" */

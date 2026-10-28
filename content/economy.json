@@ -84,8 +84,8 @@
       }
     },
     "adventurers": {
-      "name": "Adventurers",
-      "label": "an adventurer",
+      "name": "Sailors",
+      "label": "a sailor",
       "willing_min": 0.95,
       "willing_max": 1.25,
       "demand_per_hour": {

@@ -55,7 +55,7 @@ function exchange_list(int $playerId, string $itemId, int $quantity, int $unitPr
     }
     $maxPrice = max(1, (int) ceil(market_reference_value($itemId) * (float) econ('exchange.max_price_multiple', 20)));
     if ($unitPrice < 1 || $unitPrice > $maxPrice) {
-        throw new ApiError('bad_price', "Price must be between 1 and $maxPrice gold.");
+        throw new ApiError('bad_price', 'Price must be between 1 and ' . ducats($maxPrice) . '.');
     }
     if ($quantity < 1 || $quantity > 10000) {
         throw new ApiError('bad_request', 'Quantity must be at least 1.');

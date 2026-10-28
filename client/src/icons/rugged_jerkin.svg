@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Rugged Jerkin">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M22 9L32 15L42 9L54 18L50 30L46 28V56H18V28L14 30L10 18Z" fill="#8F4E2B"/>
+  <path d="M32 15V56" fill="none" stroke-width="2.5"/>
+  <rect x="20" y="33" width="9" height="6" rx="1.5" fill="#E0B04A" stroke-width="2"/>
+  <rect x="35" y="33" width="9" height="6" rx="1.5" fill="#E0B04A" stroke-width="2"/>
+  <rect x="20" y="44" width="9" height="6" rx="1.5" fill="#E0B04A" stroke-width="2"/>
+  <rect x="35" y="44" width="9" height="6" rx="1.5" fill="#E0B04A" stroke-width="2"/>
+</g>
+<path d="M21 14l6 4" stroke="#C47D4F" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

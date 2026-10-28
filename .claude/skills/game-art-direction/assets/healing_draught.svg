@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Healing Draught">
+  <g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="27" y="14" width="10" height="12" fill="#DDF3EF"/>
+    <circle cx="32" cy="40" r="16" fill="#DDF3EF"/>
+    <path d="M16.13 38H47.87A16 16 0 1 1 16.13 38Z" fill="#2FB59D" stroke-width="0"/>
+    <circle cx="32" cy="40" r="16" fill="none"/>
+    <rect x="25" y="8" width="14" height="7" rx="2.5" fill="#B07A4A"/>
+  </g>
+  <circle cx="38" cy="45" r="2" fill="#FFFFFF" opacity=".7"/>
+  <circle cx="33" cy="50" r="1.4" fill="#FFFFFF" opacity=".7"/>
+  <ellipse cx="24.5" cy="34" rx="3" ry="5" transform="rotate(30 24.5 34)" fill="#FFFFFF" opacity=".8"/>
+</svg>

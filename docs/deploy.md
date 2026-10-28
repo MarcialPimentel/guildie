@@ -260,6 +260,20 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.6.0 (the Portovela look)
+
+Fully automatic, with no database changes. The ping URL shows `"build":"0.6.0 (build …)"` and `"schema":5`.
+
+What players notice:
+
+- A new look: light sea-teal colors by day, and a night palette when their phone is in dark mode. New fonts, and an icon for every item.
+- New names: money is **ducats** (shown with a coin), the Workshop tab is **Bottega**, the Market tab is **Mercato**, the weekly Tournament is the **Regatta**, Steam Tonic is **Lemon Tonic**, and events and customers have Portovela names.
+- Nothing about gold amounts, items, prices or progress changes. Old lines in the activity log written before the update still say "g" for money.
+
+If the game still looks brown and gold after the deploy, the phone has the old page cached: pull down to refresh, or flush the SiteGround cache (Site Tools → Speed → Caching → Dynamic Cache → Flush).
+
+---
+
 ## Deploying 0.5.2 (safer deploys, no duplicate orders, return screen on phones)
 
 Fully automatic, with no database changes.

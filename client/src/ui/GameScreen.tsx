@@ -1,8 +1,8 @@
-// The main game screen: header (name, guild, gold, Feedback), the current tab, a message line, and the tab bar.
-// Tabs: Workshop (station, crafts, recipes), Market, Bag, City.
+// The main game screen: header (name, guild, ducats, Feedback), the current tab, a message line, and the tab bar.
+// Tabs: Bottega (station, crafts, recipes; the old Workshop), Mercato (the Exchange), Bag, City.
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { errorMessage, type ApiResult } from '../api'
-import { gold } from '../format'
+import { Coins } from './art'
 import { useSession, session } from '../session'
 import { Bag } from './Bag'
 import { City } from './City'
@@ -13,7 +13,7 @@ import { markSeen, ReturnSummary } from './ReturnSummary'
 import { Workshop } from './Workshop'
 
 const REFRESH_MS = 20000
-const TABS: [TabName, string][] = [['workshop', 'Workshop'], ['market', 'Market'], ['bag', 'Bag'], ['city', 'City']]
+const TABS: [TabName, string][] = [['workshop', 'Bottega'], ['market', 'Mercato'], ['bag', 'Bag'], ['city', 'City']]
 
 export function GameScreen() {
   const s = useSession()
@@ -100,7 +100,7 @@ export function GameScreen() {
       <header class="header">
         <div class="header-inner">
           <span class="who" data-testid="who">{state.player.name} · {state.profession?.name ?? 'No guild'}</span>
-          <span class="gold num" data-testid="gold">{gold(state.player.gold)}</span>
+          <span class="gold num"><Coins n={state.player.gold} testid="gold" /></span>
           <button class="secondary small" onClick={() => setFeedbackOpen(true)} data-testid="feedback-open">Feedback</button>
         </div>
       </header>

@@ -19,14 +19,14 @@
     "max_rare_share": 0.4
   },
   "customers": [
-    { "id": "lady_ashworth", "name": "Lady Ashworth", "kinds": ["standard", "bundle"], "line": "Needs {items} before tonight's ball. Discretion appreciated." },
-    { "id": "squire_pell", "name": "Squire Pell", "kinds": ["standard", "bundle"], "line": "Nervous about the tournament. Wants {items}, and quickly." },
-    { "id": "mother_hale", "name": "Mother Hale", "kinds": ["standard"], "line": "Keeps the orphanage on Tallow Street running. Asks for {items}." },
-    { "id": "foreman_grigg", "name": "Foreman Grigg", "kinds": ["standard", "bundle"], "line": "The new pumping station is behind schedule. Needs {items}." },
-    { "id": "captain_vos", "name": "Captain Vos", "kinds": ["standard", "bundle"], "line": "Her airship leaves at dawn. She'll pay well for {items}." },
-    { "id": "brother_amon", "name": "Brother Amon", "kinds": ["standard"], "line": "The infirmary is short again. Requests {items}." },
-    { "id": "madame_orsini", "name": "Madame Orsini", "kinds": ["bundle"], "line": "Opening a shop on the Canal Row. Wants {items} for the shelves." },
-    { "id": "collector_quill", "name": "Alistair Quill, collector", "kinds": ["collector"], "line": "Only the finest. Will pay handsomely for {items}." },
+    { "id": "lady_ashworth", "name": "Donna Vittoria", "kinds": ["standard", "bundle"], "line": "Needs {items} before tonight's ball at the palazzo. Discretion appreciated." },
+    { "id": "squire_pell", "name": "Pellegrino the oarsman", "kinds": ["standard", "bundle"], "line": "Nervous about the Regatta. Wants {items}, and quickly." },
+    { "id": "mother_hale", "name": "Madre Ilaria", "kinds": ["standard"], "line": "Keeps the orphanage on Tallow Lane running. Asks for {items}." },
+    { "id": "foreman_grigg", "name": "Mastro Grigio", "kinds": ["standard", "bundle"], "line": "The new harbor crane is behind schedule. Needs {items}." },
+    { "id": "captain_vos", "name": "Captain Vos", "kinds": ["standard", "bundle"], "line": "Her galley sails at dawn. She'll pay well for {items}." },
+    { "id": "brother_amon", "name": "Fra Amon", "kinds": ["standard"], "line": "The infirmary is short again. Requests {items}." },
+    { "id": "madame_orsini", "name": "Signora Orsini", "kinds": ["bundle"], "line": "Opening a shop on the Ripa, by the water. Wants {items} for the shelves." },
+    { "id": "collector_quill", "name": "Messer Quill, collector", "kinds": ["collector"], "line": "Only the finest. Will pay handsomely for {items}." },
     { "id": "collector_marchesa", "name": "La Marchesa", "kinds": ["collector"], "line": "Visiting from the south, buying curiosities: {items}." }
   ]
 }

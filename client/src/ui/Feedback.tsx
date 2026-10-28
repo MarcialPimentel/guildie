@@ -43,7 +43,7 @@ export function FeedbackDialog({ screen, onClose }: { screen: string; onClose: (
       <div class="card" role="dialog" aria-label="Send feedback">
         <h2>Send feedback</h2>
         <p class="muted small">
-          What's fun, confusing, broken or boring? Marz reads every note. Your screen, gold and the build number are attached.
+          What's fun, confusing, broken or boring? Marz reads every note. Your screen, ducats and the build number are attached.
         </p>
         <textarea
           ref={box} value={text} placeholder="Type here…" onInput={(e) => setText(e.currentTarget.value)}

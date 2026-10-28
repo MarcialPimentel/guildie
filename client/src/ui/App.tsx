@@ -21,7 +21,7 @@ export function App() {
     })
   }, [])
 
-  if (booting) return <p class="boot">Opening the guild hall…</p>
+  if (booting) return <p class="boot">Opening the bottega…</p>
   if (!s.loggedIn || !s.state) return <Login initialError={bootError} />
   if (!s.state.profession) return <ProfessionChoice />
   return <GameScreen />

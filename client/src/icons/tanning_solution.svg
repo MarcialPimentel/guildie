@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tanning Solution">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="26" y="7" width="12" height="7" rx="2.5" fill="#B07A4A"/>
+  <path d="M27 14H37V22Q46 26 46 34V52Q46 56 42 56H22Q18 56 18 52V34Q18 26 27 22Z" fill="#DDF3EF"/>
+  <path d="M19.5 36H44.5V52Q44.5 54.5 42 54.5H22Q19.5 54.5 19.5 52Z" fill="#8F5A2B" stroke-width="0"/>
+  <path d="M27 14H37V22Q46 26 46 34V52Q46 56 42 56H22Q18 56 18 52V34Q18 26 27 22Z" fill="none"/>
+  <rect x="23" y="40" width="18" height="9" rx="1.5" fill="#F5F0E4" stroke-width="2"/>
+</g>
+<path d="M23 29q-1 3 0 5" stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".8"/>
+</svg>

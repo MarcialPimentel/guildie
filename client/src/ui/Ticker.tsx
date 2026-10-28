@@ -42,7 +42,7 @@ export function NewsBoard({ news }: { news: NewsItem[] }) {
       {news.map((n) => (
         <div class="stack tight">
           <div class="row">
-            <span class="grow brass">{n.title}</span>
+            <span class="grow accent">{n.title}</span>
             <span class="tiny muted">
               {n.status === 'today' ? 'today' : n.status === 'now' ? `ends in ${duration(n.seconds ?? 0)}` : `starts in ${duration(n.seconds ?? 0)}`}
             </span>

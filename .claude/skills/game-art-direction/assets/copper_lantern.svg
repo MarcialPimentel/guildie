@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Copper Lantern">
+  <g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M26 13a6 6 0 0 1 12 0" fill="none"/>
+    <rect x="21" y="22" width="22" height="25" rx="2" fill="#FFE08A"/>
+    <path d="M32 27c-4.5 5-4.5 9.5 0 13c4.5-3.5 4.5-8 0-13z" fill="#F29A3A" stroke-width="2"/>
+    <path d="M18 22L32 12L46 22Z" fill="#C8743E"/>
+    <rect x="17" y="46" width="30" height="7" rx="2.5" fill="#C8743E"/>
+  </g>
+  <path d="M24 25h3v18h-3z" fill="#FFFFFF" opacity=".6"/>
+  <path d="M22 18l6-4" stroke="#F4B07E" stroke-width="2" stroke-linecap="round"/>
+</svg>

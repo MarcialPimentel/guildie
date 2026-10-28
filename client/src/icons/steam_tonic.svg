@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lemon Tonic">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="27" y="10" width="10" height="7" rx="2" fill="#E0B04A"/>
+  <path d="M28 17H36V26L44 40Q47 46 44 50Q42 54 37 54H27Q22 54 20 50Q17 46 20 40L28 26Z" fill="#DDF3EF"/>
+  <path d="M21.5 40H42.5L43.5 42Q45.5 46 43 49Q41 52.5 37 52.5H27Q23 52.5 21 49Q18.5 46 20.5 42Z" fill="#F2C53D" stroke-width="0"/>
+  <path d="M28 17H36V26L44 40Q47 46 44 50Q42 54 37 54H27Q22 54 20 50Q17 46 20 40L28 26Z" fill="none"/>
+  <circle cx="46" cy="22" r="9" fill="#F6E27A"/>
+  <circle cx="46" cy="22" r="5.5" fill="#FFF6C8" stroke-width="2"/>
+</g>
+<path d="M46 16.5v11M40.5 22h11M42 18l8 8M50 18l-8 8" stroke="#F2C53D" stroke-width="1.5"/>
+<circle cx="29" cy="46" r="1.8" fill="#FFFFFF" opacity=".8"/><circle cx="35" cy="43" r="1.3" fill="#FFFFFF" opacity=".8"/>
+</svg>

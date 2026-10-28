@@ -289,7 +289,7 @@ function orders_fill(int $playerId, int $orderId): array
         orders_insert($pdo, $playerId, $professionId, (int) $order['slot'], $arrives, $now);
 
         $customer = orders_customers()[$order['customer_id']]['name'] ?? 'A customer';
-        $rewardText = $order['reward_gold'] . 'g' . ($rewardItems ? ' and ' . order_items_text($rewardItems) : '');
+        $rewardText = ducats((int) $order['reward_gold']) . ($rewardItems ? ' and ' . order_items_text($rewardItems) : '');
         activity_log($pdo, $playerId, 'order_filled', ['customer' => $customer, 'items' => order_items_text($items), 'reward' => $rewardText]);
         return ['customer' => $customer, 'reward_gold' => (int) $order['reward_gold'], 'reward_text' => $rewardText];
     });

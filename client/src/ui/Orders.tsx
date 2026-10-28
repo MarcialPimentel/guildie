@@ -1,7 +1,8 @@
 // The order board (#44): named customers in the Workshop who want specific items before a deadline.
 // Filling an order hands over the items and pays more than the market (sometimes with a rare material).
 import { useMemo } from 'preact/hooks'
-import { duration, gold } from '../format'
+import { duration } from '../format'
+import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
 import type { Order } from '../types'
 import { ActionButton, useGame, useLoad, useNow } from './common'
@@ -50,7 +51,7 @@ function OrderCard({ order, elapsed, skipIn, after, say }: {
   return (
     <div class={`card tight order ${order.kind}`} data-testid="order">
       <div class="row">
-        <h3 class="grow cream">
+        <h3 class="grow ink">
           {order.customer}
           {order.kind === 'collector' && <span class="tag collector">collector</span>}
           {order.kind === 'bundle' && <span class="tag bundle">bundle</span>}
@@ -60,12 +61,13 @@ function OrderCard({ order, elapsed, skipIn, after, say }: {
       <p class="muted small">{order.line}</p>
       {order.items.map((i) => (
         <div class="row">
+          <ItemIcon id={i.item_id} />
           <span class={`grow ${i.own_guild ? '' : 'npc'}`}>{i.quantity} × {i.name}</span>
           <span class={`small ${i.have >= i.quantity ? 'ok' : 'error'}`}>have {i.have}</span>
         </div>
       ))}
       <p class="small">
-        Pays <span class="brass">{gold(order.reward_gold)}</span>
+        Pays <span class="accent"><Coins n={order.reward_gold} /></span>
         {order.reward_items.map((r) => <> + <span class="surprise">{r.quantity} {r.name}</span></>)}
       </p>
       <div class="btnrow">

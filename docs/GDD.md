@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M2 in progress (build 0.5.2)
+**Version:** 0.6 · **Date:** 2026-10-28 · **Status:** M2 in progress (build 0.6.0, the Portovela look)
 **Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -36,7 +36,7 @@
 
 ### Pitch
 
-**Rise from apprentice to master in a guild city on the edge of the steam age.** Choose one profession, master it, and trade with every other crafter in a living market. Your workshop keeps working while you're away.
+**Rise from apprentice to master in Portovela, a merchant harbor on the edge of the age of invention.** Choose one profession, master it, and trade with every other crafter in a living market. Your bottega keeps working while you're away.
 
 ### Player fantasy
 
@@ -65,7 +65,7 @@ Mobile-first browser crafting and trading game with idle/offline progression and
 ### Non-goals (for now)
 
 - Combat. Adventurers exist only as NPC customers.
-- 3D. The game is 2D and UI-driven.
+- A heavyweight game engine (Unity and the like). The world is low-poly 3D in the browser, under HTML menus (decided 2026-10-28, see [Visual direction](#visual-direction)).
 - Monetization. This is a proof of concept, and no system should be designed around a paywall.
 
 ---
@@ -101,18 +101,18 @@ Every new feature should serve one of these bets or a pillar. Details: [professi
 
 ### The city
 
-A guild city (working name: **Brassmere**) in the middle of an industrial revolution. The old craft guilds are proud, traditional, and hands-on. New steam-powered workshops and factories are rising around them. The tension between tradition and industry fuels world events, NPC factions, and flavor.
+**Portovela**, a merchant republic on a cliff coast around 1500, in the spirit of Amalfi, Venice and Genoa. Its craft guilds (the *Arti*) are proud, traditional and hands-on, and every master runs a *bottega* where apprentices learn the trade. Galleys bring goods and news from across the sea, and the Mercato on the piazza never sleeps. New inventions (water wheels, gear trains, clockwork in the style of Leonardo's notebooks) are changing how workshops run. The tension between old craft and new machines fuels world events, NPC factions, and flavor.
 
-### Progression as industrialization
+### Progression as invention
 
-The theme and the progression arc are the same story. The player begins as a medieval apprentice and rises into the steam age.
+The theme and the progression arc are the same story. The player begins as an apprentice with hand tools and rises into the age of invention, where water wheels and clockwork machines keep the bottega working overnight. (Until 0.6.0 this arc rose into the steam age; the mechanics are unchanged.)
 
 | Rank | Skill range [tune] | Feel | Example unlocks |
 |---|---|---|---|
 | Apprentice | 1–25 | Hand tools, manual work, tapping to gather | Basic recipes, two craft slots (live in M1) |
-| Journeyman | 26–50 | Better tools, first mechanical aids | Third craft slot, first powered station |
-| Expert | 51–75 | Steam machines run while you're away | Automated gathering, longer high-value crafts |
-| Master | 76–100 | Full steam workshop, prestige crafts | Masterwork recipes, second profession unlock |
+| Journeyman | 26–50 | Better tools, first mechanical aids | Third craft slot, first water-powered station |
+| Expert | 51–75 | Water wheels and gear trains run while you're away | Automated gathering, longer high-value crafts |
+| Master | 76–100 | A bottega of clockwork machines, prestige crafts | Masterwork recipes, second profession unlock |
 
 ### Target pacing
 
@@ -131,13 +131,18 @@ Mastering a profession should take **weeks**, through a hybrid of crafting a lot
 
 ### Tone
 
-Warm, cozy-industrial, lightly humorous. Picture brass, soot, lantern light, and guild banners. NPC customers have personality, such as a nervous tournament squire or a collector who only buys Masterwork.
+Warm, sunny, lightly humorous, with a touch of opera buffa. Picture sea light, whitewashed walls, lemon terraces, lanterns on the quay and guild banners. NPC customers have personality, such as a nervous oarsman before the Regatta or a collector who only buys Masterwork. English stays the main language; Italian is seasoning (place names and a few craft terms, always next to plain English), never a caricature.
 
 ### Visual direction
 
-- 2D. The workshop uses an isometric or 3/4 view in the style of a Clash of Clans base. Menus are flat, readable panels.
-- Chunky, readable silhouettes and icons designed for phone screens.
-- Art is out of scope until Milestone 4. Placeholder art and text UI come first.
+The full art direction, palette, interaction map and asset pipeline live in [art-direction.md](art-direction.md) (approved 2026-10-28).
+
+- **A world, not a spreadsheet.** Every system gets a place in the harbor and a verb: you pump the forge, empty the mine cart, set out your stall and meet the ships. Menus stay for reading numbers and making choices, and open from the world. The server still decides every result.
+- **Low-poly 3D in the browser**, seen from a 3/4 view in the spirit of a Clash of Clans base: your bottega on the harbor quay. HTML menus sit on top, so a phone that can't run 3D still plays the whole game.
+- **Palette:** sea teal, whitewash, lemon and roof-tile terracotta, with a night version of the same harbor. Text always passes WCAG AA contrast.
+- **Type:** Fraunces for headings, Nunito for text, bundled with the game.
+- **Icons:** chunky, ink-outlined item icons on light majolica tiles, readable on phone screens.
+- **Rollout:** 0.6.0 applies the palette, fonts, icons and names to the current screens. A hidden 3D test slice comes next, beside M2; the final art pass stays in M4.
 
 ---
 
@@ -175,7 +180,7 @@ The market has a weekly rhythm (see [6.5](#65-market-rhythm--events)). Players l
 
 ```
 Apprentice → Journeyman → Expert → Master
-  → Unlock and upgrade steam machines
+  → Unlock and upgrade water wheels and machines
   → Collect rare recipes and Masterwork results
   → Max profession → unlock a second profession (prestige)
   → (Later) Join a guild, contribute to guild projects
@@ -186,7 +191,7 @@ Apprentice → Journeyman → Expert → Master
 - **Mastery:** max your profession and collect every recipe.
 - **Wealth:** grow your gold (weekly profit leaderboard).
 - **Collection:** rare recipes, Masterwork items, rare materials.
-- **Industry:** build the most efficient steam workshop.
+- **Invention:** build the most efficient machine-powered bottega.
 - **Social (later):** guild rank and guild projects.
 
 ---
@@ -202,7 +207,7 @@ All professions share **one framework**. Each profession adds **one signature me
 ### 5.2 Shared systems
 
 **Skill and ranks**
-- Skill from 1 to 100, grouped into four ranks (see [Section 3](#progression-as-industrialization)). Shown as "x/100" (max stays 100, decided 2026-10-27). *Under review (#30): skill driven by crafting XP plus a first-craft bonus per recipe, replacing the random skill-up chance below.*
+- Skill from 1 to 100, grouped into four ranks (see [Section 3](#progression-as-invention)). Shown as "x/100" (max stays 100, decided 2026-10-27). *Under review (#30): skill driven by crafting XP plus a first-craft bonus per recipe, replacing the random skill-up chance below.*
 - Skill rises by crafting recipes that are still challenging.
 
 **Recipe difficulty colors** (inherited from WoW)
@@ -294,7 +299,7 @@ The live numbers (recipes, times, values) are in `/content`; this table shows th
 | Healing Draught | Finished | Alchemist | Sunleaf | NPC buyers (staple) |
 | Smelting Flux | Component | Alchemist | Ember Moss | **Blacksmith** |
 | Tanning Solution | Component | Alchemist | Sunleaf + Ember Moss | **Leatherworker** |
-| Steam Tonic | Finished (premium) | Alchemist | Ember Moss + **Brass Fittings** | NPC buyers |
+| Lemon Tonic (`steam_tonic`) | Finished (premium) | Alchemist | Ember Moss + **Brass Fittings** | NPC buyers |
 | Raw Hide | Raw | Leatherworker (Lodge) | — | Leatherworker |
 | Thick Hide | Raw (rank 15+ / long expeditions) | Leatherworker (Lodge) | — | Leatherworker |
 | Leather Grip | Component | Leatherworker | Raw Hide | **Blacksmith** |
@@ -304,7 +309,7 @@ The live numbers (recipes, times, values) are in `/content`; this table shows th
 
 **Dependency summary**
 - **Blacksmith** needs Smelting Flux (Alchemist) and Leather Grip (Leatherworker) for the iron tier.
-- **Alchemist** needs Brass Fittings (Blacksmith) for Steam Tonic.
+- **Alchemist** needs Brass Fittings (Blacksmith) for Lemon Tonic.
 - **Leatherworker** needs Tanning Solution (Alchemist) and Brass Fittings (Blacksmith) for the higher tier.
 - The copper, sunleaf, and raw-hide tiers are fully self-sufficient, so new players are never blocked.
 
@@ -347,19 +352,19 @@ NPCs are **liquidity and demand**, not fake players. Their main job is to consum
 | Persona | Buys | Sells | Behavior |
 |---|---|---|---|
 | **Townsfolk** | Low-tier finished goods (Healing Draughts, basic gear) | — | Steady daily demand, not very price-sensitive |
-| **Adventurers / Tournament Squires** | Swords, draughts, tonics | — | Big spike before the weekly tournament |
+| **Sailors / Regatta crews** | Swords, draughts, tonics | — | Big spike before the weekly Regatta |
 | **Collectors** | Masterwork and rare items | — | Rare appearances, pay well above the ceiling |
 | **Traders** | Anything listed at 0.8 × R or less | Relist near R | Punish underpricing, keep prices honest, and give players a "quick sale" |
 | **Guild Workshops** *(M1)* | A little of every component | — | Components are never a dead end |
 | **Guild Suppliers** *(M1)* | — | 5 of every item at 1.5 × R | Nothing is ever unavailable |
 | **Prospectors** | — | Raw materials | Occasionally flood a material and crash its price |
-| **The Steam Factory** | Raw materials in bulk | Cheap mass-produced Common goods | Thematic rival: competes with low-tier crafters and gives a reason to craft higher quality |
+| **The Arsenal** | Raw materials in bulk | Cheap mass-produced Common goods | Thematic rival (the republic's great shipyard and workshop): competes with low-tier crafters and gives a reason to craft higher quality |
 
 ### 6.4 Scaling with real players
 
 - For each item, NPC participation **scales inversely with real-player volume** over the last 24 hours [tune].
 - A busy item becomes player-driven, and a niche item stays NPC-supported.
-- The UI distinguishes NPC trades from player trades (for example, "Bought by a Tournament Squire" versus "Bought by Kaelith") so real interactions feel special.
+- The UI distinguishes NPC trades from player trades (for example, "Bought by a sailor" versus "Bought by Kaelith") so real interactions feel special.
 
 ### 6.5 Market rhythm & events
 
@@ -368,8 +373,8 @@ NPCs are **liquidity and demand**, not fake players. Their main job is to consum
 | Day | Event | Effect |
 |---|---|---|
 | Monday | Restock | Prospectors and the Factory flood raw materials, so prices dip |
-| Wednesday | Tournament announced | Weapon and draught demand starts rising |
-| Friday | Tournament Day | Peak demand from Adventurers |
+| Wednesday | Regatta announced | Weapon and draught demand starts rising |
+| Friday | Regatta Day | Peak demand from sailors and crews |
 | Sunday | Market Day | Collectors more likely to appear, and more orders posted |
 
 **World events** (rotating, announced on the news board)
@@ -415,7 +420,7 @@ A permanent world will inflate without strong sinks. **NPC consumption of goods 
 | Crafting order rewards | Exchange deposits and the 5% cut |
 | Gathering stations producing materials | Recipe purchases from the guild trainer |
 | Rare drops and procs | Workshop and station upgrades |
-| | **Steam machine fuel (coal)**: an ongoing running cost for automation |
+| | **Machine running costs (lamp oil and wages for hired hands)**: an ongoing cost for automation |
 | | Tool durability and repairs |
 | | Second profession unlock |
 
@@ -427,14 +432,14 @@ A permanent world will inflate without strong sinks. **NPC consumption of goods 
 
 ### 8.1 The workshop
 
-The player's home screen is an isometric or 3/4 view of their workshop (Clash of Clans style).
+The player's home screen is their **bottega** on the harbor quay, in low-poly 3D from a 3/4 view (Clash of Clans style). Until the 3D world ships, it is the Bottega tab.
 
 | Building | Function | Upgrades improve |
 |---|---|---|
 | Workbench / Forge / Lab (per profession) | Crafting | Queue slots, craft speed, quality |
 | Gathering station | Raw materials over time | Rate, storage cap, rare chance |
 | Storehouse | Inventory | Capacity |
-| Steam Engine (Journeyman+) | Powers automation | Machines supported, fuel efficiency |
+| Water Wheel (Journeyman+), later the Great Contraption | Powers automation | Machines supported, running-cost efficiency |
 | Mailbox | Expired listings, order rewards | — |
 | Guild Board | Orders, news, Exchange access | — |
 
@@ -459,7 +464,7 @@ The social layer for multiplayer. It serves Pillar 5 socially:
 
 Goal: the player feels the whole loop within about **three minutes**.
 
-1. Short intro to Brassmere and the guilds.
+1. Short intro to Portovela and the guilds.
 2. **Choose a profession** (identity moment, with a clear "you can learn another later").
 3. Collect the first materials from the gathering station (already partly filled).
 4. Craft a first item (short timer, guaranteed success).
@@ -473,7 +478,8 @@ Goal: the player feels the whole loop within about **three minutes**.
 
 - **Portrait phone layout first.** Desktop gets the same layout, centered or widened.
 - Large touch targets, with one-thumb reach for the most common actions (collect, queue, relist).
-- Core screens: Workshop (home: station, craft queue and recipes on one screen), Exchange (Browse / Sell / My Listings), Inventory (Bag), City (players, profiles, trades), Orders, News.
+- Core screens: Bottega (home: station, craft queue and recipes on one screen), Mercato (the Exchange: Browse / Sell / My Listings), Inventory (Bag), City (players, profiles, trades), Orders, News.
+- Money is shown as a number with a ducat coin; text says "ducats". The server and database still call it gold.
 - On the sell form, **listing on the Exchange comes first**; the instant guild sale sits underneath as the fallback.
 - Every timer shows remaining time and absolute finish time.
 - Offline progress is calculated on the server from timestamps.
@@ -536,7 +542,8 @@ Everything runs on the existing SiteGround hosting, on one domain.
 
 ### 11.6 Web client structure (0.4.0)
 
-- **TypeScript + Preact**, built by **Vite** into plain static files (one HTML page, one script, one stylesheet, about 20 KB compressed). It loads in about a second, even on a phone.
+- **TypeScript + Preact**, built by **Vite** into plain static files (one HTML page, one script, one stylesheet, about 25 KB of code compressed, plus about 100 KB of bundled fonts cached after the first visit). It loads in about a second, even on a phone.
+- **3D (next, approved 2026-10-28):** Three.js through React Three Fiber, which means swapping Preact for React (the same API, about 35 KB more). The world streams in after the menus are usable. Budgets are in [art-direction.md](art-direction.md) §5.
 - **Responsive:** one column with a bottom tab bar on phones. From 900 px wide, the tabs move to the top and busy screens (Workshop, sell form, City trades) use two columns.
 - `src/api.ts` (HTTP wrapper), `src/session.ts` (auth, player state, server clock offset; every action goes through it), `src/ui/*` (one file per screen: Login, Profession, GameScreen, Workshop, Market, Bag, City, Feedback).
 - Uses the browser's own text boxes, keyboard, scrolling and password autofill.
@@ -580,7 +587,7 @@ Each milestone ends with a playtest and a clear exit question.
 | **M1 Market Prototype** (live, playtesting) | 3 professions (choice + starter recipes), 18 items, gathering stations, crafting with timers and batches, the Exchange with 3 NPC personas, liquidity band, market tick, Activity Log, economy simulator. Plain text UI. See [systems.md §9](systems.md#9-milestone-matrix). | **"Is making one good trade fun?"** |
 | **M2 Crafting Depth** | Built fun-first, shipped in steps (0.5.0 = step 1) ([professions.md](professions.md) §9): **1.** order board, market ticker with Guild Week and events, "while you were away" screen, surprises on collect · **2.** skill and XP, learning recipes, rare recipes · **3.** the recipe ladder to 100 and the web rules · **4.** workshop upgrades as rank-up milestones. Quality tiers, gathering decisions and the Focus prototype follow if time allows | **"Do I want to come back tomorrow?"** |
 | **M3 Real Players** | Shared market with multiple players, NPC scaling, leaderboards (gold and rank progress; a simple City directory shipped early in 0.3.0), anti-abuse | **"Does trading with real people feel different and better?"** |
-| **M4 Look & Feel** | Isometric workshop art, steam progression visuals, events and news board, onboarding polish, installable web app | **"Would I show this to a stranger?"** |
+| **M4 Look & Feel** | Final low-poly 3D art (hero models, icons rendered from models), machine progression visuals, sound, onboarding polish, installable web app. Pulled forward: the Portovela look on today's screens shipped in 0.6.0, and a hidden 3D test slice is built beside M2 | **"Would I show this to a stranger?"** |
 | **Later** | Guilds, specializations, second profession, more professions | — |
 
 ### Backlog (not scheduled)
@@ -615,10 +622,10 @@ Each milestone ends with a playtest and a clear exit question.
 3. **Active bonus size:** how much more should active play reward than idle without making idle feel bad?
 4. **Second profession carryover:** what transfers from the first profession, if anything?
 5. **Gold sinks before slowing the pace:** players accumulate gold quickly in M1 with little to spend it on. Which M2 sinks come first?
-6. **City name:** "Brassmere" is the working name. Final name to be decided later.
+6. ~~**City name**~~ **Decided 2026-10-28: Portovela** ("port of sails"), replacing the working name Brassmere.
 7. **Skill source (#30):** replace random skill-ups with crafting XP plus a first-craft bonus? How big should the bonus be, and should gathering give XP? The current 12 recipes can't fill the 100-point curve, so more recipes are needed in M2.
 8. ~~**Player interaction beyond the Exchange**~~ **Decided 2026-10-27:** a player directory and direct trade offers ship in 0.3.0 (6.8, 6.9). Gifts and a trade fee are not decided yet.
-9. **Italian / mercantile flavour?** Inspired by *Largo al factotum*: a mercantile-Italy tone (guilds, merchants, opera-buffa humour) blended with the steam age, a Venice with brass pipes. The first taste is the #1 title, "Il Factotum della Città". A fuller theme pass (names, the city's name, NPC flavour) belongs in M4 (Look & Feel).
+9. ~~**Italian / mercantile flavour?**~~ **Decided 2026-10-28:** Guildie is set in Portovela, a Renaissance merchant republic; the steam age becomes the age of invention. Names, palette and icons changed in 0.6.0. See [art-direction.md](art-direction.md).
 10. ~~**Client engine (#40)**~~ **Decided 2026-10-27: TypeScript web client** (0.4.0). Original question: keep Godot, or move the client to a web stack (TypeScript)? Playtest 0.3.0 found the browser UI feels like a phone app on desktop and loads slowly. To decide before more client work.
 
 **Playtest 1 feedback (2026-10-27):** Marz (Blacksmith) hit 0 gold and could neither list nor buy (#27, safety valve #28); asked for visible WoW-style skill points, e.g. 100/100 (#30); found no way to meet or trade with players outside the Exchange (#31, #32).
@@ -681,6 +688,12 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-28 | "While you were away" shows after 15 minutes away, even if nothing happened | Predictable; a quiet summary still tells the player the world kept going |
 | 2026-10-28 | Order rewards are priced from usual value and stay below the Guild Suppliers' price (whole reward ≤ 1.45× value, rare material included); suppliers never sell below 1.5× usual; collectors pay a guaranteed rare material instead of 3× gold | 0.5.1 exploit fix: collector (3×) and bundle (1.7×) orders could be filled with supplier stock (1.5×) for free gold. Collectors can pay big again once they ask for Fine/Masterwork goods that suppliers don't sell (quality tiers, M2) |
 | 2026-10-28 | Raw prices follow the median of trades clamped to the NPC band, counted only with 2+ different sellers and buyers | 0.5.1 exploit fix: two friends trading one unit at 20× could pin a raw's price at its cap, then sell raws to Traders at the inflated price |
+| 2026-10-28 | **Theme: Portovela**, a Renaissance merchant republic on the coast; steam is replaced by the age of invention (water wheels, gears, clockwork) | Italian guilds, the bottega and the Rialto make a crafting-and-trading game feel native. Only names and flavor change; game rules stay the same. Replaces the 2026-10-25 steam theme and the Brassmere working name ([art-direction.md](art-direction.md)) |
+| 2026-10-28 | New look: sea teal, whitewash, lemon and terracotta, day and night palettes; Fraunces and Nunito; item icons on majolica tiles | Guildie shared Hormiga's brass-and-dark-brown palette; this one is its own and passes WCAG AA |
+| 2026-10-28 | Display renames: gold → **ducats**, the Exchange → **the Mercato**, Workshop → **Bottega**, Tournament → **Regatta**, Steam Tonic → **Lemon Tonic**, Adventurers → **Sailors** | Fit the new setting. IDs, API fields and database columns are unchanged |
+| 2026-10-28 | **3D in the browser:** Three.js through React Three Fiber (Preact → React), under HTML menus; not Unity | Keeps the stack, server and tests; every system gets a place and a verb. Replaces the 2026-10-25 "2D, UI-driven" decision |
+| 2026-10-28 | Machines cost lamp oil and wages for hired hands (replaces coal) | Still a sink that grows with automation, in the new setting |
+| 2026-10-28 | Art pulled forward: 0.6.0 reskins today's screens, then a hidden 3D test slice beside M2; final art stays in M4 | Marz asked for a release with the new look before more gameplay |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---
@@ -689,7 +702,9 @@ Each milestone ends with a playtest and a clear exit question.
 
 | Term | Meaning |
 |---|---|
-| **Exchange** | Guildie's auction house |
+| **Exchange** | Guildie's auction house. Players see it as **the Mercato** (0.6.0) |
+| **Bottega** | The player's workshop and home screen (the Workshop tab before 0.6.0) |
+| **Ducat** | Guildie's money as players see it; the server and database call it gold |
 | **Reference value (R)** | Server-side baseline price for an item |
 | **Liquidity band** | The NPC floor and ceiling price range that players trade within |
 | **Persona** | A type of NPC market participant with defined behavior |

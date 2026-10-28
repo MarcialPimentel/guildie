@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Iron Sword">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M52 8L56 12L28 40L24 36Z" fill="#D5DEE2"/>
+  <path d="M18 30L34 46" fill="none" stroke-width="7"/>
+  <path d="M18 30L34 46" fill="none" stroke="#E0B04A" stroke-width="3"/>
+  <path d="M24 40L14 50" fill="none" stroke-width="7"/>
+  <path d="M24 40L14 50" fill="none" stroke="#8F4E2B" stroke-width="3"/>
+  <circle cx="11" cy="53" r="4" fill="#E0B04A"/>
+</g>
+<path d="M49 13L31 31" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
+</svg>
