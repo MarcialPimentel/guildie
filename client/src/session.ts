@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'preact/hooks'
 import { callAction, setTokenProvider, type ApiResult } from './api'
 import type {
-  Directory, GameState, ItemCount, MarketItem, MarketRow, MyListing, Offers, Profile, ProfessionChoice, SellQuote,
+  Activity, Directory, GameState, ItemCount, MarketItem, MarketRow, MyListing, NewsItem, Offers, OrderBoard, Profile,
+  ProfessionChoice, SellQuote, Surprise,
 } from './types'
 
 const TOKEN_KEY = 'guildie.token'
@@ -96,16 +97,16 @@ class Session {
     return this.stateCall<GameState>('choose_profession', { profession_id: professionId })
   }
   collectStation() {
-    return this.stateCall('collect_station', {}, 'state')
+    return this.stateCall<{ surprises?: Surprise[] }>('collect_station', {}, 'state')
   }
   startCraft(recipeId: string, quantity: number) {
     return this.stateCall<GameState>('start_craft', { recipe_id: recipeId, quantity })
   }
   collectCrafts() {
-    return this.stateCall('collect_crafts', {}, 'state')
+    return this.stateCall<{ surprises?: Surprise[] }>('collect_crafts', {}, 'state')
   }
   market() {
-    return this.call<{ items: MarketRow[] }>('market')
+    return this.call<{ items: MarketRow[]; news: NewsItem[] }>('market')
   }
   marketItem(itemId: string) {
     return this.call<MarketItem>('market_item', { item_id: itemId })
@@ -146,6 +147,23 @@ class Session {
       to_player_id: to, give_items: give, give_gold: giveGold, ask_items: ask, ask_gold: askGold, note,
     }, 'state')
   }
+  /** The Workshop order board (#44). */
+  orders() {
+    return this.call<OrderBoard>('orders')
+  }
+  orderFill(orderId: number) {
+    return this.stateCall<{ filled: { customer: string; reward_text: string }; board: OrderBoard }>('order_fill', { order_id: orderId }, 'state')
+  }
+  orderSkip(orderId: number) {
+    return this.stateCall<{ board: OrderBoard }>('order_skip', { order_id: orderId }, 'state')
+  }
+  /** What happened since a time (the "While you were away" screen, #47). */
+  activitySince(since: number) {
+    return this.call<{ activity: Activity[] }>('activity', undefined, { since })
+  }
+  news() {
+    return this.call<{ news: NewsItem[] }>('news')
+  }
   offerAccept(offerId: number) {
     return this.stateCall('offer_accept', { offer_id: offerId }, 'state')
   }
@@ -159,8 +177,8 @@ class Session {
   // ------------------------------------------------------------ internals
 
   /** Call an action; log out locally if the session is no longer valid. */
-  private async call<T>(action: string, body?: unknown): Promise<ApiResult<T>> {
-    const r = await callAction<T>(action, body)
+  private async call<T>(action: string, body?: unknown, query: Record<string, string | number> = {}): Promise<ApiResult<T>> {
+    const r = await callAction<T>(action, body, query)
     if (!r.ok && r.status === 401 && this.token) this.clear()
     return r
   }

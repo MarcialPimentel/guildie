@@ -260,6 +260,17 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.5.0 (order board, market ticker, news, surprises)
+
+Fully automatic. The server adds its new tables by itself (migration `005`: orders, price history, world events). No SiteGround steps.
+
+**Check it:**
+1. The ping URL shows `"build":"0.5.0 (build …)"` and `"schema":5`.
+2. Open the game page and check that the footer says **Client 0.5.0**. If it still shows the old version, flush the SiteGround cache (Site Tools → Speed → Caching → Dynamic Cache → Flush).
+3. The Workshop shows **Orders** with three customers, and the Market shows **City news** and green/red arrows. Sparklines fill in over the first hour as prices are recorded.
+
+---
+
 ## Troubleshooting
 
 | What you see | Most likely cause | Fix |

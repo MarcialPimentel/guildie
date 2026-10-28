@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M1 playtest (build 0.4.0)
+**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M2 in progress (build 0.5.0)
 **Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -578,7 +578,7 @@ Each milestone ends with a playtest and a clear exit question.
 |---|---|---|
 | **M0 Foundation** ✅ | Repo, Godot project, MySQL database and PHP API on SiteGround (step-by-step setup guide), name + password login, read and write one inventory item through the server, cron job running a test tick, deploy steps, build number | Open on a phone, log in, see server-owned gold and an item |
 | **M1 Market Prototype** (live, playtesting) | 3 professions (choice + starter recipes), 18 items, gathering stations, crafting with timers and batches, the Exchange with 3 NPC personas, liquidity band, market tick, Activity Log, economy simulator. Plain text UI. See [systems.md §9](systems.md#9-milestone-matrix). | **"Is making one good trade fun?"** |
-| **M2 Crafting Depth** | One big release, built fun-first ([professions.md](professions.md) §9): **1.** order board, market ticker with Guild Week and events, "while you were away" screen, surprises on collect · **2.** skill and XP, learning recipes, rare recipes · **3.** the recipe ladder to 100 and the web rules · **4.** workshop upgrades as rank-up milestones. Quality tiers, gathering decisions and the Focus prototype follow if time allows | **"Do I want to come back tomorrow?"** |
+| **M2 Crafting Depth** | Built fun-first, shipped in steps (0.5.0 = step 1) ([professions.md](professions.md) §9): **1.** order board, market ticker with Guild Week and events, "while you were away" screen, surprises on collect · **2.** skill and XP, learning recipes, rare recipes · **3.** the recipe ladder to 100 and the web rules · **4.** workshop upgrades as rank-up milestones. Quality tiers, gathering decisions and the Focus prototype follow if time allows | **"Do I want to come back tomorrow?"** |
 | **M3 Real Players** | Shared market with multiple players, NPC scaling, leaderboards (gold and rank progress; a simple City directory shipped early in 0.3.0), anti-abuse | **"Does trading with real people feel different and better?"** |
 | **M4 Look & Feel** | Isometric workshop art, steam progression visuals, events and news board, onboarding polish, installable web app | **"Would I show this to a stranger?"** |
 | **Later** | Guilds, specializations, second profession, more professions | — |
@@ -676,6 +676,9 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-28 | Workshop upgrades are the rank-up milestones, capped by rank and costing gold plus other guilds' parts | Ranks should feel like events; the strongest everyday reason to trade |
 | 2026-10-28 | Web rules W1–W7 and the 16-recipe ladder per guild adopted ([professions.md](professions.md)); one big M2 release | A framework every recipe follows, checked by the validator |
 | 2026-10-28 | New professions, specialization branches and the second profession are on hold | Make the three guilds fun first |
+| 2026-10-28 | M2 step 1 (the fun core) ships on its own as 0.5.0 | Marz asked to ship it, so the fun bets get playtested before the content is built |
+| 2026-10-28 | Until skill ranks exist, bundle orders unlock at 30 crafts made (standing in for Journeyman); collectors are rare high-paying orders (more on Sunday) | Lets 0.5.0 test bundle orders and collectors without waiting for step 2 |
+| 2026-10-28 | "While you were away" shows after 15 minutes away, even if nothing happened | Predictable; a quiet summary still tells the player the world kept going |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---

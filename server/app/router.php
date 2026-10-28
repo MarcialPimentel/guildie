@@ -38,6 +38,10 @@ function guildie_actions(): array
         'offer_accept'      => [['POST'],        true,  'action_offer_accept'],
         'offer_decline'     => [['POST'],        true,  'action_offer_decline'],
         'offer_cancel'      => [['POST'],        true,  'action_offer_cancel'],
+        'orders'            => [['GET'],         true,  'action_orders'],
+        'order_fill'        => [['POST'],        true,  'action_order_fill'],
+        'order_skip'        => [['POST'],        true,  'action_order_skip'],
+        'news'              => [['GET'],         true,  'action_news'],
     ];
 }
 
@@ -88,8 +92,8 @@ function action_choose_profession(array $body, ?int $playerId): array
 
 function action_collect_station(array $body, ?int $playerId): array
 {
-    $collected = gathering_collect($playerId);
-    return ['collected' => $collected, 'state' => player_state($playerId)];
+    $result = gathering_collect($playerId);
+    return $result + ['state' => player_state($playerId)];
 }
 
 function action_start_craft(array $body, ?int $playerId): array
@@ -100,13 +104,13 @@ function action_start_craft(array $body, ?int $playerId): array
 
 function action_collect_crafts(array $body, ?int $playerId): array
 {
-    $collected = crafting_collect($playerId);
-    return ['collected' => $collected, 'state' => player_state($playerId)];
+    $result = crafting_collect($playerId);
+    return $result + ['state' => player_state($playerId)];
 }
 
 function action_market(array $body, ?int $playerId): array
 {
-    return ['items' => exchange_overview(), 'server_time' => game_now()];
+    return ['items' => exchange_overview(), 'news' => calendar_news(game_now()), 'server_time' => game_now()];
 }
 
 function action_market_item(array $body, ?int $playerId): array
@@ -151,7 +155,31 @@ function action_my_listings(array $body, ?int $playerId): array
 
 function action_activity(array $body, ?int $playerId): array
 {
-    return ['activity' => activity_list($playerId, 50)];
+    // ?since=<unix time> returns what happened since then (the "While you were away" screen, #47).
+    $since = max(0, (int) ($_GET['since'] ?? 0));
+    return ['activity' => activity_list($playerId, $since > 0 ? 100 : 50, $since)];
+}
+
+function action_orders(array $body, ?int $playerId): array
+{
+    return orders_board($playerId);
+}
+
+function action_order_fill(array $body, ?int $playerId): array
+{
+    $result = orders_fill($playerId, body_int($body, 'order_id', 0, 1, PHP_INT_MAX));
+    return ['filled' => $result, 'board' => orders_board($playerId), 'state' => player_state($playerId)];
+}
+
+function action_order_skip(array $body, ?int $playerId): array
+{
+    orders_skip($playerId, body_int($body, 'order_id', 0, 1, PHP_INT_MAX));
+    return ['board' => orders_board($playerId), 'state' => player_state($playerId)];
+}
+
+function action_news(array $body, ?int $playerId): array
+{
+    return ['news' => calendar_news(game_now())];
 }
 
 function action_sell_to_guild(array $body, ?int $playerId): array

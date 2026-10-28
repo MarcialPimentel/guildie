@@ -58,6 +58,8 @@ function activity_text(string $type, array $p): string
         'sold'              => sprintf('Sold %d %s to %s for %dg (after %dg cut%s).', $n('quantity'), $item(), $p['buyer'] ?? 'someone', $n('earned'), $n('cut'),
                                    $n('deposit') > 0 ? sprintf(' and %dg deposit', $n('deposit')) : ''),
         'sold_to_guild'     => sprintf('Sold %d %s to the guild for %dg.', $n('quantity'), $item(), $n('earned')),
+        'order_filled'      => sprintf('%s took %s and paid %s.', $p['customer'] ?? 'A customer', $p['items'] ?? '', $p['reward'] ?? ''),
+        'surprise'          => (string) ($p['text'] ?? 'A lucky find!'),
         'offer_sent'        => sprintf('You offered %s %s for %s.', $p['other'] ?? 'a player', $p['give'] ?? '', $p['ask'] ?? ''),
         'offer_received'    => sprintf('%s offers you %s for %s. See City → Trades.', $p['other'] ?? 'A player', $p['give'] ?? '', $p['ask'] ?? ''),
         'offer_accepted'    => sprintf('%s accepted your trade: you got %s for %s.', $p['other'] ?? 'A player', $p['got'] ?? '', $p['gave'] ?? ''),

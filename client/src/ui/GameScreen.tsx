@@ -9,6 +9,7 @@ import { City } from './City'
 import { GameContext, type Game, type TabName, type TabRequest } from './common'
 import { FeedbackDialog } from './Feedback'
 import { Market } from './Market'
+import { markSeen, ReturnSummary } from './ReturnSummary'
 import { Workshop } from './Workshop'
 
 const REFRESH_MS = 20000
@@ -38,14 +39,19 @@ export function GameScreen() {
     refreshTimer.current = window.setTimeout(async () => {
       await session.refresh()
       setRefreshTick((n) => n + 1)
+      if (document.visibilityState === 'visible' && session.state) markSeen(session.state.player.id)
       scheduleRefresh()
     }, REFRESH_MS)
   }
   useEffect(() => {
     scheduleRefresh()
+    // Leaving the page counts as the last time the player was here (for "While you were away").
+    const onHide = () => document.visibilityState === 'hidden' && session.state && markSeen(session.state.player.id)
+    document.addEventListener('visibilitychange', onHide)
     return () => {
       clearTimeout(refreshTimer.current)
       clearTimeout(messageTimer.current)
+      document.removeEventListener('visibilitychange', onHide)
     }
   }, [])
 
@@ -108,6 +114,8 @@ export function GameScreen() {
           <span class={message.error ? 'error' : 'ok'}>{message.text}</span>
         </div>
       )}
+
+      <ReturnSummary />
 
       {feedbackOpen && <FeedbackDialog screen={screenName} onClose={() => setFeedbackOpen(false)} />}
     </GameContext.Provider>

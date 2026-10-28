@@ -82,7 +82,55 @@ export interface ProfessionChoice {
   needs_from_others: string
 }
 
-export interface MarketRow {
+/** Ticker fields (#45): usual value, % versus usual, a hot flag, and a price history (oldest first). */
+export interface Ticker {
+  usual: number
+  change_pct: number
+  hot: boolean
+  spark: number[]
+}
+
+export interface NewsItem {
+  kind: 'week' | 'event'
+  title: string
+  headline: string
+  status: 'today' | 'now' | 'soon'
+  seconds?: number
+}
+
+export interface Surprise {
+  text: string
+  item_id: string
+  quantity: number
+}
+
+export interface OrderLine {
+  item_id: string
+  name: string
+  quantity: number
+  have: number
+  own_guild: boolean
+}
+
+export interface Order {
+  id: number
+  slot: number
+  kind: 'standard' | 'bundle' | 'collector'
+  customer: string
+  line: string
+  arriving_in: number
+  seconds_left: number
+  items: OrderLine[]
+  reward_gold: number
+  reward_items: { item_id: string; name: string; quantity: number }[]
+}
+
+export interface OrderBoard {
+  orders: Order[]
+  skip_in: number
+}
+
+export interface MarketRow extends Ticker {
   item_id: string
   name: string
   type: string
@@ -110,7 +158,7 @@ export interface Trade {
   ago: number
 }
 
-export interface MarketItem {
+export interface MarketItem extends Ticker {
   item_id: string
   name: string
   description: string

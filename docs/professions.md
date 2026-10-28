@@ -315,7 +315,7 @@ The Herb Garden (Alchemist) and the Trapper's Lodge (Leatherworker) get matching
 
 ## 9. M2 build order
 
-**One big M2 release** for players (decided), built in an order that proves the fun first. If step 1 doesn't make the game feel alive in our own testing, we learn that before building 36+ recipes on top of it.
+Built in an order that proves the fun first. If step 1 doesn't make the game feel alive, we learn that before building 36+ recipes on top of it. **Step 1 shipped on its own as 0.5.0** so it could be playtested (2026-10-28); the remaining steps follow.
 
 | Step | What | Why first |
 |---|---|---|
@@ -333,7 +333,7 @@ Then a simulator pass, slowing the pace (`pace.time_multiplier`, now that gold s
 **Decided (2026-10-28):**
 1. **Web rules W1–W7** are adopted and enforced by the validator.
 2. **The ladder:** 4 trainer recipes per rank as the base, plus rare recipes from orders.
-3. **One big M2**, built in the order above.
+3. **M2 built in the order above.** Originally one big release; step 1 shipped on its own as 0.5.0.
 4. **Workshop upgrades** are the rank-up milestones and need other guilds' parts.
 5. **Orders live in the Workshop** and may ask for several items, including other guilds' goods (from Journeyman).
 6. **Market ticker** showing price versus usual, with green and red arrows, driven by learnable causes.

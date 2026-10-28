@@ -25,7 +25,7 @@ function failure<T>(code: string, message: string, status: number): ApiResult<T>
 }
 
 /** Call an API action. Pass a body for POST, or nothing for GET. */
-export async function callAction<T>(action: string, body?: unknown): Promise<ApiResult<T>> {
+export async function callAction<T>(action: string, body?: unknown, query: Record<string, string | number> = {}): Promise<ApiResult<T>> {
   const headers: Record<string, string> = { Accept: 'application/json' }
   const token = tokenProvider()
   if (token) headers['X-Guildie-Token'] = token
@@ -35,7 +35,8 @@ export async function callAction<T>(action: string, body?: unknown): Promise<Api
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   let response: Response
   try {
-    response = await fetch(`${BASE}?action=${encodeURIComponent(action)}`, {
+    const params = new URLSearchParams({ action, ...Object.fromEntries(Object.entries(query).map(([k, v]) => [k, String(v)])) })
+    response = await fetch(`${BASE}?${params}`, {
       method: body === undefined ? 'GET' : 'POST',
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),

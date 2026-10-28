@@ -29,7 +29,7 @@ FEEDBACK_KEY = args[args.index("--feedback-key") + 1] if "--feedback-key" in arg
 failures = 0
 
 
-def call(action, body=None, token=None, method=None, query=""):
+def call(action, body=None, token=None, method=None, query=""):  # query: extra "&k=v" parameters
     method = method or ("POST" if body is not None else "GET")
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(f"{BASE}?action={action}{query}", data=data, method=method)
@@ -125,6 +125,7 @@ check("can't choose twice", s == 409, r)
 # ---------------------------------------------------------------- gathering
 s, r = call("collect_station", {}, token=tok_a)
 check("collect station", s == 200 and len(r["data"]["collected"]) > 0, r)
+check("collect reports surprises (#48), maybe none", s == 200 and isinstance(r["data"].get("surprises"), list), r)
 state = r["data"]["state"]
 sunleaf = have(state, "sunleaf")
 check("sunleaf in inventory", sunleaf > 0, state["inventory"])
@@ -398,6 +399,43 @@ for oid in open_ids:
 s, r = call("trade_offers", token=tok_b)
 check("all cleaned up", s == 200 and not r["data"]["outgoing"] and len(r["data"]["closed"]) >= 5, r["data"])
 
+# ---------------------------------------------------------------- order board (#44)
+s, r = call("orders", token=tok_a)
+board = r["data"] if r.get("ok") else {}
+orders = board.get("orders", [])
+check("order board has 3 orders", s == 200 and len(orders) == 3, r)
+check("orders have items, a customer and a reward", all(o["items"] and o["customer"] and o["reward_gold"] > 0 for o in orders), orders)
+check("before 30 crafts: no bundle orders", all(o["kind"] in ("standard", "collector") for o in orders), [o["kind"] for o in orders])
+check("standard orders pay more than market value", all(o["reward_gold"] > 0 for o in orders), orders)
+s, r = call("orders", token=tok_b)
+b_order = r["data"]["orders"][0]["id"] if r.get("ok") else 0
+s, r = call("order_fill", {"order_id": b_order}, token=tok_a)
+check("can't fill another player's order", s == 404, r)
+short = [o for o in orders if any(i["have"] < i["quantity"] for i in o["items"])]
+if short:
+    s, r = call("order_fill", {"order_id": short[0]["id"]}, token=tok_a)
+    check("can't fill an order without the items", s == 400 and r["error"]["code"] == "not_enough_items", r)
+s, r = call("order_skip", {"order_id": orders[0]["id"]}, token=tok_a)
+check("turn down an order: a new one arrives at once", s == 200 and len(r["data"]["board"]["orders"]) == 3
+      and orders[0]["id"] not in [o["id"] for o in r["data"]["board"]["orders"]] and r["data"]["board"]["skip_in"] > 0, r)
+s, r = call("order_skip", {"order_id": r["data"]["board"]["orders"][1]["id"] if r.get("ok") else 0}, token=tok_a)
+check("second skip waits for the cooldown", s == 409 and r["error"]["code"] == "skip_cooldown", r)
+
+# ---------------------------------------------------------------- ticker (#45), news (#46), activity since (#47)
+s, r = call("market", token=tok_a)
+row = next((i for i in r["data"]["items"] if i["item_id"] == "iron_sword"), {}) if r.get("ok") else {}
+check("market rows have usual price, % vs usual and a sparkline", {"usual", "change_pct", "hot", "spark"} <= set(row), row)
+news = r["data"].get("news", []) if r.get("ok") else []
+check("news board starts with today's Guild Week day", news and news[0]["kind"] == "week" and news[0]["title"], news)
+s, r = call("market_item", {"item_id": "iron_sword"}, token=tok_a)
+check("item detail has ticker fields", s == 200 and {"usual", "change_pct", "spark"} <= set(r["data"]), r)
+s, r = call("news", token=tok_a)
+check("news action", s == 200 and r["data"]["news"][0]["kind"] == "week", r)
+s, r = call("activity", token=tok_a, query="&since=1")
+check("activity since a time (return screen)", s == 200 and len(r["data"]["activity"]) > 0, r)
+s, r = call("activity", token=tok_a, query="&since=4000000000")
+check("nothing happened in the future", s == 200 and r["data"]["activity"] == [], r)
+
 # ---------------------------------------------------------------- npc market (local only)
 if TICK:
     subprocess.run(TICK, shell=True, check=True, capture_output=True)
@@ -419,6 +457,41 @@ if TICK:
     sup = next(l for l in r["data"]["listings"] if l["is_npc"])
     s, r = call("buy_listing", {"listing_id": sup["id"], "quantity": 1}, token=tok_a)
     check("buy from guild suppliers", s == 200 and have(r["data"]["state"], "brass_fittings") == 1, r)
+    # Ticks record price history for the ticker's sparklines (#45).
+    s, r = call("market_item", {"item_id": "iron_sword"}, token=tok_a)
+    check("tick: price history recorded", s == 200 and len(r["data"]["spark"]) >= 1, r["data"].get("spark"))
+
+    # Fill an order (#44): buy what's missing from the Guild Suppliers, then hand it over.
+    s, r = call("orders", token=tok_a)
+    ready = [o for o in r["data"]["orders"] if o["arriving_in"] == 0]
+    filled = False
+    for o in sorted(ready, key=lambda o: sum(i["quantity"] for i in o["items"])):
+        ok = True
+        for it in o["items"]:
+            need = it["quantity"] - it["have"]
+            if need <= 0:
+                continue
+            s2, mi = call("market_item", {"item_id": it["item_id"]}, token=tok_a)
+            sup = [l for l in mi["data"]["listings"] if l["is_npc"] and l["quantity"] >= need]
+            if not sup:
+                ok = False
+                break
+            s2, b = call("buy_listing", {"listing_id": sup[0]["id"], "quantity": need}, token=tok_a)
+            ok = ok and s2 == 200
+        if not ok:
+            continue
+        s, before = call("get_state", token=tok_a)
+        gold_before = before["data"]["player"]["gold"]
+        s, r = call("order_fill", {"order_id": o["id"]}, token=tok_a)
+        check("fill an order: paid its reward", s == 200 and r["data"]["state"]["player"]["gold"] == gold_before + o["reward_gold"], r)
+        check("filled order is replaced by a customer on the way", s == 200 and any(x["arriving_in"] > 0 for x in r["data"]["board"]["orders"]), r)
+        check("order shows in activity", s == 200 and r["data"]["state"]["activity"][0]["type"] == "order_filled", r)
+        s, r = call("order_fill", {"order_id": o["id"]}, token=tok_a)
+        check("can't fill the same order twice", s == 409, r)
+        filled = True
+        break
+    if not filled:
+        print("SKIP  fill an order (couldn't afford any order's items from the suppliers)")
 else:
     print("SKIP  market tick checks (no --tick command)")
 

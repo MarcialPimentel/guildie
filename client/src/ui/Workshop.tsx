@@ -4,7 +4,9 @@ import { useState } from 'preact/hooks'
 import { ago, CLIENT_BUILD, duration, gold, trimNumber } from '../format'
 import { session, useSession } from '../session'
 import type { GameState, Recipe } from '../types'
-import { ActionButton, Stepper, useNow } from './common'
+import type { ApiResult } from '../api'
+import { ActionButton, Stepper, useGame, useNow } from './common'
+import { Orders } from './Orders'
 
 export function Workshop() {
   const s = useSession()
@@ -15,13 +17,14 @@ export function Workshop() {
     <div class="cols">
       <div class="stack">
         <Station state={state} now={now} />
+        <Orders />
         <Crafts state={state} now={now} />
         <section class="stack tight">
           <h2>Recent activity</h2>
           {state.activity.length === 0 && <p class="muted">Nothing yet.</p>}
           {state.activity.slice(0, 12).map((a) => (
             <div class="row">
-              <p class={`grow small ${a.type === 'sold' || a.type === 'sold_to_guild' || a.type === 'trade_done' ? 'ok' : ''}`}>{a.text}</p>
+              <p class={`grow small ${a.type === 'surprise' ? 'surprise' : ['sold', 'sold_to_guild', 'trade_done', 'order_filled'].includes(a.type) ? 'ok' : ''}`}>{a.text}</p>
               <span class="tiny muted num">{ago(now - a.created_at).replace(' ago', '')}</span>
             </div>
           ))}
@@ -34,8 +37,19 @@ export function Workshop() {
   )
 }
 
+/** After a collect: show any surprises (#48) instead of the plain success message. */
+function useSurpriseMessage() {
+  const game = useGame()
+  return (ok: boolean, r: ApiResult<unknown>) => {
+    if (!ok || !r.ok) return
+    const surprises = (r.data as { surprises?: { text: string }[] }).surprises ?? []
+    if (surprises.length) game.say(surprises.map((x) => x.text).join(' · '))
+  }
+}
+
 function Station({ state, now }: { state: GameState; now: number }) {
   const station = state.profession!.station
+  const onCollected = useSurpriseMessage()
   // The server sent counts at server_time; estimate what has been produced since (the server decides on collect).
   const since = Math.max(0, now - state.server_time)
   let anyReady = false
@@ -61,7 +75,7 @@ function Station({ state, now }: { state: GameState; now: number }) {
           </div>
         )
       })}
-      <ActionButton action={() => session.collectStation()} success="Collected." disabled={!anyReady} testid="collect-station">
+      <ActionButton action={() => session.collectStation()} success="Collected." after={onCollected} disabled={!anyReady} testid="collect-station">
         Collect
       </ActionButton>
     </section>
@@ -70,6 +84,7 @@ function Station({ state, now }: { state: GameState; now: number }) {
 
 function Crafts({ state, now }: { state: GameState; now: number }) {
   const crafts = state.crafts
+  const onCollected = useSurpriseMessage()
   const anyDone = crafts.some((c) => c.ends_at <= now)
   return (
     <section class="card" data-testid="crafts">
@@ -85,7 +100,7 @@ function Crafts({ state, now }: { state: GameState; now: number }) {
         </div>
       ))}
       {crafts.length > 0 && (
-        <ActionButton action={() => session.collectCrafts()} success="Crafts collected." disabled={!anyDone} testid="collect-crafts">
+        <ActionButton action={() => session.collectCrafts()} success="Crafts collected." after={onCollected} disabled={!anyDone} testid="collect-crafts">
           Collect finished crafts
         </ActionButton>
       )}

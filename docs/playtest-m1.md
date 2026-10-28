@@ -23,6 +23,10 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
 5. **Blue ingredients** come from other guilds. The best goods (swords, tonics, jerkins) need them, so you'll have to buy from other players, or from the Guild Suppliers at a premium.
 6. **City:** see every crafter with their gold and crafts made (tap **Gold** or **Crafts** to sort). The richest crafter is **Il Factotum della Città**. Tap someone to see what they're selling, or **Propose a trade**: pick what you give and what you want back. What you offer is held until they accept or decline (or a day passes). Offers waiting for you show as **City (1)**; answer them in **City → Trades**.
 7. **Feedback:** tap **Feedback** at the top of the screen anytime to send Marz a note.
+8. **Orders (new in 0.5.0):** the Workshop has an order board with three customers. Each wants specific items before a deadline and pays more than the market, sometimes with a rare material too. **Fill** an order when you have the items, or **Turn it down** for a new customer (you can only turn one down every so often). After about 30 crafts, some orders ask for another guild's goods as well.
+9. **The ticker (new in 0.5.0):** on the Market, every price shows how it compares with usual. **Green ▲** means above usual (a good time to sell); **red ▼** means below (a good time to buy). The **City news** at the top says why: the day of the Guild Week (Friday is Tournament Day!) and events such as a mine collapse.
+10. **Little surprises:** collecting can turn up a rich vein, a bumper crop or a prize pelt, and crafts sometimes come out with a bonus item.
+11. **While you were away:** come back after a while and the game shows what happened, with one tap to collect everything.
 
 ## Things to know
 
@@ -38,4 +42,6 @@ After a few days, tell Marz:
 2. Did you ever check prices before deciding? Did you buy anything from another player?
 3. Did you feel stuck or confused anywhere?
 4. When did you open the game, and did each visit feel worth it?
+5. Did you open the game to fill an order? Which customer or order stood out?
+6. Did you ever sell or buy *because* of the green or red arrows, or the news?
 5. What was the most fun moment? The most boring one?

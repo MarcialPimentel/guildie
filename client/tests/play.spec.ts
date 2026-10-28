@@ -29,7 +29,14 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
 
   // --- workshop: collect, then craft from the recipes on the same screen (#39)
   await page.click(id('collect-station'))
-  await message(page, 'Collected.')
+  await expect(page.locator(id('message'))).toBeVisible()   // "Collected." or a surprise (#48)
+
+  // --- the order board (#44): three customers, or a customer on the way
+  await expect(page.locator(id('orders'))).toBeVisible()
+  await expect(page.locator(`${id('order')}, ${id('order-arriving')}`)).toHaveCount(3)
+  await page.locator(id('order-skip')).first().click()
+  await message(page, /turned down/)
+  await expect(page.locator(id('order-skip')).first()).toBeDisabled()   // skip cooldown
   const draught = page.locator(id('recipe-healing_draught'))
   await expect(draught).toBeVisible()
   await draught.getByRole('button', { name: 'plus 1' }).click()
@@ -38,7 +45,7 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(page.locator(id('crafts'))).toContainText('Ready!', { timeout: 60_000 })
   await expect(page.locator(id('collect-crafts'))).toBeEnabled()
   await page.click(id('collect-crafts'))
-  await message(page, 'Crafts collected.')
+  await expect(page.locator(id('message'))).toBeVisible()
   await expect(page.locator(id('footer'))).toContainText(/Client .+ · Server (?!\?)\S/)
 
   // --- bag -> sell form: the Exchange comes first, the guild sale below (#37)
@@ -65,10 +72,13 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await page.click(id('sell-sunleaf'))
   await expect(page.locator(id('raw-hint'))).toBeVisible()
 
-  // --- browse and an item's detail
+  // --- browse: the news board (#46) and the ticker (#45), then an item's detail with its history
   await page.click(id('mode-browse'))
+  await expect(page.locator(id('news'))).toContainText('City news')
+  await expect(page.locator(id('trend')).first()).toContainText(/%/)
   await page.click(id('browse-item-brass_fittings'))
   await expect(page.locator(id('item-detail'))).toContainText('Brass Fittings')
+  await expect(page.locator(id('item-detail'))).toContainText('usual')
 
   // --- city: one list with Gold and Crafts columns (#38), a profile, the trade form, the inbox (#32)
   await page.click(id('tab-city'))
@@ -94,6 +104,15 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await page.click(id('feedback-send'))
   await expect(page.locator(id('feedback-dialog'))).toHaveCount(0)
   await message(page, 'Thanks! Feedback sent.')
+
+  // --- "While you were away" (#47): pretend the last visit was an hour ago, then reload
+  await page.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('guildie.lastSeen.')) localStorage.setItem(k, String(Math.floor(Date.now() / 1000) - 3600))
+  })
+  await page.reload()
+  await expect(page.locator(id('return-summary'))).toContainText('While you were away')
+  await page.click(id('return-close'))
+  await expect(page.locator(id('return-summary'))).toHaveCount(0)
 
   // --- log out
   await page.click(id('tab-workshop'))
