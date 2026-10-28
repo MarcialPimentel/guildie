@@ -21,6 +21,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 args = sys.argv[1:]
 BASE = args[0] if args and not args[0].startswith("--") else "http://127.0.0.1:8080/games/guildie/api/index.php"
@@ -421,6 +422,16 @@ check("turn down an order: a new one arrives at once", s == 200 and len(r["data"
       and orders[0]["id"] not in [o["id"] for o in r["data"]["board"]["orders"]] and r["data"]["board"]["skip_in"] > 0, r)
 s, r = call("order_skip", {"order_id": r["data"]["board"]["orders"][1]["id"] if r.get("ok") else 0}, token=tok_a)
 check("second skip waits for the cooldown", s == 409 and r["error"]["code"] == "skip_cooldown", r)
+
+# Race (0.5.2): a new player's board loaded by several requests at the same moment gets exactly 3 orders.
+name_c, pw_c, tok_c, r = register("c")
+call("choose_profession", {"profession_id": "leatherworker"}, token=tok_c)
+with ThreadPoolExecutor(max_workers=6) as pool:
+    results = list(pool.map(lambda _: call("orders", token=tok_c), range(6)))
+check("6 board loads at once all succeed", all(s == 200 for s, _ in results), [s for s, _ in results])
+s, r = call("orders", token=tok_c)
+slots = [o["slot"] for o in r["data"]["orders"]] if r.get("ok") else []
+check("no duplicate orders from loads at the same moment", sorted(slots) == [0, 1, 2], slots)
 
 # ---------------------------------------------------------------- ticker (#45), news (#46), activity since (#47)
 s, r = call("market", token=tok_a)

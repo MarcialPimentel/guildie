@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M2 in progress (build 0.5.1)
+**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M2 in progress (build 0.5.2)
 **Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).

@@ -260,6 +260,16 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.5.2 (safer deploys, no duplicate orders, return screen on phones)
+
+Fully automatic, with no database changes.
+
+From this release, **the deploy checks itself**: after uploading, GitHub waits until the live server reports the new build and database version, and the game page serves the new client. If not, the run fails and shows why. If the game page is still cached by SiteGround, the run shows a **"Stale cache"** warning instead: flush the cache (Site Tools → Speed → Caching → Dynamic Cache → Flush).
+
+New database updates (from `006`) only run once their file has fully arrived (each ends with a `-- END NNN` line), so a request that lands mid-upload can no longer half-apply one.
+
+---
+
 ## Deploying 0.5.1 (exploit fixes)
 
 Fully automatic, with no database changes. The ping URL shows `"build":"0.5.1 (build …)"` and `"schema":5`. Orders already on boards keep the reward they were created with; new orders use the new pricing.

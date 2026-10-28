@@ -170,7 +170,7 @@ function orders_refresh(PDO $pdo, int $playerId, string $professionId, int $now)
     $s = orders_settings();
     $pdo->prepare("UPDATE orders SET status = 'expired', resolved_at = ? WHERE player_id = ? AND status = 'open' AND expires_at <= ?")
         ->execute([$now, $playerId, $now]);
-    $stmt = $pdo->prepare("SELECT slot FROM orders WHERE player_id = ? AND status = 'open'");
+    $stmt = $pdo->prepare("SELECT slot FROM orders WHERE player_id = ? AND status = 'open' FOR UPDATE");
     $stmt->execute([$playerId]);
     $taken = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
     for ($slot = 0; $slot < (int) $s['board_size']; $slot++) {
@@ -197,9 +197,12 @@ function orders_insert(PDO $pdo, int $playerId, string $professionId, int $slot,
 function orders_board(int $playerId): array
 {
     $board = tx(function (PDO $pdo) use ($playerId) {
+        // One board refresh at a time per player. Lock the player row FIRST, before any plain read:
+        // InnoDB fixes a transaction's view of the data at its first plain read, so locking later would
+        // still see an empty board and two requests at once would both fill it (duplicate orders, 0.5.2).
+        gold_get($pdo, $playerId, true);
         $professionId = require_profession($pdo, $playerId)['id'];
         $now = game_now();
-        gold_get($pdo, $playerId, true);   // one board refresh at a time per player
         orders_refresh($pdo, $playerId, $professionId, $now);
         $stmt = $pdo->prepare("SELECT * FROM orders WHERE player_id = ? AND status = 'open' ORDER BY slot");
         $stmt->execute([$playerId]);
@@ -262,6 +265,7 @@ function orders_lock(PDO $pdo, int $playerId, int $orderId, int $now): array
 function orders_fill(int $playerId, int $orderId): array
 {
     return tx(function (PDO $pdo) use ($playerId, $orderId) {
+        gold_get($pdo, $playerId, true);   // same lock order as the board refresh: player first (no deadlocks)
         $professionId = require_profession($pdo, $playerId)['id'];
         $now = game_now();
         $order = orders_lock($pdo, $playerId, $orderId, $now);
@@ -295,6 +299,7 @@ function orders_fill(int $playerId, int $orderId): array
 function orders_skip(int $playerId, int $orderId): void
 {
     tx(function (PDO $pdo) use ($playerId, $orderId) {
+        gold_get($pdo, $playerId, true);   // same lock order as the board refresh: player first (no deadlocks)
         $professionId = require_profession($pdo, $playerId)['id'];
         $now = game_now();
         $pdo->prepare('INSERT IGNORE INTO order_boards (player_id, skip_ready_at) VALUES (?, 0)')->execute([$playerId]);
