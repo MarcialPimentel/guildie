@@ -75,6 +75,10 @@ jobs:
           import json
           p = 'ci/content/economy.json'; d = json.load(open(p))
           d['pace']['time_multiplier'] = 0.05
+          # Deterministic tests: no random surprises (#48) and no random price movement (#45).
+          for k in ('rich_find_chance', 'rare_find_chance', 'bonus_craft_chance'):
+              d['surprises'][k] = 0
+          d['market']['noise_per_hour'] = 0
           json.dump(d, open(p, 'w'), indent=1)
           EOF
           cat > ci/private/config.php <<'EOF'
