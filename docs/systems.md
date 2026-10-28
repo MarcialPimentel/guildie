@@ -190,7 +190,7 @@ These rules apply to every system.
 
 ### 5.1 Professions & Progression
 
-> Skill curve, recipe ladder and the cross-profession web rules: [professions.md](professions.md) (proposal).
+> Skill curve, recipe ladder and the cross-profession web rules: [professions.md](professions.md).
 
 | | |
 |---|---|
@@ -357,7 +357,13 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 | **Inputs** | Market Simulation and Calendar post orders |
 | **Outputs** | Rewards (gold, rare materials, recipes) to Inventory; events to Activity Log |
 
-**Rules:** NPCs post orders sized to the player's rank; fulfilling removes the items (consumed: a sink) and pays the reward. Rare-recipe rewards make orders the main way to discover recipes. Player-posted orders are in the backlog.
+**Rules** (decided 2026-10-28, details in [professions.md](professions.md) §2):
+- Orders show on an **order board in the Workshop**: 3 at a time, from named NPC customers, scaled to the player's rank.
+- From Journeyman on, an order can be a **bundle of several items, including other guilds' goods**.
+- Each order has a deadline in hours. Skipping one has a cooldown.
+- Fulfilling **removes the items** (consumed: a sink) and pays rewards the market can't give: XP, rare materials (sometimes another guild's), and **rare recipes**, the only way to get some recipes.
+
+Player-posted orders are in the backlog.
 
 **Milestone:** M2.
 
