@@ -27,7 +27,7 @@ return [
     // (docs/realtime-setup.md). Leave realtime_url empty to turn presence off (the quarters still work,
     // without live players). realtime_secret must be the same long random phrase as the worker's
     // REALTIME_SECRET (at least 16 characters).
-    'realtime_url'    => '',   // e.g. 'wss://guildie-live.marz.gg'
+    'realtime_url'    => '',   // e.g. 'wss://guildie.marz.gg'
     'realtime_secret' => '',
 
     // Set to true only while debugging; shows detailed errors in API responses.

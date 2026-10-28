@@ -126,7 +126,7 @@ One city-wide order that everyone works on together. Server-authoritative, built
 
 ### 7.2 Which service, and what it costs
 
-**Chosen (2026-10-28): the DigitalOcean droplet that already runs Hormigas** (`hub`, 1 vCPU, 2 GB). Its Caddy already serves HTTPS and passes WebSockets through, and it has an automatic GitHub deploy. The rooms run as one more container (`guildie-realtime`) at `guildie-live.marz.gg`. No new account and no message quota; the load is tiny (small messages, only while people walk, no game simulation), about 50 MB of memory. If the droplet is down, quarters show "Quiet day" and nothing else is affected.
+**Chosen (2026-10-28): the DigitalOcean droplet that already runs Hormigas** (`hub`, 1 vCPU, 2 GB). Its Caddy already serves HTTPS and passes WebSockets through, and it has an automatic GitHub deploy. The rooms run as one more container (`guildie-realtime`) at `guildie.marz.gg`. No new account and no message quota; the load is tiny (small messages, only while people walk, no game simulation), about 50 MB of memory. If the droplet is down, quarters show "Quiet day" and nothing else is affected.
 
 The hosted services compared first (checked on 2026-10-28 on each provider's pricing page):
 

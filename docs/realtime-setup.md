@@ -9,23 +9,24 @@ It takes about 15 minutes, once. The droplet's address and how to log in are in 
 ## How it fits on the droplet
 
 ```
-guildie-live.marz.gg ──> Caddy (already there: HTTPS) ──> guildie-realtime container (new)
+guildie.marz.gg ──> Caddy (already there: HTTPS) ──> guildie-realtime container (new)
 hormigas.marz.gg     ──> Caddy                        ──> hormigas container (unchanged)
 ```
 
 The new container uses about 50 MB of memory and almost no CPU. If it ever stops, Hormigas is unaffected and Guildie's quarters just say "Quiet day".
 
-## 1. Add the web address (SiteGround DNS)
+## 1. Add the web address (SiteGround DNS) ✓ done 2026-10-28
 
 1. SiteGround **Site Tools** → **Domain** → **DNS Zone Editor**.
-2. Choose **A** record. **Name:** `guildie-live`. **Points to:** the droplet's IP (the same IP as the `hormigas` record). Leave TTL as it is. Click **Create**.
-3. It can take 5 to 30 minutes to start working. You can do the next steps meanwhile.
+2. Choose **A** record. **Name:** `guildie`. **Points to:** the droplet's IP (the same IP as the `hormigas` record). Leave TTL as it is. Click **Create**.
+
+`guildie.marz.gg` only carries the live rooms. If someone opens it in a browser, Caddy sends them to the game at `marz.gg/games/guildie/`.
 
 ## 2. Make up the shared secret
 
 Make up a long random phrase of at least 32 characters (your password manager's generator, letters and numbers only). Save it as "Guildie realtime secret". The game server uses it to sign each player's pass, and the rooms use it to check the pass.
 
-## 3. Add two secrets to the Guildie repo on GitHub
+## 3. Add two secrets to the Guildie repo on GitHub ✓ done 2026-10-28
 
 These let GitHub restart the rooms after each merge. They're the same values the Hormigas repo already uses (GitHub never shows a saved secret, so copy them from the source):
 
@@ -57,7 +58,7 @@ Log in as in your private doc (`ssh deploy@…`), then `cd /opt/hub`. Three smal
    docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
    ```
    The second line makes Caddy pick up the new address without restarting Hormigas.
-5. **Check:** `docker compose ps` should list `guildie-realtime` as running (healthy after half a minute). In a browser, `https://guildie-live.marz.gg/health` should show `{"ok":true,…}`. If the page doesn't load yet, the DNS record from step 1 may still be on its way: wait and try again.
+5. **Check:** `docker compose ps` should list `guildie-realtime` as running (healthy after half a minute). In a browser, `https://guildie.marz.gg/health` should show `{"ok":true,…}`. If the page doesn't load yet, the DNS record from step 1 may still be on its way: wait and try again.
 6. **Keep the repo copy in step:** the Hormigas repo keeps a copy of these files in `deploy/hub/`. Add the same two blocks there (or ask a session to), as your private doc says.
 
 From now on, every merge to Guildie's `main` rebuilds the rooms and restarts the container by itself (the **realtime** job in the deploy run). Players in a quarter reconnect on their own within a few seconds.
@@ -69,7 +70,7 @@ From now on, every merge to Guildie's `main` rebuilds the rooms and restarts the
 3. Before the line `'debug' => false,` add these two lines, with your phrase from step 2:
 
 ```php
-    'realtime_url'    => 'wss://guildie-live.marz.gg',
+    'realtime_url'    => 'wss://guildie.marz.gg',
     'realtime_secret' => 'THE SAME PHRASE AS GUILDIE_REALTIME_SECRET',
 ```
 
@@ -87,7 +88,7 @@ Set `'realtime_url' => ''` in `config.php`. The quarters go back to stalls, town
 
 ## If something goes wrong
 
-- **"Quiet day" after step 6:** open `https://guildie-live.marz.gg/health`. If it answers, check that `realtime_url` starts with `wss://` and that the two secrets match exactly. If it doesn't answer, see the next items.
+- **"Quiet day" after step 6:** open `https://guildie.marz.gg/health`. If it answers, check that `realtime_url` starts with `wss://` and that the two secrets match exactly. If it doesn't answer, see the next items.
 - **502 Bad Gateway** on that address: Caddy is fine but the container is down. On the droplet: `docker compose ps` and `docker compose logs guildie-realtime`. A line "Set REALTIME_SECRET" means step 5.1 is missing or misspelled.
 - **The page doesn't load at all:** the DNS record (step 1) isn't active yet, or Caddy wasn't reloaded (step 5.4).
 - **The realtime job says "Realtime restart skipped":** the two GitHub secrets (step 3) aren't set, or the container isn't in `docker-compose.yml` yet (step 5). The image is still built.
