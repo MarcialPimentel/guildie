@@ -239,7 +239,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     if (scene === 'harbor') return
     engine.current?.setQuarterLabels({
       duke: dukeLabel(duke),
-      trainer: { text: `${HALL[scene]} · guild trainer soon`, tone: 'plain' },
+      trainer: { text: `${HALL[scene]} · guild trainer`, tone: 'plain' },
       home: { text: 'Down to your bottega', tone: 'plain' },
     })
   }, [duke, scene, status])

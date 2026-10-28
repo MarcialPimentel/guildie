@@ -188,6 +188,12 @@ test('the living city: walk, a quarter, a second player live, and a slap', async
   await expect(a.locator(id('compose'))).toBeVisible()
   await a.click(id('panel-close'))
 
+  // The quarter's guild hall door: the guild trainer (0.8.0).
+  await a.click(id('dock-trainer'))
+  await expect(a.locator(id('panel-trainer'))).toBeVisible()
+  await expect(a.locator(id('trainer'))).toBeVisible()
+  await a.click(id('panel-close'))
+
   // B leaves: A no longer sees them. Then A goes home down the Steps.
   await b.click(id('dock-home'))
   await expect(a.locator(`[data-testid="world-peer-${idB}"]`)).toHaveCount(0)

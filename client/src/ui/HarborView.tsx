@@ -10,6 +10,7 @@ import { City, Crafter } from './City'
 import { useLoad, useNow, type TabRequest } from './common'
 import { DukeOrder } from './Duke'
 import { QuarterChooser } from './Quarters'
+import { Trainer } from './Trainer'
 import { Market } from './Market'
 import { Orders } from './Orders'
 import { NewsBoard } from './Ticker'
@@ -85,7 +86,7 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
       case 'news': body = <News />; break
       case 'duke': body = <DukeOrder />; break
       case 'steps': body = <QuarterChooser go={(q) => go(q as Scene)} />; break
-      case 'trainer': body = <Trainer />; break
+      case 'trainer': body = <GuildHall />; break
       case 'visit': body = panel.playerId ? <Crafter key={panel.playerId} id={panel.playerId} /> : null; break
     }
   }
@@ -132,12 +133,7 @@ function News() {
   )
 }
 
-/** The guild hall door in a quarter: the guild trainer moves in with M2 (#49); until then, the City. */
-function Trainer() {
-  return (
-    <>
-      <p class="muted small" data-testid="trainer-soon">The guild trainer will teach new recipes here (coming with skill and recipes). For now, the hall keeps the city's notices.</p>
-      <City onView={() => {}} />
-    </>
-  )
+/** The guild hall door in a quarter: the guild trainer (M2 #49), who teaches your guild's recipes. */
+function GuildHall() {
+  return <Trainer />
 }
