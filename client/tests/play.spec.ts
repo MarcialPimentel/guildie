@@ -10,9 +10,12 @@ async function message(page: Page, text: RegExp | string) {
 
 test('a new alchemist plays through every screen', async ({ page }, info) => {
   const name = `pw_${info.project.name.slice(0, 2)}${Date.now() % 1_000_000}`
+  const engineRequests: string[] = []
+  page.on('request', (r) => { if (/\/engine-[^/]*\.js/.test(r.url())) engineRequests.push(r.url()) })
 
-  // --- login screen -> register
-  await page.goto('./')
+  // --- login screen -> register. Desktop defaults to the 3D harbor (world.spec.ts), so this test asks for the
+  // classic screens there; phones get the classic view by default.
+  await page.goto(info.project.name === 'desktop' ? './?view=classic' : './')
   await expect(page.locator('h1')).toHaveText('Guildie')
   // The footer shows the server's build once the ping answers ("dev" on CI's unpackaged server).
   await expect(page.getByText(/· Server (?!…|unreachable)\S/)).toBeVisible()
@@ -26,6 +29,7 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(page.locator(id('who'))).toContainText(`${name} · Alchemist`)
   await expect(page.locator(id('gold'))).toHaveText(/^[\d,]+ ducats?$/)
   await expect(page.locator('.tabbar button')).toHaveCount(4)
+  await expect(page.locator(id('world'))).toHaveCount(0)   // no 3D on the classic view (phones: never downloaded)
 
   // --- workshop: collect, then craft from the recipes on the same screen (#39)
   await page.click(id('collect-station'))
@@ -121,4 +125,7 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await page.click(id('tab-workshop'))
   await page.click(id('logout'))
   await expect(page.locator(id('login'))).toBeVisible()
+
+  // The classic view never downloads the 3D harbor (it's a separate file, loaded only by the 3D view).
+  expect(engineRequests).toEqual([])
 })

@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.6 · **Date:** 2026-10-28 · **Status:** M2 in progress (build 0.6.0, the Portovela look)
+**Version:** 0.7 · **Date:** 2026-10-28 · **Status:** M2 in progress (build 0.7.0, the 3D harbor)
 **Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -142,7 +142,7 @@ The full art direction, palette, interaction map and asset pipeline live in [art
 - **Palette:** sea teal, whitewash, lemon and roof-tile terracotta, with a night version of the same harbor. Text always passes WCAG AA contrast.
 - **Type:** Fraunces for headings, Nunito for text, bundled with the game.
 - **Icons:** chunky, ink-outlined item icons on light majolica tiles, readable on phone screens.
-- **Rollout:** 0.6.0 applies the palette, fonts, icons and names to the current screens. A hidden 3D test slice comes next, beside M2; the final art pass stays in M4.
+- **Rollout:** 0.6.0 applied the palette, fonts, icons and names to the screens. **0.7.0 makes the 3D harbor the home screen on desktop browsers**: every place opens a side panel with the same screens. Phones keep the classic screens for now and move toward the 3D world step by step (touch controls and full-screen panels already work with `?view=3d`). The final art pass stays in M4.
 
 ---
 
@@ -480,6 +480,7 @@ Goal: the player feels the whole loop within about **three minutes**.
 - Large touch targets, with one-thumb reach for the most common actions (collect, queue, relist).
 - Core screens: Bottega (home: station, craft queue and recipes on one screen), Mercato (the Exchange: Browse / Sell / My Listings), Inventory (Bag), City (players, profiles, trades), Orders, News.
 - Money is shown as a number with a ducat coin; text says "ducats". The server and database still call it gold.
+- **Two views of the same game (0.7.0).** On desktop (a wide screen with a mouse) the home screen is the **3D harbor**: the station, workbench, customers, your stall, the Mercato, the storehouse, the guild hall, the news galley and the bottega's ledger are places you click, each opening a side panel with the classic screen for it. A dock lists every place as a button, and floating labels show live numbers (station fill, craft timers, customers ready to fill). On phones the **classic view** (tabs) stays the default. A header button switches views and the choice is remembered; `?view=3d` or `?view=classic` in the address forces one. If 3D can't start, the game falls back to the classic view.
 - On the sell form, **listing on the Exchange comes first**; the instant guild sale sits underneath as the fallback.
 - Every timer shows remaining time and absolute finish time.
 - Offline progress is calculated on the server from timestamps.
@@ -543,7 +544,7 @@ Everything runs on the existing SiteGround hosting, on one domain.
 ### 11.6 Web client structure (0.4.0)
 
 - **TypeScript + Preact**, built by **Vite** into plain static files (one HTML page, one script, one stylesheet, about 25 KB of code compressed, plus about 100 KB of bundled fonts cached after the first visit). It loads in about a second, even on a phone.
-- **3D (next, approved 2026-10-28):** Three.js through React Three Fiber, which means swapping Preact for React (the same API, about 35 KB more). The world streams in after the menus are usable. Budgets are in [art-direction.md](art-direction.md) §5.
+- **3D harbor (0.7.0):** plain **Three.js** inside the Preact app (`client/src/world/`), as a separate file of about 140 KB compressed that only the 3D view downloads. The static town is merged into a few meshes, waves run on the GPU, shadows are drawn once and redrawn only on change, the frame rate drops to 30 when nothing moves, and the pixel ratio adapts to the machine. Today's scene: about 40 draw calls and 35k triangles. The engine only shows the server's state. Budgets are in [art-direction.md](art-direction.md) §5.
 - **Responsive:** one column with a bottom tab bar on phones. From 900 px wide, the tabs move to the top and busy screens (Workshop, sell form, City trades) use two columns.
 - `src/api.ts` (HTTP wrapper), `src/session.ts` (auth, player state, server clock offset; every action goes through it), `src/ui/*` (one file per screen: Login, Profession, GameScreen, Workshop, Market, Bag, City, Feedback).
 - Uses the browser's own text boxes, keyboard, scrolling and password autofill.
@@ -587,7 +588,7 @@ Each milestone ends with a playtest and a clear exit question.
 | **M1 Market Prototype** (live, playtesting) | 3 professions (choice + starter recipes), 18 items, gathering stations, crafting with timers and batches, the Exchange with 3 NPC personas, liquidity band, market tick, Activity Log, economy simulator. Plain text UI. See [systems.md §9](systems.md#9-milestone-matrix). | **"Is making one good trade fun?"** |
 | **M2 Crafting Depth** | Built fun-first, shipped in steps (0.5.0 = step 1) ([professions.md](professions.md) §9): **1.** order board, market ticker with Guild Week and events, "while you were away" screen, surprises on collect · **2.** skill and XP, learning recipes, rare recipes · **3.** the recipe ladder to 100 and the web rules · **4.** workshop upgrades as rank-up milestones. Quality tiers, gathering decisions and the Focus prototype follow if time allows | **"Do I want to come back tomorrow?"** |
 | **M3 Real Players** | Shared market with multiple players, NPC scaling, leaderboards (gold and rank progress; a simple City directory shipped early in 0.3.0), anti-abuse | **"Does trading with real people feel different and better?"** |
-| **M4 Look & Feel** | Final low-poly 3D art (hero models, icons rendered from models), machine progression visuals, sound, onboarding polish, installable web app. Pulled forward: the Portovela look on today's screens shipped in 0.6.0, and a hidden 3D test slice is built beside M2 | **"Would I show this to a stranger?"** |
+| **M4 Look & Feel** | Final low-poly 3D art (hero models, icons rendered from models), machine progression visuals, sound, onboarding polish, installable web app. Pulled forward: the Portovela look shipped in 0.6.0, and the 3D harbor became the desktop home screen in 0.7.0 (low-poly shapes built in code, to be replaced by modelled assets) | **"Would I show this to a stranger?"** |
 | **Later** | Guilds, specializations, second profession, more professions | — |
 
 ### Backlog (not scheduled)
@@ -694,6 +695,8 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-28 | **3D in the browser:** Three.js through React Three Fiber (Preact → React), under HTML menus; not Unity | Keeps the stack, server and tests; every system gets a place and a verb. Replaces the 2026-10-25 "2D, UI-driven" decision |
 | 2026-10-28 | Machines cost lamp oil and wages for hired hands (replaces coal) | Still a sink that grows with automation, in the new setting |
 | 2026-10-28 | Art pulled forward: 0.6.0 reskins today's screens, then a hidden 3D test slice beside M2; final art stays in M4 | Marz asked for a release with the new look before more gameplay |
+| 2026-10-28 | **The 3D harbor is the desktop home screen (0.7.0); phones keep the classic view for now** and move toward 3D step by step | Marz asked for a functional 3D overhaul optimized for browsers, with the classic view kept for mobile. Panels reuse the classic screens, so both views stay in step |
+| 2026-10-28 | **Three.js directly in the Preact app, not React Three Fiber** (replaces the React + R3F choice above) | The scene is mostly hand-animated, so R3F's declarative layer adds little; plain Three.js keeps the client on Preact (no app-wide React swap), keeps the 3D in its own lazily loaded file, and gives full control of the render loop for battery and speed. R3F can still come later if the scene grows into many interactive pieces |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---

@@ -260,6 +260,19 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.7.0 (the 3D harbor)
+
+Fully automatic, with no database or server changes. The ping URL shows `"build":"0.7.0 (build …)"` and `"schema":5`.
+
+What players notice:
+
+- **On a computer**, the game opens on the **3D harbor**. Click a place (or its floating label, or the buttons along the bottom) to open it in a panel on the right: the station, the workbench, customers at your door, your stall, the Mercato, the storehouse, the guild hall, the news galley and your bottega's ledger. Drag to turn the view, right-drag to move, scroll to zoom. **Classic view** in the header switches back to the tabs (remembered next time).
+- **On a phone**, nothing changes: the classic view stays, and the 3D file is never downloaded.
+- To try the harbor on a phone, open the game with `?view=3d` at the end of the address (for example `https://marz.gg/games/guildie/?view=3d`). One finger turns, two fingers zoom. Tap **Classic view** in the header to go back.
+- Add `?debug=1` to see how fast the harbor runs (frames per second, draw calls).
+
+---
+
 ## Deploying 0.6.0 (the Portovela look)
 
 Fully automatic, with no database changes. The ping URL shows `"build":"0.6.0 (build …)"` and `"schema":5`.
