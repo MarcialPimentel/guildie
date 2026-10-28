@@ -307,6 +307,9 @@ export interface Profile {
   title: string | null
   can_trade: boolean
   listings: { id: number; item_id: string; name: string; quantity: number; unit_price: number }[]
+  /** 0.9.0 */
+  friend?: boolean
+  profession_id?: string
 }
 
 export interface Offer {
@@ -329,4 +332,77 @@ export interface Offers {
 export interface ItemCount {
   item_id: string
   quantity: number
+}
+
+// ---------------------------------------------------------------- the living city (0.9.0)
+
+export interface PresenceMe {
+  id: number
+  name: string
+  profession: string
+  look: number
+  slaps: boolean
+}
+
+export interface PresencePass {
+  enabled: boolean
+  url?: string
+  token?: string
+  expires_in?: number
+  me: PresenceMe
+}
+
+export interface StallCard {
+  id: number
+  name: string
+  profession_id: string
+  profession: string
+  look: number
+  me: boolean
+  friend: boolean
+  seen_ago: number | null
+  listing_count: number
+  listings: { id: number; item_id: string; name: string; quantity: number; unit_price: number }[]
+  echo: { text: string; ago: number } | null
+}
+
+export interface QuarterData {
+  quarter: string
+  name: string
+  guild: string
+  crafters: number
+  stalls: StallCard[]
+}
+
+export interface Friends {
+  friends: StallCard[]
+}
+
+export interface DukeLine {
+  item_id: string
+  name: string
+  guild: string
+  goal: number
+  delivered: number
+  have: number
+  mine: number
+  can_give: number
+  unit_pay: number
+  unit_bonus: number
+}
+
+export interface DukeBoard {
+  id: number
+  title: string
+  line: string
+  status: 'open' | 'fulfilled' | 'expired'
+  seconds_left: number
+  share_open_in: number
+  max_share: number
+  lines: DukeLine[]
+  helpers: { player_id: number; name: string; value: number; items: number; me: boolean }[]
+  helper_count: number
+  my_rank: number | null
+  my_paid: number
+  my_bonus: number
 }

@@ -4,8 +4,8 @@
 import { useEffect, useState } from 'preact/hooks'
 import { callAction, setTokenProvider, type ApiResult } from './api'
 import type {
-  Activity, Directory, GameState, ItemCount, MarketItem, MarketRow, MyListing, NewsItem, Offers, OrderBoard, Profile,
-  ProfessionChoice, ProgressGain, SellQuote, Surprise, Trainer,
+  Activity, Directory, DukeBoard, Friends, GameState, ItemCount, MarketItem, MarketRow, MyListing, NewsItem, Offers, OrderBoard,
+  PresencePass, Profile, ProfessionChoice, ProgressGain, QuarterData, SellQuote, Surprise, Trainer,
 } from './types'
 
 const TOKEN_KEY = 'guildie.token'
@@ -36,6 +36,8 @@ class Session {
   serverBuild = '?'
   /** Server clock minus local clock (seconds), so countdowns match the server. */
   offset = 0
+  /** Bumped when you add or remove a friend, so the 3D city's stars update at once (0.9.0). */
+  friendsVersion = 0
   private listeners = new Set<Listener>()
 
   constructor() {
@@ -170,6 +172,41 @@ class Session {
   }
   news() {
     return this.call<{ news: NewsItem[] }>('news')
+  }
+  // ---- the living city (0.9.0)
+  /** A signed pass for the realtime room (enabled: false when presence isn't set up). */
+  presenceToken() {
+    return this.call<PresencePass>('presence_token')
+  }
+  cityPrefs(slaps: boolean) {
+    return this.call<{ slaps: boolean }>('city_prefs', { slaps })
+  }
+  quarter(quarter: string) {
+    return this.call<QuarterData>('quarter', { quarter })
+  }
+  friends() {
+    return this.call<Friends>('friends')
+  }
+  friendAdd(playerId: number) {
+    return this.friendsCall('friend_add', playerId)
+  }
+  friendRemove(playerId: number) {
+    return this.friendsCall('friend_remove', playerId)
+  }
+  private async friendsCall(action: string, playerId: number) {
+    const r = await this.call<Friends>(action, { player_id: playerId })
+    if (r.ok) {
+      this.friendsVersion++
+      this.emit()
+    }
+    return r
+  }
+  dukeOrder() {
+    return this.call<DukeBoard>('duke_order')
+  }
+  dukeContribute(itemId: string, quantity: number) {
+    return this.stateCall<{ given: { name: string; quantity: number; paid: number; fulfilled: boolean }; board: DukeBoard }>(
+      'duke_contribute', { item_id: itemId, quantity }, 'state')
   }
   offerAccept(offerId: number) {
     return this.stateCall('offer_accept', { offer_id: offerId }, 'state')

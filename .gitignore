@@ -3,6 +3,7 @@
 /client/dist/
 /client/test-results/
 /client/playwright-report/
+/realtime/node_modules/
 *.tmp
 
 # --- Server secrets ---

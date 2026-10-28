@@ -412,6 +412,30 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   box(hall, 4, 0.3, 1.4, C.stoneDark, HX, 1, -0.4)
   finish('city', hall)
 
+  // the Duke's notice board by the storehouse (0.9.0): the city-wide order. A herald blob stands beside it.
+  const duke = place('duke')
+  for (const dx of [-1.1, 1.1]) box(duke, 0.16, 2.6, 0.16, C.woodDark, 17.6 + dx, 1, 0.2)
+  box(duke, 2.6, 1.7, 0.14, '#6E4A2C', 17.6, 2.0, 0.2)
+  box(duke, 2.3, 1.4, 0.05, C.cream, 17.6, 2.15, 0.29, false)
+  box(duke, 2.8, 0.22, 0.4, C.roof, 17.6, 3.7, 0.2)
+  box(duke, 0.6, 0.16, 0.06, '#A9492A', 17.6, 3.2, 0.33, false)
+  for (let i = 0; i < 4; i++) box(duke, 1.5 - i * 0.18, 0.06, 0.02, '#4A6B6F', 17.6, 2.45 + i * 0.25, 0.33, false)
+  box(duke, 0.5, 1.6, 0.05, '#2A4C9A', 16.0, 2.6, 0.2, false)
+  box(duke, 0.5, 0.3, 0.05, '#F2C53D', 16.0, 4.2, 0.2, false)
+  finish('duke', duke)
+
+  // the Steps up to the guild quarters (0.9.0): an arch with a sign over the stairs at the east end
+  const stepsUp = place('steps')
+  for (const dx of [-1.5, 1.5]) box(stepsUp, 0.5, 4.2, 0.5, '#F4EBD8', 27 + dx, 1, -1.4)
+  box(stepsUp, 3.6, 0.6, 0.6, '#F4EBD8', 27, 5.2, -1.4)
+  solid(stepsUp, new THREE.SphereGeometry(0.35, 8, 6), C.lemon, 27, 6.1, -1.4)
+  {
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), new THREE.MeshStandardMaterial({ map: signTexture('To the quarters') }))
+    sign.position.set(27, 4.6, -1.08)
+    stepsUp.add(sign)
+  }
+  finish('steps', stepsUp)
+
   // ------------------------------------------------------------ boats, gulls, bunting
   const sailMat = new THREE.MeshStandardMaterial({ color: C.cream, side: THREE.DoubleSide, flatShading: true })
   const makeShip = (L: number, W: number, hull: string, band: string, sails: { x: number; h: number; a: number; b: number }[]) => {
@@ -544,13 +568,15 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
 
   // ------------------------------------------------------------ focus and label points
   const shipCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(22, 0, 21), new THREE.Vector3(14, 0, 24), new THREE.Vector3(5.3, 0, 11.5))
-  const focus: Record<PickId, THREE.Vector3> = {
+  const focus: Partial<Record<PickId, THREE.Vector3>> = {
+    duke: new THREE.Vector3(17.6, 2, 0.4), steps: new THREE.Vector3(27, 2, -1.2),
     station: new THREE.Vector3(STATION_X, 2, -3.5), workbench: new THREE.Vector3(WORK_X, 2.2, -2.4),
     orders: new THREE.Vector3(-3, 1.5, 0.6), ledger: new THREE.Vector3(-3, 3, -3), bag: new THREE.Vector3(12.5, 2.5, -2.6),
     stall: new THREE.Vector3(-8.2, 1.8, 1.9), mercato: new THREE.Vector3(MX, 3, -3), city: new THREE.Vector3(HX, 4, -3.4),
     news: new THREE.Vector3(),
   }
-  const labels: Record<PickId, THREE.Vector3> = {
+  const labels: Partial<Record<PickId, THREE.Vector3>> = {
+    duke: new THREE.Vector3(17.6, 5.4, 0.2), steps: new THREE.Vector3(27, 7.3, -1.4),
     station: new THREE.Vector3(STATION_X, profession === 'blacksmith' ? 4.9 : 5.4, -3.8), workbench: new THREE.Vector3(WORK_X, 5.9, -2.2),
     orders: new THREE.Vector3(-2.6, 3.7, 1.2), ledger: new THREE.Vector3(-3, 8.7, -3.6), bag: new THREE.Vector3(13, 7.4, -3.6),
     stall: new THREE.Vector3(-8.2, 4.4, 1.9), mercato: new THREE.Vector3(MX, 9, -3), city: new THREE.Vector3(HX, 13.6, -3.6),
@@ -559,8 +585,8 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
 
   return {
     root, picks, highlight,
-    focusPoint: (id) => (id === 'news' ? galley.position.clone().setY(2) : focus[id].clone()),
-    labelPoint: (id) => (id === 'news' ? galley.position.clone().setY(8.4) : labels[id]),
+    focusPoint: (id) => (id === 'news' ? galley.position.clone().setY(2) : (focus[id] ?? new THREE.Vector3()).clone()),
+    labelPoint: (id) => (id === 'news' ? galley.position.clone().setY(8.4) : labels[id] ?? new THREE.Vector3(0, -100, 0)),
     live: {
       station: stationSets, stationCaps, stationMarker, workMarker, workLight, workGlow, workAnim, crates, goods, customers, bunting,
       galley, gozzo, gulls, particles, particleKind,

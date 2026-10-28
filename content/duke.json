@@ -1,0 +1,55 @@
+{
+  "_comment": "The Duke's order (systems.md 6.5, docs/living-city.md section 5): one city-wide order at a time that every player can contribute to. Orders run in this list's order, then start over. Each line's goal is multiplied by max(1, active crafters in the last 7 days / players_per_goal_step), up to max_goal_scale. A contribution pays pay_multiplier x the item's usual value per unit at once; when every line is filled, contributors get bonus_multiplier x usual value per unit they gave. pay_multiplier + bonus_multiplier must stay below market.ceiling_multiplier (the 0.5.1 supplier rule; the validator checks it). One player can fill at most max_share of a line until open_share_after of the order's time has passed; then anyone can finish it. duration_hours scales with the game's pace. Every number is [tune].",
+  "settings": {
+    "duration_hours": 72,
+    "pay_multiplier": 1.25,
+    "bonus_multiplier": 0.15,
+    "max_share": 0.4,
+    "open_share_after": 0.75,
+    "players_per_goal_step": 4,
+    "max_goal_scale": 5,
+    "board_size": 8
+  },
+  "orders": [
+    {
+      "id": "regatta_fleet",
+      "title": "Lights and supplies for the Regatta fleet",
+      "line": "By order of His Grace the Duke: every galley in the Regatta shall carry a lantern, a draught for the oarsmen and a satchel for the captain's charts.",
+      "lines": [
+        { "item_id": "copper_lantern", "goal": 24 },
+        { "item_id": "healing_draught", "goal": 30 },
+        { "item_id": "hide_satchel", "goal": 24 }
+      ]
+    },
+    {
+      "id": "city_watch",
+      "title": "Arm the city watch",
+      "line": "The Duke's watch walks the walls at night. They need blades, tonic against the cold, and stout jerkins.",
+      "lines": [
+        { "item_id": "iron_sword", "goal": 3 },
+        { "item_id": "steam_tonic", "goal": 10 },
+        { "item_id": "rugged_jerkin", "goal": 3 }
+      ]
+    },
+    {
+      "id": "ospedale",
+      "title": "The Ospedale of Santa Lucia",
+      "line": "The Duke endows the hospital by the harbor. Fra Amon will gladly take lanterns for the wards, draughts and satchels for the healers.",
+      "lines": [
+        { "item_id": "copper_lantern", "goal": 16 },
+        { "item_id": "healing_draught", "goal": 40 },
+        { "item_id": "hide_satchel", "goal": 16 }
+      ]
+    },
+    {
+      "id": "palazzo_feast",
+      "title": "A feast at the Palazzo Ducale",
+      "line": "Ambassadors arrive from the Levant. The palazzo must glitter: lanterns along the loggia, lemon tonic for the toasts, fine satchels as gifts.",
+      "lines": [
+        { "item_id": "copper_lantern", "goal": 30 },
+        { "item_id": "steam_tonic", "goal": 12 },
+        { "item_id": "hide_satchel", "goal": 20 }
+      ]
+    }
+  ]
+}

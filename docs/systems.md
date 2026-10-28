@@ -18,8 +18,8 @@ The GDD describes *what Guildie is*. This document breaks the game into **system
 3. [Shared conventions](#3-shared-conventions)
 4. [Foundation systems](#4-foundation-systems): Accounts, Time & Timers, Content, Inventory & Wallet, Activity Log
 5. [Production systems](#5-production-systems): Professions & Progression, Gathering, Crafting, Focus (active play)
-6. [Exchange systems](#6-exchange-systems): The Exchange, Market Simulation, Crafting Orders, Direct Trades
-7. [Meta systems](#7-meta-systems): Workshop & Buildings, Calendar & Events, Leaderboards, Guilds
+6. [Exchange systems](#6-exchange-systems): The Exchange, Market Simulation, Crafting Orders, Direct Trades, The Duke's Order
+7. [Meta systems](#7-meta-systems): Workshop & Buildings, Calendar & Events, Leaderboards, Guilds, Presence, Friends
 8. [Cross-cutting systems](#8-cross-cutting-systems): Economy Balance, Playtest Feedback, Onboarding
 9. [Milestone matrix](#9-milestone-matrix)
 10. [Confirmed defaults](#confirmed-defaults)
@@ -65,10 +65,13 @@ flowchart LR
 | | **Direct Trades** | Player-to-player offers | ✅ 0.3.0 |
 | | **Market Simulation** | NPC demand and supply that keeps the market alive | ✅ M1 |
 | | **Crafting Orders** | Specific requests with rewards | ✅ 0.5.0 (order board) |
+| | **The Duke's Order** | One city-wide order everyone works on | 0.9.0 |
 | Meta | **Workshop & Buildings** | Capacity and speed upgrades | M2 |
 | | **Calendar & Events** | Weekly rhythm and world events | ✅ 0.5.0 (Guild Week, events, news board); polish M4 |
 | | **Leaderboards** | Public rankings | City directory ✅ 0.3.0; full boards M3 |
 | | **Guilds** | Social layer | Later |
+| | **Presence** | Seeing other merchants live in the guild quarters (cosmetic) | 0.9.0 |
+| | **Friends** | Players you follow; their stalls everywhere | 0.9.0 |
 | Cross-cutting | **Economy Balance** | Faucets, sinks, and monitoring | ✅ M1 (simulator), ongoing |
 | | **Onboarding** | The first three minutes | M2 (basic), M4 (polish) |
 
@@ -97,6 +100,11 @@ Everything a player can *do*, and which system owns it. If a new feature adds a 
 | **Fill / turn down** an order | Crafting Orders | 30 s | 0.5.0 |
 | **Learn** a recipe | Professions | 5 min | M2 |
 | **Upgrade** a building | Workshop | 5 min | M2 |
+| **Walk** your merchant (WASD, arrows, click) | Presence | 30 s | 0.9.0 |
+| **Visit** a quarter, a stall, a player | Presence, Leaderboards | 5 min | 0.9.0 |
+| **Wave / slap** another merchant | Presence | any | 0.9.0 |
+| **Add / remove** a friend | Friends | 30 s | 0.9.0 |
+| **Contribute** to the Duke's order | The Duke's Order | 30 s | 0.9.0 |
 
 **Design check:** the 30-second verbs (collect, craft, list) must each be one or two taps. The 30-minute verbs (tend, buy, read) are where depth and skill live.
 
@@ -410,6 +418,28 @@ Player-posted orders are in the backlog.
 
 **Later:** gifts, a small fee, and anti-abuse checks for alt-account funnelling (M3).
 
+### 6.5 The Duke's Order *(0.9.0)*
+
+| | |
+|---|---|
+| **Job** | One shared, city-wide goal everyone can see and help with ("Together, first") |
+| **Owns** | `duke_orders` (lines with goal and delivered, multipliers, start, end, status), `duke_contributions` (who gave what, paid, bonus) |
+| **Verbs** | Contribute |
+| **Inputs** | Items from Inventory; order definitions from `content/duke.json`; active-player count (goal scaling) |
+| **Outputs** | Gold to the Wallet at once and on completion; the public board; Activity Log events |
+
+**Rules**
+- One open order at a time, resolved lazily (like the order board): reading or contributing closes an overdue order (expired) and starts the next one from `content/duke.json` in turn.
+- Each order has **lines for all three guilds**. A line's goal is `goal` × max(1, active crafters in the last 7 days ÷ `players_per_goal_step`), fixed when the order starts.
+- **Contribute** removes the items (a sink) and pays `pay_multiplier` (1.25) × the item's usual value per unit at once, in one transaction that locks the order row. Refused beyond the line's goal, or beyond `max_share` (40%) of a line per player until `open_share_after` (75%) of the order's time has passed; then anyone can finish it.
+- When the last line fills, the order is **fulfilled** in the same transaction and every contributor is paid `bonus_multiplier` (0.15) × usual value per unit they delivered.
+- **Supplier rule:** `pay_multiplier + bonus_multiplier` must stay below `market.ceiling_multiplier` (validator), so supplier stock can't be turned into profit (0.5.1).
+- The board shows the lines, time left, and the top helpers by value delivered.
+
+**Tuning knobs** (`content/duke.json` → `settings`): `duration_hours` 72, `pay_multiplier` 1.25, `bonus_multiplier` 0.15, `max_share` 0.4, `open_share_after` 0.75, `players_per_goal_step` 4, `max_goal_scale` 5, `board_size` 8.
+
+**Milestone:** 0.9.0.
+
 ---
 
 ## 7. Meta systems
@@ -463,6 +493,39 @@ Player-posted orders are in the backlog.
 
 Social layer: guild orders needing several professions, a shared guild hall, guild rankings (GDD 8.3). **Later.**
 
+### 7.5 Presence *(0.9.0)*
+
+| | |
+|---|---|
+| **Job** | Let players see each other move in the guild quarters: positions, waves and slaps. Cosmetic only |
+| **Owns** | `city_prefs` (slaps on/off); the realtime rooms (`realtime/`, a small container on the DigitalOcean droplet), which keep nothing after everyone leaves |
+| **Verbs** | Walk, Visit, Wave, Slap |
+| **Inputs** | A signed presence pass from the PHP server (`presence_token`: player id, name, guild, look, slaps, expiry in 10 min); recent `activity` for echoes |
+| **Outputs** | Nothing that changes game state |
+
+**Rules**
+- **Never touches value.** Gold, items, trades, orders and friends stay on the PHP server; the room only relays positions, waves and slaps.
+- **Only logged-in players join:** the room checks the pass's HMAC-SHA256 signature (secret shared with `config.php` → `realtime_secret`) and expiry, and takes identity from the pass, never from the client.
+- **Rooms:** one per quarter copy (`smiths-1`, `smiths-2`, …), at most `30` players [tune]; a full room sends the join to the next copy.
+- **Fair play:** positions clamped to the piazza; at most 10 messages a second per client (more are dropped); a slap needs both players' slaps on, distance ≤ 2.5 m and 1.5 s since the slapper's last slap.
+- **Optional:** with no `realtime_url` configured, or the service unreachable, quarters still show stalls, townsfolk and **echoes** (crafters of that guild who acted in the last 30 minutes, from `activity`).
+- Players aren't solid, and clicking a place opens it from anywhere, so nobody can block a door.
+
+**Milestone:** 0.9.0 (desktop); phones get lists of the quarters, no live walkers.
+
+### 7.6 Friends *(0.9.0)*
+
+| | |
+|---|---|
+| **Job** | Keep track of the crafters you like trading with |
+| **Owns** | `friends` (player, friend, created) |
+| **Verbs** | Add, Remove |
+| **Outputs** | Friends' stalls first in every quarter; the Friends list in City |
+
+**Rules:** one-way (no request to accept: everything shown is already public); at most 50 [tune]; you can't friend yourself; removing is instant.
+
+**Milestone:** 0.9.0.
+
 ---
 
 ## 8. Cross-cutting systems
@@ -511,6 +574,9 @@ What each system delivers in each milestone.
 | Workshop | — | Upgrades, rank caps | — | Isometric art |
 | Calendar & Events | — | Guild Week | — | World events, news |
 | Leaderboards | City directory (0.3.0) | — | Gold + rank | — |
+| The Duke's Order | — | 0.9.0 (city-wide order) | Scale goals with players | — |
+| Presence | — | 0.9.0 (desktop quarters, live) | Phones? | Final blob art |
+| Friends | — | 0.9.0 | — | — |
 | Economy Balance | **Simulator** | Retune | Live metrics | — |
 | Onboarding | — | Basic flow | — | Polish |
 

@@ -1,0 +1,13 @@
+# Add this to /opt/hub/Caddyfile on the droplet (and the copy in the hormigas repo's deploy/hub/).
+# Caddy gets the HTTPS certificate by itself and passes WebSockets through. Only the rooms (/q/…) and the
+# health check go to the container; anyone opening guildie.marz.gg in a browser is sent to the game.
+
+guildie.marz.gg {
+	@rooms path /q/* /health
+	handle @rooms {
+		reverse_proxy guildie-realtime:8788
+	}
+	handle {
+		redir https://marz.gg/games/guildie/ 302
+	}
+}

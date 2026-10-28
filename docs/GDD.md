@@ -458,6 +458,20 @@ The social layer for multiplayer. It serves Pillar 5 socially:
 - Guild rankings.
 - A reason to recruit a blacksmith rather than just buy from one.
 
+### 8.4 The living city (0.9.0)
+
+Other players become people you see. Full design: [living-city.md](living-city.md).
+
+- **Your merchant:** a blob merchant you steer (WASD, arrows or click-to-move). Clicking a place opens its panel at once while your merchant walks there.
+- **Guild quarters:** the Smiths', Alchemists' and Tanners' piazzas, up the Steps from your quay. Each lines up to 12 bottegas (friends first, then recently active crafters of that guild) and shows other players moving **live**. A quarter copy holds 30 players; more open a second copy.
+- **Tap a player or a stall:** visit their shop window (buy), propose a trade, add a friend, wave, or slap.
+- **Friends:** one-way bookmarks; friends' stalls appear first in every quarter, and in a Friends list in the City tab.
+- **Gentlemanly slaps:** a glove slap was a Renaissance duel challenge. Cosmetic, opt-out, can't block a door.
+- **The Duke's order:** a city-wide order with lines from all three guilds and a public board of helpers. Pays 1.25 × usual value per unit at once, plus 0.15 × on completion (under the suppliers' 1.5 ×).
+- **Never empty:** townsfolk and "echoes" of crafters who acted in the last 30 minutes fill quiet quarters.
+- **Presence is cosmetic and optional:** positions, waves and slaps go through a small realtime service (a Node container on the DigitalOcean droplet that already hosts Hormigas); everything with value stays on the PHP server. With no service configured, the quarters still show stalls, townsfolk and echoes.
+- **Phones:** the City tab lists the quarters, friends and the Duke's order.
+
 ---
 
 ## 9. Onboarding (First-Time User Experience)
@@ -703,6 +717,14 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-28 | **Rare recipes are better variants of existing goods for now** (2 per guild: more output per craft and 1.5× XP), taught by orders up to 10 skill above yours | Trophies without new items and icons; step 3 (#50) can add rare goods with their own art |
 | 2026-10-28 | Raw 2 (Iron Ore, Ember Moss, Thick Hide) unlocks at skill 15 for new players | professions.md §5; Apprentice recipes before 15 use only raw 1 |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
+| 2026-10-28 | **The living city (0.9.0):** live presence of other players through a small realtime service next to SiteGround: a **Node container on the existing DigitalOcean droplet** (behind its Caddy, `guildie.marz.gg`), carrying only cosmetic things (positions, waves, slaps); the PHP server signs a 10-minute pass so only logged-in players join | Marz wants to see other players move. Shared PHP hosting can't hold WebSockets. The droplet is already paid for, already serves HTTPS and WebSockets for Hormigas, and has no message quota; no new account. Cloudflare Durable Objects (free plan) was the runner-up; Ably and Pusher count every delivery. Presence is optional: without the service the game is unchanged ([living-city.md](living-city.md) §7) |
+| 2026-10-28 | Player-steered merchant (WASD, arrows, click-to-move); clicking a place opens its panel at once while the merchant walks there | Walking around is the fun; the 30-second check-in must not get slower |
+| 2026-10-28 | **Guild quarters** (Smiths', Alchemists', Tanners') instead of one long street; 30 visible players per quarter copy, more open a new copy; townsfolk and echoes from recent activity fill quiet quarters | Meeting your own guild serves Pillar 1; a long street of every player doesn't scale and is empty with few players (Pillar 3) |
+| 2026-10-28 | **Friends** as one-way bookmarks (no requests); friends' stalls first in every quarter (migration 007) | Everything a friend sees is already public, so no consent step is needed; simplest version to test |
+| 2026-10-28 | **Gentlemanly slaps:** a cosmetic glove slap (a Renaissance duel challenge), opt-out, rate- and distance-limited by the realtime room; players aren't solid, so nobody can block a door | Character and fun between players with no effect on the economy |
+| 2026-10-28 | **People become wobbly blob merchants** in guild dress and hats, with an oversized slap glove (art-direction.md §9) | Reads from far away, funny without faces, cheap to animate (spring wobble, no skeleton or physics engine) |
+| 2026-10-28 | **The Duke's order:** one city-wide order with lines for all three guilds, 72 h, pays 1.25 × usual value per unit at once plus 0.15 × on completion, at most 40% of a line per player until its last quarter of time, public board of helpers | "Together, first": a shared goal everyone can see. The whole reward (1.40 ×) stays under the suppliers' 1.5 × (the 0.5.1 supplier rule) |
+| 2026-10-28 | Living city on phones: the City tab gets the Duke's order, Friends and Quarters as lists; no live walkers on phones yet | Every feature must work in the classic view (Decision of 2026-10-28) |
 
 ---
 

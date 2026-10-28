@@ -244,6 +244,39 @@ if not (0 <= g.get("drop_per_unit", -1) < 1):
 if g.get("recovery_half_life_hours", 0) <= 0:
     err("economy: guild_sale.recovery_half_life_hours must be > 0")
 
+# The Duke's order (0.9.0, systems.md 6.5).
+duke = load("duke.json")
+ds = duke.get("settings", {})
+ceiling = m.get("ceiling_multiplier", 0)
+if not (1 <= ds.get("pay_multiplier", 0) and 0 <= ds.get("bonus_multiplier", -1)
+        and ds.get("pay_multiplier", 0) + ds.get("bonus_multiplier", 0) < ceiling):
+    err(f"duke: need pay_multiplier >= 1, bonus_multiplier >= 0 and pay + bonus below market.ceiling_multiplier ({ceiling}), "
+        "or the Duke's order can be filled at a profit from the Guild Suppliers")
+for key in ("max_share", "open_share_after"):
+    if not (0 < ds.get(key, 0) <= 1):
+        err(f"duke: settings.{key} must be between 0 and 1")
+for key in ("duration_hours", "players_per_goal_step", "max_goal_scale", "board_size"):
+    if not ds.get(key, 0) > 0:
+        err(f"duke: settings.{key} must be > 0")
+if not duke.get("orders"):
+    err("duke: needs at least one order")
+unique_ids(duke.get("orders", []), "duke orders")
+item_prof = {i.get("id"): i.get("profession") for i in items}
+for o in duke.get("orders", []):
+    lines = o.get("lines", [])
+    for field in ("title", "line"):
+        if not o.get(field):
+            err(f"duke: order {o.get('id')!r} needs a {field}")
+    for ln in lines:
+        if ln.get("item_id") not in item_ids:
+            err(f"duke: order {o.get('id')!r}: unknown item {ln.get('item_id')!r}")
+        if not (isinstance(ln.get("goal"), int) and ln["goal"] > 0):
+            err(f"duke: order {o.get('id')!r}: goal for {ln.get('item_id')!r} must be a positive whole number")
+    if len({ln.get("item_id") for ln in lines}) != len(lines):
+        err(f"duke: order {o.get('id')!r} lists an item twice")
+    if len({item_prof.get(ln.get("item_id")) for ln in lines}) < 2:
+        err(f"duke: order {o.get('id')!r} must ask for goods from at least two guilds (it's a city-wide order)")
+
 if errors:
     print(f"Content INVALID ({len(errors)} problems):")
     for e in errors:

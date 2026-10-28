@@ -76,6 +76,8 @@ function activity_text(string $type, array $p): string
         'offer_declined'    => sprintf('%s declined your offer. %s returned.', $p['other'] ?? 'A player', ucfirst((string) ($p['give'] ?? ''))),
         'offer_cancelled'   => sprintf('You cancelled your offer. %s returned.', ucfirst((string) ($p['give'] ?? ''))),
         'offer_expired'     => sprintf('Your offer expired. %s returned.', ucfirst((string) ($p['give'] ?? ''))),
+        'duke_contributed'  => sprintf('Gave %d %s to the Duke (%s) and were paid %s.', $n('quantity'), $item(), $p['title'] ?? "the Duke's order", ducats($n('paid'))),
+        'duke_fulfilled'    => sprintf("The Duke's order is fulfilled: %s. Your thanks from the palazzo: %s.", $p['title'] ?? '', ducats($n('bonus'))),
         'bought'            => sprintf('Bought %d %s from %s for %s.', $n('quantity'), $item(), $p['seller'] ?? 'someone', ducats($n('total'))),
         'listing_cancelled' => sprintf('Cancelled your listing: %d %s returned.', $n('quantity'), $item()) . deposit_note($p),
         'listing_expired'   => sprintf('Your listing expired: %d %s returned.', $n('quantity'), $item()) . deposit_note($p),

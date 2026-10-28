@@ -1,10 +1,13 @@
 # Checks every pull request, and on every merge to main deploys Guildie to marz.gg over FTPS.
 #
 #   checks  (PRs and main): PHP syntax, content validator, API smoke test against a throwaway
-#           MySQL, web client build (TypeScript), browser test (Playwright, phone + desktop)
-#           -> downloadable packages (Artifacts)
+#           MySQL, web client build (TypeScript), realtime room tests, browser test (Playwright,
+#           phone + desktop, with a local realtime room server) -> downloadable packages (Artifacts)
 #   deploy  (main only):    uploads the server code into guildie-private/, then the game into
 #           public_html/games/guildie/. The server applies new migrations itself.
+#   realtime (main only):   builds the living city's realtime rooms (realtime/) as a Docker image on GitHub
+#           Packages, then restarts them on the DigitalOcean droplet (docs/realtime-setup.md). The
+#           restart is skipped until its secrets are set; it never blocks the game deploy.
 #
 # Two SiteGround FTP accounts, each limited to the folder it needs (see docs/deploy.md):
 #   server-code account  home = the guildie-private/ folder        -> server code
@@ -15,6 +18,7 @@
 #   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD               (server-code account)
 #   FTP_PUBLIC_USERNAME, FTP_PUBLIC_PASSWORD             (game-files account, same host)
 # Until all five are set, checks still run and the upload is skipped.
+#   DROPLET_HOST, DROPLET_SSH_KEY   (the realtime job: the same values as in the hormigas repo)
 name: Deploy
 
 on:
@@ -93,7 +97,8 @@ jobs:
           cat > ci/private/config.php <<'EOF'
           <?php
           return ['db' => ['host' => '127.0.0.1', 'name' => 'guildie_test', 'user' => 'guildie', 'pass' => 'localtestpw', 'charset' => 'utf8mb4'],
-                  'tick_interval_seconds' => 300, 'debug' => true, 'feedback_key' => 'ci-feedback-key'];
+                  'tick_interval_seconds' => 300, 'debug' => true, 'feedback_key' => 'ci-feedback-key',
+                  'realtime_url' => 'ws://127.0.0.1:8788', 'realtime_secret' => 'ci-realtime-secret-0123456789'];
           EOF
           export GUILDIE_PRIVATE="$PWD/ci/private" GUILDIE_CONTENT="$PWD/ci/content" GUILDIE_MIGRATIONS="$PWD/server/migrations"
           echo "GUILDIE_PRIVATE=$GUILDIE_PRIVATE" >> "$GITHUB_ENV"
@@ -127,6 +132,14 @@ jobs:
           # Serve it next to the API, exactly like the live folder layout.
           cp -r dist/. ../ci/www/games/guildie/
 
+      - name: Realtime rooms (rule tests, then a local room server for the browser test)
+        working-directory: realtime
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+          (REALTIME_SECRET=ci-realtime-secret-0123456789 PORT=8788 nohup node src/server.mjs > ../ci/realtime.log 2>&1 &)
+          for i in $(seq 20); do curl -s http://127.0.0.1:8788/ && break; sleep 0.5; done
+
       - name: Browser test (plays the real game against the API, phone + desktop)
         working-directory: client
         run: |
@@ -138,7 +151,9 @@ jobs:
 
       - name: Server log (on failure)
         if: failure()
-        run: cat ci/php-server.log || true
+        run: |
+          cat ci/php-server.log || true
+          cat ci/realtime.log || true
 
       - name: Browser test traces (on failure)
         if: failure()
@@ -255,3 +270,64 @@ jobs:
             echo "::warning title=Stale cache::Players still get the old game page ('$served'). Flush the SiteGround cache: Site Tools > Speed > Caching > Dynamic Cache > Flush."
           fi
           echo "::notice::Live: build $BUILD, schema $SCHEMA, client $ASSET."
+
+  # The living city's realtime rooms (docs/realtime-setup.md): a small container on the DigitalOcean droplet,
+  # next to Hormigas, behind its Caddy (HTTPS). Cosmetic only (positions, waves, slaps), so a failure here
+  # never blocks the game deploy; the game works without it.
+  realtime:
+    needs: checks
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: realtime
+          push: true
+          tags: |
+            ghcr.io/marcialpimentel/guildie-realtime:latest
+            ghcr.io/marcialpimentel/guildie-realtime:${{ github.sha }}
+          cache-from: type=gha,scope=realtime
+          cache-to: type=gha,scope=realtime,mode=max
+
+      - name: Check droplet settings
+        id: check
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+        run: |
+          if [ -z "$DROPLET_HOST" ] || [ -z "$DROPLET_SSH_KEY" ]; then
+            echo "::notice::Realtime restart skipped: DROPLET_HOST and DROPLET_SSH_KEY aren't set in this repo yet. See docs/realtime-setup.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restart the realtime rooms on the droplet
+        if: steps.check.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: deploy
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            cd /opt/hub
+            if ! docker compose config --services | grep -qx guildie-realtime; then
+              echo "guildie-realtime isn't in /opt/hub/docker-compose.yml yet (one-time setup: docs/realtime-setup.md). Skipping."
+              exit 0
+            fi
+            docker compose pull guildie-realtime
+            docker compose up -d guildie-realtime
+            docker image prune -f
