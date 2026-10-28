@@ -60,6 +60,15 @@ function activity_text(string $type, array $p): string
         'sold_to_guild'     => sprintf('Sold %d %s to the guild for %s.', $n('quantity'), $item(), ducats($n('earned'))),
         'order_filled'      => sprintf('%s took %s and paid %s.', $p['customer'] ?? 'A customer', $p['items'] ?? '', $p['reward'] ?? ''),
         'surprise'          => (string) ($p['text'] ?? 'A lucky find!'),
+        'skill_up'          => sprintf('%s skill %d → %d (+%d XP).', $p['profession'] ?? 'Your', $n('from'), $n('to'), $n('xp'))
+                                   . (empty($p['discoveries']) ? '' : ' First ' . implode(', ', $p['discoveries'])
+                                       . (count($p['discoveries']) > 1 ? ': +1 skill each.' : ': +1 skill.')),
+        'rank_up'           => sprintf('You are now a %s %s!', $p['rank'] ?? '', $p['profession'] ?? '')
+                                   . (empty($p['learned']) ? '' : ' The guild taught you ' . implode(', ', $p['learned']) . ' for free.'),
+        'raw_unlocked'      => sprintf('%s now yields %s too.', $p['station'] ?? 'Your station', $p['item'] ?? ''),
+        'recipe_learned'    => sprintf('Learned %s at the guild trainer for %s.', $p['recipe'] ?? '', ducats($n('price'))),
+        'recipe_taught'     => sprintf('%s taught you a rare recipe: %s.', $p['customer'] ?? 'A customer', $p['recipe'] ?? ''),
+        'skill_counted'     => sprintf('Skill arrived! Your past crafts count: %s %d/100 · %s.', $p['profession'] ?? '', $n('skill'), $p['rank'] ?? ''),
         'offer_sent'        => sprintf('You offered %s %s for %s.', $p['other'] ?? 'a player', $p['give'] ?? '', $p['ask'] ?? ''),
         'offer_received'    => sprintf('%s offers you %s for %s. See City → Trades.', $p['other'] ?? 'A player', $p['give'] ?? '', $p['ask'] ?? ''),
         'offer_accepted'    => sprintf('%s accepted your trade: you got %s for %s.', $p['other'] ?? 'A player', $p['got'] ?? '', $p['gave'] ?? ''),

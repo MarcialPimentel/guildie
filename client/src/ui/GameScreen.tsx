@@ -13,6 +13,7 @@ import { HarborView, type Panel } from './HarborView'
 import { Market } from './Market'
 import { markSeen, ReturnSummary } from './ReturnSummary'
 import { Workshop } from './Workshop'
+import { RankUp, SkillLine, XpBar } from './Progress'
 import { canOffer3D, initialView, rememberView, type ViewMode } from '../view'
 import type { PickId } from '../world/types'
 
@@ -126,7 +127,7 @@ export function GameScreen() {
     <GameContext.Provider value={game}>
       <header class="header">
         <div class="header-inner">
-          <span class="who" data-testid="who">{state.player.name} · {state.profession?.name ?? 'No guild'}</span>
+          <span class="who" data-testid="who">{state.player.name}</span>
           <span class="gold num"><Coins n={state.player.gold} testid="gold" /></span>
           {(mode === '3d' || canOffer3D()) && (
             <button class="secondary small" onClick={() => switchMode(mode === '3d' ? 'classic' : '3d')} data-testid="view-toggle">
@@ -135,6 +136,8 @@ export function GameScreen() {
           )}
           <button class="secondary small" onClick={() => setFeedbackOpen(true)} data-testid="feedback-open">Feedback</button>
         </div>
+        <SkillLine state={state} />
+        <XpBar state={state} />
       </header>
 
       {mode === '3d' && (
@@ -178,6 +181,7 @@ export function GameScreen() {
       )}
 
       <ReturnSummary />
+      <RankUp profession={state.profession?.name ?? ''} />
 
       {feedbackOpen && <FeedbackDialog screen={screenName} onClose={() => setFeedbackOpen(false)} />}
     </GameContext.Provider>

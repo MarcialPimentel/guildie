@@ -90,6 +90,9 @@ jobs:
           d['market']['noise_per_hour'] = 0
           d['market']['reversion_per_hour'] = 0   # Guild Week / event prices don't move items during tests
           json.dump(d, open(p, 'w'), indent=1)
+          p = 'ci/content/orders.json'; o = json.load(open(p))
+          o['settings']['rare_recipe_chance'] = {k: 1 for k in o['settings']['rare_recipe_chance']}   # tests always see one (#49)
+          json.dump(o, open(p, 'w'), indent=1)
           EOF
           cat > ci/private/config.php <<'EOF'
           <?php
@@ -113,7 +116,7 @@ jobs:
           fi
 
       - name: API smoke test
-        run: python3 tools/smoke_test.py http://127.0.0.1:8080/games/guildie/api/index.php --tick "php server/app/tick.php --force" --feedback-key ci-feedback-key
+        run: python3 tools/smoke_test.py http://127.0.0.1:8080/games/guildie/api/index.php --tick "php server/app/tick.php --force" --feedback-key ci-feedback-key --player-tool "php tools/test_player.php"
 
       - uses: actions/setup-node@v4
         with:

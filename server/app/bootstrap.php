@@ -35,6 +35,7 @@ require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/activity.php';
 require __DIR__ . '/lib/inventory.php';
 require __DIR__ . '/lib/professions.php';
+require __DIR__ . '/lib/progression.php';
 require __DIR__ . '/lib/gathering.php';
 require __DIR__ . '/lib/crafting.php';
 require __DIR__ . '/lib/exchange.php';

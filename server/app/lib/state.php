@@ -18,10 +18,12 @@ function player_state(int $playerId): array
     $profession = null;
     if ($professionId !== null) {
         $def = content_profession($professionId);
+        $row = progression_row($pdo, $playerId);
         $profession = [
             'id'      => $professionId,
             'name'    => $def['name'],
             'tagline' => $def['tagline'],
+            'progress' => progression_status($row, game_now()),
             'station' => gathering_status($playerId, $professionId),
             'recipes' => crafting_recipes($playerId, $professionId),
         ];

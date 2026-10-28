@@ -310,6 +310,31 @@ body.in-world .header-inner { height: 60px; padding-top: 0; padding-bottom: 0; }
 .header button { white-space: nowrap; }
 @media (max-width: 899px) { .world-hint { display: none; } }
 
+/* ---------------------------------------------------------------- skill, XP and the trainer (0.8.0, #30, #49) */
+
+.header-skill {
+  max-width: 1100px; margin: -4px auto 0; padding: 0 var(--gutter) 5px;
+  display: flex; gap: 10px; font-size: 13px; font-weight: 700; color: var(--muted);
+}
+.header-skill .grow { flex: 1 1 auto; min-width: 0; color: var(--heading); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xpbar { height: 4px; background: var(--panel-light); }
+.xpbar i { display: block; height: 100%; background: var(--lemon); transition: width 0.4s ease; }
+.xp-chip { flex: none; font-size: 13px; font-weight: 800; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.xp-chip.orange { background: #E8853A; color: #2A1405; }
+.xp-chip.yellow { background: var(--lemon); color: #10323A; }
+.xp-chip.green { background: #8DBE55; color: #13280A; }
+.xp-chip.grey { background: var(--panel-light); color: var(--muted); }
+.tag.rare { background: #7A3E9D; color: #FFFFFF; }
+button.link.inline { display: inline; width: auto; color: var(--accent); text-decoration: underline; font-weight: 700; }
+.lesson.learn { border-left: 5px solid var(--accent); }
+.lesson.known { opacity: 0.8; }
+.lesson.rare { border-left: 5px solid #7A3E9D; }
+.rank-up { border: 3px solid var(--lemon); text-align: left; }
+.rank-up h1 { font-size: 40px; color: var(--accent); }
+.rank-up ul { margin: 4px 0; padding-left: 20px; }
+/* In the 3D harbor the header has fixed heights: 60 px bar + 20 px skill row + 4 px XP bar + 1 px border. */
+body.in-world { --header-h: 85px; }
+body.in-world .header-skill { height: 20px; margin-top: 0; padding-bottom: 0; align-items: center; }
 /* ---------------------------------------------------------------- the living city (0.9.0) */
 .world-label.person { font-size: 12px; padding: 3px 10px; background: rgba(248, 252, 251, 0.92); color: #10323A; }
 .world-bubble {

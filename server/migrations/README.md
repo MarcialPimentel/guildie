@@ -7,6 +7,7 @@ SQL files that build and change the database. From 0.2.1 the server applies them
 - `003_guild_sale_feedback.sql`: listing deposit from the sale, Sell to guild, feedback (0.2.2)
 - `004_trade_offers.sql`: direct trades (0.3.0)
 - `005_fun_core.sql`: orders, price history, world events (0.5.0)
+- `006_progression.sql`: XP and the daily bonus on `player_professions`, known recipes (`player_recipes`), rare recipes on orders (0.8.0). Players from before 0.8.0 are upgraded by the server code (`progression.php`), not the SQL
 
 Rules:
 - Name files `NNN_short_name.sql`, numbered in order. Never edit a migration that has already been applied; add a new file instead.

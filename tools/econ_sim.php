@@ -5,6 +5,8 @@
  * Runs virtual players through the REAL server code (gathering, crafting, Exchange, market tick)
  * on a scratch database, with a fast-forwarded clock, and reports how the economy behaves.
  * Use it to tune content/economy.json before numbers reach real players.
+ * Bots also fill the orders they can, learn recipes at the trainer when they can afford them, and the
+ * report says when each bot reached each rank (time-to-rank, #30).
  *
  *   php tools/econ_sim.php --db-name=guildie_sim --db-user=guildie --db-pass=... \
  *       [--players=6] [--days=7] [--seed=1] [--content=content] [--report=out.json]
@@ -162,6 +164,24 @@ function bot_checkin(array $bot, array &$log): void
         }
     }
 
+    // Orders (#44): fill any order the bot already has the goods for (pays gold and XP).
+    foreach (attempt(fn() => orders_board($id))['orders'] ?? [] as $o) {
+        if ($o['arriving_in'] === 0 && array_reduce($o['items'], fn($ok, $i) => $ok && $i['have'] >= $i['quantity'], true)
+            && attempt(fn() => orders_fill($id, $o['id'])) !== false) {
+            $log['orders_filled'][$bot['profession']] = ($log['orders_filled'][$bot['profession']] ?? 0) + 1;
+        }
+    }
+
+    // The trainer (#49): learn the cheapest recipe the bot can, keeping 50 ducats back for inputs.
+    $learnable = array_filter(attempt(fn() => trainer_list($id))['recipes'] ?? [], fn($r) => $r['status'] === 'learn');
+    usort($learnable, fn($a, $b) => $a['price'] <=> $b['price']);
+    foreach ($learnable as $r) {
+        if (gold_get(db(), $id) >= $r['price'] + 50 && attempt(fn() => trainer_learn($id, $r['id'])) !== false) {
+            $log['learned'][$r['id']] = ($log['learned'][$r['id']] ?? 0) + 1;
+            break;
+        }
+    }
+
     // Sell: finished goods and components; raw materials only when there's a surplus.
     $state = player_state($id);
     $needs = [];
@@ -194,7 +214,8 @@ function bot_checkin(array $bot, array &$log): void
 $end = $start + (int) ($days * 86400);
 $tickEvery = 300;
 $nextTick = $start + $tickEvery;
-$log = ['crafted' => [], 'listed' => [], 'bought_inputs' => []];
+$log = ['crafted' => [], 'listed' => [], 'bought_inputs' => [], 'orders_filled' => [], 'learned' => []];
+$rankAt = [];
 $daily = [];
 $unmet = [];
 $npcBought = [];
@@ -222,6 +243,8 @@ while (true) {
             if ($bot['next'] === $now) {
                 bot_checkin($bot, $log);
                 $bot['next'] = next_checkin($bot, $now);
+                $rankName = progression_rank((int) (progression_row(db(), $bot['id'])['skill'] ?? 1))['name'];
+                $rankAt[$bot['id']][$rankName] ??= round(($now - $start) / 86400, 1);
             }
         }
         unset($bot);
@@ -271,8 +294,13 @@ foreach (content_items() as $id => $item) {
 }
 
 $playersOut = db()->query(
-    'SELECT p.name, pp.profession_id, p.gold FROM players p JOIN player_professions pp ON pp.player_id = p.id ORDER BY p.id'
+    'SELECT p.id, p.name, pp.profession_id, p.gold, pp.skill FROM players p JOIN player_professions pp ON pp.player_id = p.id ORDER BY p.id'
 )->fetchAll();
+foreach ($playersOut as &$p) {
+    $p['style'] = current(array_filter($bots, fn($b) => $b['id'] === (int) $p['id']))['style'] ?? '';
+    $p['rank_days'] = $rankAt[(int) $p['id']] ?? [];
+}
+unset($p);
 
 $report = ['players' => $players, 'days' => $days, 'seed' => $seed, 'items' => $rows, 'players_final' => $playersOut, 'daily' => $daily, 'log' => $log];
 if (isset($opt['report'])) {
@@ -285,8 +313,10 @@ foreach ($rows as $r) {
     printf("%-17s %5d %6.1f %+4d%% %6s %7d %6d %4d %6d %6d\n", $r['item'], $r['base'], $r['final_ref'], $r['ref_change_pct'],
         $r['avg_sale'] === null ? '-' : number_format($r['avg_sale'], 1), $r['to_consumers'], $r['unmet_demand'], $r['p2p'], $r['to_traders'], $r['from_suppliers']);
 }
-echo "\nFinal gold by player:\n";
+echo "\nFinal gold, skill and day each rank was reached (time-to-rank, #30):\n";
 foreach ($playersOut as $p) {
-    printf("  %-14s %-14s %6d\n", $p['name'], $p['profession_id'], $p['gold']);
+    $ranks = implode(', ', array_map(fn($r, $d) => "$r day $d", array_keys($p['rank_days']), $p['rank_days']));
+    printf("  %-14s %-14s %-8s %6d  skill %3d  %s\n", $p['name'], $p['profession_id'], $p['style'], $p['gold'], $p['skill'], $ranks);
 }
+echo "\nOrders filled: " . json_encode($log['orders_filled']) . "\nRecipes learned: " . json_encode($log['learned']) . "\n";
 printf("\nGold in circulation: start %d -> end %d\n", $daily[0]['gold_total'] ?? 0, (int) db()->query('SELECT SUM(gold) FROM players')->fetchColumn());

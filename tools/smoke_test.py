@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
-Guildie API smoke test (M1 + 0.2.2). Exercises accounts, professions, gathering, crafting, the Exchange,
-the 0-gold path, Sell to guild, feedback, and (optionally) the NPC market tick, end to end.
+Guildie API smoke test. Exercises accounts, professions, gathering, crafting, the Exchange, the 0-gold path,
+Sell to guild, feedback, the City, trades, orders, the ticker, skill and XP, the guild trainer (0.8.0) and
+(optionally) the NPC market tick, end to end.
 
-    python3 tools/smoke_test.py URL [--tick "COMMAND"] [--feedback-key KEY]
+    python3 tools/smoke_test.py URL [--tick "COMMAND"] [--feedback-key KEY] [--player-tool "COMMAND"]
 
     URL             e.g. http://127.0.0.1:8080/games/guildie/api/index.php
     --tick          a shell command that forces one market tick (local testing only), e.g.
                     "php server/app/tick.php --force". Without it, market checks are skipped.
     --feedback-key  the server's config.php feedback_key, to check the private feedback page.
+    --player-tool   the test helper (local testing only), e.g. "php tools/test_player.php". Used to set a
+                    player's skill (rank-up check) and to turn a player into a pre-0.8.0 one (skill replay).
 
 Crafting checks wait for real craft timers, so for speed run the server with a content copy whose
 economy.json has a small pace.time_multiplier (e.g. 0.05). Creates throwaway smoke_* players.
@@ -28,6 +31,7 @@ BASE = args[0] if args and not args[0].startswith("--") else "http://127.0.0.1:8
 TICK = args[args.index("--tick") + 1] if "--tick" in args else None
 SUPPLIERS = "the guild suppliers"   # economy.json personas.suppliers.label (how NPC sellers are named)
 FEEDBACK_KEY = args[args.index("--feedback-key") + 1] if "--feedback-key" in args else None
+PLAYER_TOOL = args[args.index("--player-tool") + 1] if "--player-tool" in args else None
 failures = 0
 
 
@@ -120,7 +124,15 @@ check("choose alchemist", s == 200 and r["data"]["profession"]["id"] == "alchemi
 state = r["data"]
 station = {o["item_id"]: o for o in state["profession"]["station"]["outputs"]}
 check("station starts partly full", station["sunleaf"]["ready"] > 0, station)
-check("alchemist sees 4 recipes", len(state["profession"]["recipes"]) == 4, state["profession"]["recipes"])
+check("raw 2 is locked for a new player until skill 15 (#30)", "ember_moss" not in station
+      and state["profession"]["station"]["locked"] == [{"item_id": "ember_moss", "name": "Ember Moss", "unlock_skill": 15}], state["profession"]["station"])
+check("a new alchemist knows only the free starter recipe (#49)", [r["id"] for r in state["profession"]["recipes"]] == ["healing_draught"], state["profession"]["recipes"])
+prog = state["profession"].get("progress", {})
+check("starts at skill 1/100, Apprentice, Journeyman at 26, double XP waiting", prog.get("skill") == 1 and prog.get("max_skill") == 100
+      and prog.get("rank") == "Apprentice" and prog.get("next_rank") == {"name": "Journeyman", "at": 26} and prog.get("first_craft_bonus") is True
+      and prog.get("xp") == 0 and prog.get("xp_needed") == 22, prog)
+r0 = state["profession"]["recipes"][0]
+check("recipes show colour and XP per craft", r0.get("colour") == "orange" and r0.get("xp_each") == 10 and r0.get("discovered") is False, r0)
 s, r = call("choose_profession", {"profession_id": "blacksmith"}, token=tok_a)
 check("can't choose twice", s == 409, r)
 
@@ -140,18 +152,19 @@ check("other profession's recipe rejected", s == 400 and r["error"]["code"] == "
 s, r = call("start_craft", {"recipe_id": "healing_draught", "quantity": 999}, token=tok_a)
 check("batch over limit rejected", s == 400, r)
 s, r = call("start_craft", {"recipe_id": "steam_tonic", "quantity": 1}, token=tok_a)
+check("unknown recipe refused (#49)", s == 400 and r["error"]["code"] == "recipe_not_known", r)
+s, r = call("start_craft", {"recipe_id": "healing_draught", "quantity": 10}, token=tok_a)
 check("missing inputs rejected", s == 400 and r["error"]["code"] == "not_enough_items", r)
 
 batch = min(3, sunleaf // 2)
-s, r = call("start_craft", {"recipe_id": "healing_draught", "quantity": batch}, token=tok_a)
-check(f"start batch of {batch} healing draughts", s == 200 and len(r["data"]["crafts"]) == 1, r)
-check("inputs removed at start", have(r["data"], "sunleaf") == sunleaf - 2 * batch, r["data"]["inventory"])
+s, r = call("start_craft", {"recipe_id": "healing_draught", "quantity": batch - 1}, token=tok_a)
+check(f"start batch of {batch - 1} healing draughts", s == 200 and len(r["data"]["crafts"]) == 1, r)
+check("inputs removed at start", have(r["data"], "sunleaf") == sunleaf - 2 * (batch - 1), r["data"]["inventory"])
 s, r = call("collect_crafts", {}, token=tok_a)
 check("collect before done -> nothing_to_collect", s == 400 and r["error"]["code"] == "nothing_to_collect", r)
 
-ember = have(r.get("data", {}).get("state", {}) or call("get_state", token=tok_a)[1]["data"], "ember_moss")
-s, r = call("start_craft", {"recipe_id": "smelting_flux", "quantity": 1}, token=tok_a)
-check("second slot used for smelting flux", s == 200 and len(r["data"]["crafts"]) == 2, r)
+s, r = call("start_craft", {"recipe_id": "healing_draught", "quantity": 1}, token=tok_a)
+check("second slot used", s == 200 and len(r["data"]["crafts"]) == 2, r)
 s, r = call("start_craft", {"recipe_id": "healing_draught", "quantity": 1}, token=tok_a)
 check("third craft blocked: no free slot", s == 400 and r["error"]["code"] == "no_free_slot", r)
 
@@ -162,6 +175,16 @@ state = r["data"]["state"]
 check("draughts in inventory", have(state, "healing_draught") == batch, state["inventory"])
 check("slots free again", len(state["crafts"]) == 0, state["crafts"])
 check("activity recorded", any(a["type"] == "crafted" for a in state["activity"]), state["activity"])
+# XP (#30): 2 crafts x 10 XP, doubled (first of the day) = 40, then 1 x 10 = 10. First Healing Draught: +1 skill.
+# Skill 1 -> 2 (discovery), 40 XP -> 3 with 16 left, then 26 XP -> 4 with 0 left.
+pr = r["data"].get("progress") or {}
+check("collect pays XP: first batch of the day doubled, +1 skill on discovery", pr.get("xp") == (batch - 1) * 20 + 10
+      and pr.get("doubled") is True and pr.get("discoveries") == ["Healing Draught"] and pr.get("skill_from") == 1, pr)
+check("skill and XP stored on the server", state["profession"]["progress"]["skill"] == pr.get("skill_to")
+      and state["profession"]["progress"]["first_craft_bonus"] is False, state["profession"]["progress"])
+if batch == 3:
+    check("skill 1 -> 4 with 0 XP over (XP curve 20 x (1 + L/20)^2)", pr.get("skill_to") == 4 and state["profession"]["progress"]["xp"] == 0, (pr, state["profession"]["progress"]))
+check("skill-up in activity", any(a["type"] == "skill_up" and "Alchemist skill 1 → " in a["text"] for a in state["activity"]), state["activity"][:4])
 
 # ---------------------------------------------------------------- exchange
 name_b, pw_b, tok_b, r = register("b")
@@ -304,8 +327,9 @@ check("mastery sorted by crafts made", s == 200 and crafted == sorted(crafted, r
 s, r = call("players", {"sort": "beauty"}, token=tok_b)
 check("unknown sort rejected", s == 400, r)
 s, r = call("player_profile", {"player_id": id_a}, token=tok_b)
-check("profile of A: guild, crafts, recipes, can trade", s == 200 and r["data"]["profession"] == "Alchemist"
-      and r["data"]["crafted"] >= batch and r["data"]["recipes_known"] == 2 and r["data"]["recipes_total"] == 4 and r["data"]["can_trade"], r)
+check("profile of A: guild, skill, crafts, recipes, can trade", s == 200 and r["data"]["profession"] == "Alchemist" and r["data"]["skill"] >= 2
+      and r["data"]["rank_name"] == "Apprentice" and r["data"]["crafted"] >= batch and r["data"]["recipes_known"] == 1
+      and r["data"]["recipes_total"] == 4 and r["data"]["can_trade"], r)
 s, r = call("player_profile", {"player_id": id_b}, token=tok_b)
 check("own profile: can't trade with yourself", s == 200 and r["data"]["me"] and not r["data"]["can_trade"], r)
 s, r = call("player_profile", {"player_id": 999999999}, token=tok_b)
@@ -407,8 +431,13 @@ board = r["data"] if r.get("ok") else {}
 orders = board.get("orders", [])
 check("order board has 3 orders", s == 200 and len(orders) == 3, r)
 check("orders have items, a customer and a reward", all(o["items"] and o["customer"] and o["reward_gold"] > 0 for o in orders), orders)
-check("before 30 crafts: no bundle orders", all(o["kind"] in ("standard", "collector") for o in orders), [o["kind"] for o in orders])
+check("Apprentice: no bundle orders", all(o["kind"] in ("standard", "collector") for o in orders), [o["kind"] for o in orders])
 check("standard orders pay more than market value", all(o["reward_gold"] > 0 for o in orders), orders)
+check("orders pay XP (#30)", all(o["reward_xp"] > 0 for o in orders), [o.get("reward_xp") for o in orders])
+check("Apprentice orders only ask for goods you know or can learn now", all(i["item_id"] == "healing_draught" for o in orders for i in o["items"]),
+      [[i["item_id"] for i in o["items"]] for o in orders])
+rare_offers = [o["reward_recipe"]["id"] for o in orders if o.get("reward_recipe")]
+check("a rare recipe is offered at most once on a board (#49)", len(rare_offers) == len(set(rare_offers)), rare_offers)
 s, r = call("orders", token=tok_b)
 b_order = r["data"]["orders"][0]["id"] if r.get("ok") else 0
 s, r = call("order_fill", {"order_id": b_order}, token=tok_a)
@@ -432,6 +461,123 @@ check("6 board loads at once all succeed", all(s == 200 for s, _ in results), [s
 s, r = call("orders", token=tok_c)
 slots = [o["slot"] for o in r["data"]["orders"]] if r.get("ok") else []
 check("no duplicate orders from loads at the same moment", sorted(slots) == [0, 1, 2], slots)
+
+
+# ---------------------------------------------------------------- skill, XP and the guild trainer (#30, #49)
+def station_ready(tok, item_id):
+    s, r = call("get_state", token=tok)
+    return next((o["ready"] for o in r["data"]["profession"]["station"]["outputs"] if o["item_id"] == item_id), 0)
+
+
+def craft_and_collect(tok, recipe_id, qty):
+    s, r = call("start_craft", {"recipe_id": recipe_id, "quantity": qty}, token=tok)
+    if s != 200:
+        return s, r
+    wait_for_crafts(tok)
+    return call("collect_crafts", {}, token=tok)
+
+
+def wait_for_ore(tok, item_id, need, timeout=150):
+    """Collect from the station until the player has `need` of a raw (the CI pace makes 1 copper ore per ~6 s)."""
+    end = time.time() + timeout
+    while time.time() < end:
+        s, r = call("get_state", token=tok)
+        missing = need - have(r["data"], item_id)
+        if missing <= 0:
+            return True
+        if station_ready(tok, item_id) >= missing:
+            call("collect_station", {}, token=tok)
+            continue
+        time.sleep(3)
+    return False
+
+
+name_d, pw_d, tok_d, r = register("d")
+s, r = call("choose_profession", {"profession_id": "blacksmith"}, token=tok_d)
+st = r["data"]
+check("new blacksmith knows only Brass Fittings", [x["id"] for x in st["profession"]["recipes"]] == ["brass_fittings"], st["profession"]["recipes"])
+check("new blacksmith's mine yields copper only; iron ore at skill 15",
+      [o["item_id"] for o in st["profession"]["station"]["outputs"]] == ["copper_ore"]
+      and st["profession"]["station"]["locked"][0]["unlock_skill"] == 15, st["profession"]["station"])
+for rid, why in (("copper_lantern", "trainer"), ("iron_sword", "trainer"), ("arsenale_fittings", "rare")):
+    s, r = call("start_craft", {"recipe_id": rid, "quantity": 1}, token=tok_d)
+    check(f"can't craft unknown {rid}", s == 400 and r["error"]["code"] == "recipe_not_known" and why in r["error"]["message"], r)
+
+s, r = call("trainer", token=tok_d)
+tr = {x["id"]: x for x in r["data"]["recipes"]} if s == 200 else {}
+check("trainer lists all 6 blacksmith recipes", s == 200 and len(tr) == 6 and r["data"]["trainer"], r)
+check("trainer: Brass Fittings known (free starter)", tr.get("brass_fittings", {}).get("status") == "known" and tr["brass_fittings"]["starter"], tr.get("brass_fittings"))
+check("trainer: Copper Lantern at skill 6 for 50 ducats", tr.get("copper_lantern", {}).get("status") == "locked"
+      and tr["copper_lantern"]["skill"] == 6 and tr["copper_lantern"]["price"] == 50, tr.get("copper_lantern"))
+check("trainer: Iron Sword is Journeyman, 200 ducats", tr.get("iron_sword", {}).get("rank") == "Journeyman" and tr["iron_sword"]["price"] == 200, tr.get("iron_sword"))
+check("trainer shows other guilds' goods and the +25% trade bonus", tr.get("iron_ingot", {}).get("imports_from") == ["Alchemist"]
+      and next(i for i in tr["iron_ingot"]["inputs"] if i["item_id"] == "smelting_flux")["guild"] == "Alchemist"
+      and tr["iron_ingot"]["xp_each"] == 25 and tr["iron_ingot"]["colour"] == "orange", tr.get("iron_ingot"))
+check("trainer: rare recipes only from customers", tr.get("arsenale_fittings", {}).get("status") == "rare" and tr["arsenale_fittings"]["rare"], tr.get("arsenale_fittings"))
+
+for rid, code, label in (("copper_lantern", "skill_too_low", "skill too low"), ("arsenale_fittings", "rare_recipe", "rare recipe"),
+                         ("healing_draught", "wrong_profession", "another guild's recipe"), ("brass_fittings", "already_known", "already known"),
+                         ("dragon_blade", "unknown_recipe", "unknown recipe")):
+    s, r = call("learn_recipe", {"recipe_id": rid}, token=tok_d)
+    check(f"trainer refuses: {label}", s in (400, 409) and r["error"]["code"] == code, r)
+s, r = call("get_state", token=tok_d)
+check("refused lessons cost nothing", r["data"]["player"]["gold"] == 150, r["data"]["player"])
+
+call("collect_station", {}, token=tok_d)
+s, r = craft_and_collect(tok_d, "brass_fittings", 1)
+pr = r["data"].get("progress", {}) if s == 200 else {}
+check("first brass: 10 XP doubled = 20, +1 skill for the discovery -> skill 2", pr.get("xp") == 20 and pr.get("doubled") is True
+      and pr.get("skill_to") == 2 and r["data"]["state"]["profession"]["progress"]["xp"] == 20, r)
+s, r = craft_and_collect(tok_d, "brass_fittings", 6)
+pr = r["data"].get("progress", {}) if s == 200 else {}
+check("6 more: 60 XP, no double, no discovery -> skill 5", pr.get("xp") == 60 and pr.get("doubled") is False and not pr.get("discoveries")
+      and pr.get("skill_to") == 5, r)
+check("D: waiting for copper ore at the mine", wait_for_ore(tok_d, "copper_ore", 9), "timed out")
+s, r = craft_and_collect(tok_d, "brass_fittings", 3)
+check("3 more: skill 6", s == 200 and r["data"]["progress"]["skill_to"] == 6, r)
+brass = next(x for x in r["data"]["state"]["profession"]["recipes"] if x["id"] == "brass_fittings") if s == 200 else {}
+check("Brass Fittings turned yellow at skill 6 (60%: 6 XP)", brass.get("colour") == "yellow" and brass.get("xp_each") == 6, brass)
+
+s, r = call("learn_recipe", {"recipe_id": "copper_lantern"}, token=tok_d)
+check("learn Copper Lantern at the trainer", s == 200 and r["data"]["learned"]["price"] == 50
+      and r["data"]["state"]["player"]["gold"] == 100, r)
+check("lantern now known, orange, 10 XP", s == 200 and any(x["id"] == "copper_lantern" and x["colour"] == "orange" and x["xp_each"] == 10
+      for x in r["data"]["state"]["profession"]["recipes"]), r)
+check("lesson in activity", s == 200 and r["data"]["state"]["activity"][0]["type"] == "recipe_learned", r)
+s, r = call("learn_recipe", {"recipe_id": "copper_lantern"}, token=tok_d)
+check("can't buy the same recipe twice", s == 409 and r["error"]["code"] == "already_known", r)
+
+if PLAYER_TOOL:
+    # Rank-up (#30): one XP short of 26, then a green lantern (2 XP) makes a Journeyman.
+    subprocess.run(f"{PLAYER_TOOL} skill {name_d} 25", shell=True, check=True, capture_output=True)
+    s, r = craft_and_collect(tok_d, "copper_lantern", 1)
+    pr = r["data"].get("progress", {}) if s == 200 else {}
+    check("rank-up: Journeyman at 26", pr.get("skill_to") == 26 and pr.get("rank_up") == "Journeyman", r)
+    check("rank-up teaches the Journeyman starter free (Iron Ingot)", pr.get("learned") == ["Iron Ingot"]
+          and any(x["id"] == "iron_ingot" for x in r["data"]["state"]["profession"]["recipes"]), pr)
+    check("passing skill 15 opens iron ore at the mine", pr.get("unlocked") == ["Iron Ore"]
+          and not r["data"]["state"]["profession"]["station"]["locked"], r["data"]["state"]["profession"]["station"])
+    check("rank-up in activity", any(a["type"] == "rank_up" and "Journeyman Blacksmith" in a["text"] for a in r["data"]["state"]["activity"]), r["data"]["state"]["activity"][:5])
+    st = r["data"]["state"]["profession"]["progress"]
+    check("header data: Blacksmith 26/100 · Journeyman, Expert next at 51", st["skill"] == 26 and st["rank"] == "Journeyman"
+          and st["next_rank"] == {"name": "Expert", "at": 51}, st)
+
+    # Players from before 0.8.0 (#30): skill replayed from past crafts, every guild recipe kept, both raws kept.
+    subprocess.run(f"{PLAYER_TOOL} legacy {name_d}", shell=True, check=True, capture_output=True)
+    s, r = call("get_state", token=tok_d)
+    st = r["data"]["profession"]
+    check("legacy player: skill counted from past crafts", st["progress"]["skill"] == 6, st["progress"])
+    check("legacy player keeps every guild recipe (not the rare ones)", sorted(x["id"] for x in st["recipes"])
+          == ["brass_fittings", "copper_lantern", "iron_ingot", "iron_sword"], st["recipes"])
+    check("legacy player keeps both raws", [o["item_id"] for o in st["station"]["outputs"]] == ["copper_ore", "iron_ore"], st["station"])
+    check("legacy upgrade in activity", any(a["type"] == "skill_counted" for a in r["data"]["activity"]), r["data"]["activity"][:3])
+    s, r = call("start_craft", {"recipe_id": "iron_sword", "quantity": 1}, token=tok_d)
+    check("legacy player may craft a recipe above their skill", s == 400 and r["error"]["code"] == "not_enough_items", r)
+    s, r = call("get_state", token=tok_d)
+    check("the upgrade runs once", r["data"]["profession"]["progress"]["skill"] == 6
+          and sum(a["type"] == "skill_counted" for a in r["data"]["activity"]) == 1, r["data"]["activity"][:4])
+else:
+    print("SKIP  rank-up and pre-0.8.0 players (no --player-tool)")
 
 # ---------------------------------------------------------------- ticker (#45), news (#46), activity since (#47)
 s, r = call("market", token=tok_a)
@@ -526,7 +672,7 @@ if TICK:
     s, r = call("orders", token=tok_a)
     ready = [o for o in r["data"]["orders"] if o["arriving_in"] == 0]
     filled = False
-    for o in sorted(ready, key=lambda o: sum(i["quantity"] for i in o["items"])):
+    for o in sorted(ready, key=lambda o: (not o.get("reward_recipe"), sum(i["quantity"] for i in o["items"]))):
         ok = True
         for it in o["items"]:
             need = it["quantity"] - it["have"]
@@ -546,7 +692,20 @@ if TICK:
         s, r = call("order_fill", {"order_id": o["id"]}, token=tok_a)
         check("fill an order: paid its reward", s == 200 and r["data"]["state"]["player"]["gold"] == gold_before + o["reward_gold"], r)
         check("filled order is replaced by a customer on the way", s == 200 and any(x["arriving_in"] > 0 for x in r["data"]["board"]["orders"]), r)
-        check("order shows in activity", s == 200 and r["data"]["state"]["activity"][0]["type"] == "order_filled", r)
+        check("order shows in activity", s == 200 and any(a["type"] == "order_filled" for a in r["data"]["state"]["activity"][:4]), r)
+        fp = r["data"]["filled"].get("progress", {}) if s == 200 else {}
+        check("filling an order pays the XP it showed (#30)", fp.get("xp") == o["reward_xp"] and fp.get("xp", 0) > 0, (fp, o.get("reward_xp")))
+        if o.get("reward_recipe"):
+            rid = o["reward_recipe"]["id"]
+            check("the customer taught the rare recipe (#49)", fp.get("taught") == o["reward_recipe"]["name"]
+                  and rid in [x["id"] for x in r["data"]["state"]["profession"]["recipes"]], (fp, o["reward_recipe"]))
+            check("rare recipe in activity", any(a["type"] == "recipe_taught" for a in r["data"]["state"]["activity"][:5]), r["data"]["state"]["activity"][:5])
+            s2, t = call("trainer", token=tok_a)
+            check("trainer lists the rare recipe as known", s2 == 200 and next(x for x in t["data"]["recipes"] if x["id"] == rid)["status"] == "known", t)
+            s2, b2 = call("orders", token=tok_a)
+            check("no order offers a rare recipe you already know", all((x.get("reward_recipe") or {}).get("id") != rid for x in b2["data"]["orders"]), b2)
+        else:
+            print("SKIP  rare recipe from an order (none offered: the CI content sets rare_recipe_chance to 1)")
         s, r = call("order_fill", {"order_id": o["id"]}, token=tok_a)
         check("can't fill the same order twice", s == 409, r)
         filled = True
@@ -555,7 +714,7 @@ if TICK:
         print("SKIP  fill an order (couldn't afford any order's items from the suppliers)")
 
     # Exploit guard (0.5.1): no order may be worth more than buying its items from the Guild Suppliers.
-    # Restock first: filling an order above can buy a supplier's whole stock of an item (then it has no price).
+    # (A tick first: filling the order above may have bought the suppliers' whole stock of that item.)
     subprocess.run(TICK, shell=True, check=True, capture_output=True)
     s, mk = call("market", token=tok_a)
     usual = {i["item_id"]: i["usual"] for i in mk["data"]["items"]}

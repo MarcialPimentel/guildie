@@ -12,6 +12,30 @@
     "slots": 2,
     "max_batch": 10
   },
+  "progression": {
+    "_comment": "Skill 1-100 and XP (#30, professions.md 5). ranks: where each rank starts. Recipe XP per craft and trainer prices are by the recipe's rank (same order as ranks). colours: a recipe learned at skill S gives factor x XP while your skill is below S + below (WoW-style orange, yellow, green, then grey = 0). trade_bonus: extra XP share for recipes that use another guild's goods. first_craft_of_day: XP multiplier for the first finished batch collected each day (UTC). discovery_skill: skill gained the first time you craft a recipe. XP to go from level L to L+1 = xp_base x (1 + L / xp_scale)^2. Every number is [tune].",
+    "max_skill": 100,
+    "ranks": [
+      { "id": "apprentice", "name": "Apprentice", "from": 1 },
+      { "id": "journeyman", "name": "Journeyman", "from": 26 },
+      { "id": "expert", "name": "Expert", "from": 51 },
+      { "id": "master", "name": "Master", "from": 76 }
+    ],
+    "recipe_xp_by_rank": [10, 20, 40, 80],
+    "trainer_price_by_rank": [50, 200, 800, 3000],
+    "colours": [
+      { "id": "orange", "below": 5, "factor": 1.0 },
+      { "id": "yellow", "below": 12, "factor": 0.6 },
+      { "id": "green", "below": 20, "factor": 0.2 },
+      { "id": "grey", "below": 1000, "factor": 0 }
+    ],
+    "trade_bonus": 0.25,
+    "first_craft_of_day": 2,
+    "discovery_skill": 1,
+    "xp_base": 20,
+    "xp_scale": 20,
+    "bundle_orders_rank": "journeyman"
+  },
   "exchange": {
     "durations_hours": [
       12,

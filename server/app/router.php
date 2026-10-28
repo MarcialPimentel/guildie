@@ -42,6 +42,8 @@ function guildie_actions(): array
         'order_fill'        => [['POST'],        true,  'action_order_fill'],
         'order_skip'        => [['POST'],        true,  'action_order_skip'],
         'news'              => [['GET'],         true,  'action_news'],
+        'trainer'           => [['GET'],         true,  'action_trainer'],
+        'learn_recipe'      => [['POST'],        true,  'action_learn_recipe'],
         // The living city (0.9.0, docs/living-city.md)
         'presence_token'    => [['GET', 'POST'], true,  'action_presence_token'],
         'city_prefs'        => [['POST'],        true,  'action_city_prefs'],
@@ -189,6 +191,17 @@ function action_order_skip(array $body, ?int $playerId): array
 function action_news(array $body, ?int $playerId): array
 {
     return ['news' => calendar_news(game_now())];
+}
+
+function action_trainer(array $body, ?int $playerId): array
+{
+    return trainer_list($playerId);
+}
+
+function action_learn_recipe(array $body, ?int $playerId): array
+{
+    $learned = trainer_learn($playerId, body_string($body, 'recipe_id'));
+    return ['learned' => $learned, 'trainer' => trainer_list($playerId), 'state' => player_state($playerId)];
 }
 
 function action_sell_to_guild(array $body, ?int $playerId): array
@@ -340,6 +353,9 @@ function guildie_handle_request(): void
         }
 
         $playerId = $needsLogin ? require_player_id() : null;
+        if ($playerId !== null) {
+            progression_ensure($playerId);   // players from before 0.8.0: count their skill once
+        }
         $data = $handler($body, $playerId);
         if (isset($data['_html'])) {
             http_response_code(200);

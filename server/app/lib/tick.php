@@ -77,7 +77,8 @@ function tick_work(PDO $pdo, int $now, int $elapsed): array
     $pdo->exec('DELETE FROM login_failures WHERE attempted_at < UTC_TIMESTAMP() - INTERVAL 1 DAY');
     $pdo->prepare('DELETE FROM sessions WHERE last_seen_at < UTC_TIMESTAMP() - INTERVAL ? DAY')->execute([SESSION_IDLE_DAYS]);
     $expiredOffers = offers_expire($pdo, $now);
-    return market_tick($pdo, $now, $elapsed) + ['offers_expired' => $expiredOffers];
+    $upgraded = progression_upgrade_pending($pdo);
+    return market_tick($pdo, $now, $elapsed) + ['offers_expired' => $expiredOffers, 'players_upgraded' => $upgraded];
 }
 
 /** Status for the ping endpoint, so the tick can be checked from a browser. */

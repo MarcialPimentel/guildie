@@ -96,7 +96,7 @@ function Players({ open }: { open: (id: number) => void }) {
               <span class="grow">
                 <span class={p.me ? 'accent' : ''}>{p.name}{p.me ? ' (you)' : ''}</span>
                 {p.title && <span class="accent small" style={{ display: 'block' }} data-testid="title">{p.title}</span>}
-                <span class="muted small" style={{ display: 'block' }}>{p.profession} · {seen(p.seen_ago)}</span>
+                <span class="muted small" style={{ display: 'block' }}>{p.profession} {p.skill} · {p.rank_name} · {seen(p.seen_ago)}</span>
               </span>
               <span class={`col-num num ${sort === 'wealth' ? '' : 'muted'}`}><Coins n={p.gold} /></span>
               <span class={`col-num num ${sort === 'mastery' ? '' : 'muted'}`}>{p.crafted}</span>
@@ -131,7 +131,7 @@ function ProfileView({ id, back, trade, extra }: { id: number; back: (() => void
       <section class="card">
         <h1>{p.name}{p.me ? ' (you)' : ''}</h1>
         {p.title && <p class="accent">{p.title}: the richest crafter in the city</p>}
-        <p class="muted">{p.profession} · {seen(p.seen_ago)}</p>
+        <p class="muted" data-testid="profile-skill">{p.profession} {p.skill}/100 · {p.rank_name} · {seen(p.seen_ago)}</p>
         <div class="stats">
           <div><div class="label">Ducats</div><div class="value num"><Coins n={p.gold} /></div></div>
           <div><div class="label">Crafts made</div><div class="value num">{p.crafted}</div></div>

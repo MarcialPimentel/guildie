@@ -1,5 +1,5 @@
 {
-  "_comment": "Order board (#44, professions.md section 2). Customers who post orders in each player's Workshop. 'kinds' says which order types a customer posts: standard (your own goods), bundle (your goods plus another guild's; from 'bundle_min_crafts' crafts made, a stand-in for Journeyman until skill ranks arrive), collector (one item at a high price). Lines use {items} for what's asked. Rewards are priced from each item's usual value; reward_multiplier is the WHOLE reward (gold + any rare material at its usual value) and must stay below market.ceiling_multiplier, so orders can't be filled at a profit from the Guild Suppliers (validator rule). Collectors get a guaranteed rare material instead of a big gold multiple (until quality tiers let them ask for Masterwork goods suppliers don't sell). Every number is [tune].",
+  "_comment": "Order board (#44, professions.md section 2). Customers who post orders in each player's Workshop. 'kinds' says which order types a customer posts: standard (your own goods), bundle (your goods plus another guild's; from Journeyman, economy.progression.bundle_orders_rank), collector (one item at a high price). Lines use {items} for what's asked. Rewards are priced from each item's usual value; reward_multiplier is the WHOLE reward (gold + any rare material at its usual value) and must stay below market.ceiling_multiplier, so orders can't be filled at a profit from the Guild Suppliers (validator rule). Collectors get a guaranteed rare material instead of a big gold multiple (until quality tiers let them ask for Masterwork goods suppliers don't sell). XP (0.8.0): an order pays xp_multiplier x the recipe XP of every item asked (by the rank of the recipe that makes it), with no fall-off, so orders are the best XP for the time. rare_recipe_chance: chance that an order also teaches one of your guild's rare recipes you don't know yet, learnable up to rare_recipe_reach skill above yours. Every number is [tune].",
   "settings": {
     "board_size": 3,
     "deadline_hours_min": 2,
@@ -9,14 +9,16 @@
     "target_value_min": 50,
     "target_value_max": 140,
     "max_quantity": 5,
-    "bundle_min_crafts": 30,
-    "bundle_chance": 0.35,
+        "bundle_chance": 0.35,
     "collector_chance": 0.08,
     "collector_chance_sunday": 0.25,
     "reward_multiplier": { "standard": 1.35, "bundle": 1.45, "collector": 1.45 },
     "rare_material_chance": { "standard": 0.3, "bundle": 0.5, "collector": 1.0 },
     "rare_material_max": 3,
-    "max_rare_share": 0.4
+    "max_rare_share": 0.4,
+    "xp_multiplier": { "standard": 3, "bundle": 3, "collector": 4 },
+    "rare_recipe_chance": { "standard": 0.04, "bundle": 0.1, "collector": 0.25 },
+    "rare_recipe_reach": 10
   },
   "customers": [
     { "id": "lady_ashworth", "name": "Donna Vittoria", "kinds": ["standard", "bundle"], "line": "Needs {items} before tonight's ball at the palazzo. Discretion appreciated." },

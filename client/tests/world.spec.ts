@@ -48,6 +48,11 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await expect(page.locator(id('world-label-workbench'))).toContainText('ready', { timeout: 60_000 })
   await page.click(id('collect-crafts'))
   await expect(page.locator(id('crafts'))).not.toContainText('Brass Fittings ×1')
+  await expect(page.locator(id('skill'))).toHaveText('Blacksmith 2/100 · Apprentice')   // 0.8.0: skill and XP
+  // The guild trainer opens inside the workbench panel (0.8.0, #49).
+  await page.click(id('trainer-open'))
+  await expect(page.locator(id('lesson-copper_lantern'))).toContainText('Learn from skill 6')
+  await page.click(id('trainer-close'))
 
   // Every other place opens its screen.
   await page.click(id('dock-orders'))
