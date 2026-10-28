@@ -339,7 +339,7 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
   - **Guild Workshops** *(added in M1)*: a little demand for every component, so making components is never a dead end even before other players need them.
   - **Traders:** buy anything players list at 0.8 × R or less within a tick ("quick sale"), resell some near R, consume the rest.
   - **Guild Suppliers:** always offer 5 of every item at the ceiling (1.5 × R).
-- **Pricing by scarcity** *(M1)*: for goods NPCs consume, R rises when demand goes unmet and eases down only when all demand was met and a glut is left over. For raw materials, R follows player trade prices. This stops undercutting alone from dragging prices down while the city still wants more.
+- **Pricing by scarcity** *(M1)*: for goods NPCs consume, R rises when demand goes unmet and eases down only when all demand was met and a glut is left over. For raw materials, R follows player trade prices: the **median** of the last day's trades, each clamped to the NPC band around the usual value, and only when at least 2 different sellers and 2 different buyers traded (`market.trade_signal_min_traders`); otherwise it drifts back to usual (0.5.1, so two friends wash-trading at 20× move nothing). This stops undercutting alone from dragging prices down while the city still wants more.
 - **Demand scales with active players** *(simple version pulled forward from M3)*: NPC demand rates are written for 8 active players and scale with the number active in the last day (minimum 25%), so 3 friends and 30 strangers both get a balanced market.
 - Full player-volume scaling per item stays in M3.
 
@@ -367,6 +367,7 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 - From Journeyman on, an order can be a **bundle of several items, including other guilds' goods**.
 - Each order has a deadline in hours. Skipping one has a cooldown.
 - Fulfilling **removes the items** (consumed: a sink) and pays rewards the market can't give: XP, rare materials (sometimes another guild's), and **rare recipes**, the only way to get some recipes.
+- **Rewards are priced from each item's usual value** (0.5.1). The *whole* reward (gold plus any rare material at its usual value) is `reward_multiplier` × that value. The validator keeps this below `market.ceiling_multiplier`, and the **Guild Suppliers never sell below ceiling × usual**, so an order can never be filled at a profit from supplier stock.
 
 Player-posted orders are in the backlog.
 

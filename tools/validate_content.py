@@ -124,8 +124,19 @@ for c in orders.get("customers", []):
 for kind in kinds:
     if not any(kind in c.get("kinds", []) for c in orders.get("customers", [])):
         err(f"orders: no customer posts {kind!r} orders")
-    if kind not in orders.get("settings", {}).get("reward_multiplier", {}):
+    os_ = orders.get("settings", {})
+    if kind not in os_.get("reward_multiplier", {}):
         err(f"orders: settings.reward_multiplier needs {kind!r}")
+    # Exploit guard (0.5.1): a whole order reward must be worth less than buying the items from the
+    # Guild Suppliers (ceiling x usual value), or players fill orders from supplier stock for profit.
+    elif not (1 <= os_["reward_multiplier"][kind] < economy.get("market", {}).get("ceiling_multiplier", 0)):
+        err(f"orders: reward_multiplier.{kind} must be at least 1 and below market.ceiling_multiplier "
+            f"({economy.get('market', {}).get('ceiling_multiplier')}), or orders can be filled at a profit from the Guild Suppliers")
+    if not (0 <= os_.get("rare_material_chance", {}).get(kind, -1) <= 1):
+        err(f"orders: settings.rare_material_chance.{kind} must be between 0 and 1")
+
+if not (0 <= orders.get("settings", {}).get("max_rare_share", -1) < 1):
+    err("orders: settings.max_rare_share must be between 0 and 1 (the share of a reward paid as rare materials)")
 
 calendar = load("calendar.json")
 days = sorted(d.get("day") for d in calendar.get("week", []))

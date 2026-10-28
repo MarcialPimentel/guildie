@@ -260,6 +260,12 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.5.1 (exploit fixes)
+
+Fully automatic, with no database changes. The ping URL shows `"build":"0.5.1 (build …)"` and `"schema":5`. Orders already on boards keep the reward they were created with; new orders use the new pricing.
+
+---
+
 ## Deploying 0.5.0 (order board, market ticker, news, surprises)
 
 Fully automatic. The server adds its new tables by itself (migration `005`: orders, price history, world events). No SiteGround steps.

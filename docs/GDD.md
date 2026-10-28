@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M2 in progress (build 0.5.0)
+**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M2 in progress (build 0.5.1)
 **Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -679,6 +679,8 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-28 | M2 step 1 (the fun core) ships on its own as 0.5.0 | Marz asked to ship it, so the fun bets get playtested before the content is built |
 | 2026-10-28 | Until skill ranks exist, bundle orders unlock at 30 crafts made (standing in for Journeyman); collectors are rare high-paying orders (more on Sunday) | Lets 0.5.0 test bundle orders and collectors without waiting for step 2 |
 | 2026-10-28 | "While you were away" shows after 15 minutes away, even if nothing happened | Predictable; a quiet summary still tells the player the world kept going |
+| 2026-10-28 | Order rewards are priced from usual value and stay below the Guild Suppliers' price (whole reward ≤ 1.45× value, rare material included); suppliers never sell below 1.5× usual; collectors pay a guaranteed rare material instead of 3× gold | 0.5.1 exploit fix: collector (3×) and bundle (1.7×) orders could be filled with supplier stock (1.5×) for free gold. Collectors can pay big again once they ask for Fine/Masterwork goods that suppliers don't sell (quality tiers, M2) |
+| 2026-10-28 | Raw prices follow the median of trades clamped to the NPC band, counted only with 2+ different sellers and buyers | 0.5.1 exploit fix: two friends trading one unit at 20× could pin a raw's price at its cap, then sell raws to Traders at the inflated price |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---

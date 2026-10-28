@@ -168,14 +168,19 @@ function market_traders(PDO $pdo, int $now, array $refs, array &$stats): void
     }
 }
 
-/** Guild Suppliers: keep a small stock of every item at the ceiling price. */
+/**
+ * Guild Suppliers: keep a small stock of every item at the ceiling price. They never sell below
+ * ceiling x the item's USUAL value, even when today's price has dipped, so supplier stock can't be
+ * used to fill orders (priced from usual value) at a profit (0.5.1).
+ */
 function market_suppliers(PDO $pdo, int $now, array $refs): void
 {
     $ceiling = (float) econ('market.ceiling_multiplier', 1.5);
     $stockSize = (int) econ('market.ceiling_stock', 5);
 
     foreach ($refs as $itemId => $ref) {
-        $price = max(1, (int) ceil($ref * $ceiling));
+        $usual = (float) (content_item($itemId)['reference_value'] ?? $ref);
+        $price = max(1, (int) ceil(max($ref, $usual) * $ceiling));
         $stmt = $pdo->prepare("SELECT id FROM listings WHERE status = 'active' AND item_id = ? AND seller_persona = 'suppliers' ORDER BY id LIMIT 1 FOR UPDATE");
         $stmt->execute([$itemId]);
         $id = $stmt->fetchColumn();
@@ -189,6 +194,48 @@ function market_suppliers(PDO $pdo, int $now, array $refs): void
             )->execute([$itemId, $stockSize, $stockSize, $price, $now, $now + 48 * 3600]);
         }
     }
+}
+
+/**
+ * What players have been paying for an item, for raw materials' price drift (0.5.1). Resistant to
+ * wash trading:
+ *   - each trade's price is clamped to the NPC band around the item's USUAL value (floor..ceiling),
+ *   - the result is the quantity-weighted MEDIAN, not the mean,
+ *   - it only counts when at least trade_signal_min_traders different sellers AND buyers traded;
+ *     otherwise null (the price just drifts back to usual).
+ * So two friends trading one unit at 20x between themselves move nothing.
+ */
+function market_trade_signal(PDO $pdo, string $itemId, int $since, float $usual): ?float
+{
+    $stmt = $pdo->prepare(
+        'SELECT unit_price, quantity, seller_player_id, buyer_player_id, buyer_persona FROM trades
+         WHERE item_id = ? AND created_at >= ? AND seller_player_id IS NOT NULL'
+    );
+    $stmt->execute([$itemId, $since]);
+    $rows = $stmt->fetchAll();
+    $min = max(1, (int) econ('market.trade_signal_min_traders', 2));
+    $sellers = array_unique(array_column($rows, 'seller_player_id'));
+    $buyers = array_unique(array_map(fn($r) => $r['buyer_player_id'] !== null ? 'p' . $r['buyer_player_id'] : 'n' . $r['buyer_persona'], $rows));
+    if (count($sellers) < $min || count($buyers) < $min) {
+        return null;
+    }
+    $lo = $usual * (float) econ('market.floor_multiplier', 0.6);
+    $hi = $usual * (float) econ('market.ceiling_multiplier', 1.5);
+    $points = [];
+    $total = 0;
+    foreach ($rows as $r) {
+        $points[] = [min($hi, max($lo, (float) $r['unit_price'])), (int) $r['quantity']];
+        $total += (int) $r['quantity'];
+    }
+    usort($points, fn($a, $b) => $a[0] <=> $b[0]);
+    $seen = 0;
+    foreach ($points as [$price, $qty]) {
+        $seen += $qty;
+        if ($seen * 2 >= $total) {
+            return $price;
+        }
+    }
+    return null;
 }
 
 /** Save every item's price at this tick for the ticker's sparklines; keep 8 days. */
@@ -272,10 +319,6 @@ function market_drift(PDO $pdo, int $now, int $elapsed, array $refs, array $stat
         }
     }
 
-    $tradeAvg = $pdo->prepare(
-        "SELECT SUM(quantity * unit_price) / SUM(quantity) FROM trades
-         WHERE item_id = ? AND created_at >= ? AND seller_player_id IS NOT NULL"
-    );
     $glut = $pdo->prepare(
         "SELECT COALESCE(SUM(quantity), 0) FROM listings
          WHERE status = 'active' AND item_id = ? AND seller_player_id IS NOT NULL AND unit_price <= ?"
@@ -299,10 +342,9 @@ function market_drift(PDO $pdo, int $now, int $elapsed, array $refs, array $stat
                 }
             }
         } else {
-            $tradeAvg->execute([$itemId, $now - 86400]);
-            $avg = $tradeAvg->fetchColumn();
-            $traded = $avg !== null && $avg !== false;
-            $target = $traded ? (float) $avg : $base;
+            $avg = market_trade_signal($pdo, $itemId, $now - 86400, $usual);
+            $traded = $avg !== null;
+            $target = $traded ? $avg : $base;
             $new = $ref + ($traded ? $factor : $factor * 0.25) * ($target - $ref);
         }
 

@@ -68,6 +68,7 @@
     "reversion_per_hour": 0.1,
     "noise_per_hour": 0.02,
     "hot_percent": 15,
+    "trade_signal_min_traders": 2,
     "demand_min_scale": 0.25
   },
   "personas": {
