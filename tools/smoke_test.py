@@ -448,6 +448,55 @@ check("activity since a time (return screen)", s == 200 and len(r["data"]["activ
 s, r = call("activity", token=tok_a, query="&since=4000000000")
 check("nothing happened in the future", s == 200 and r["data"]["activity"] == [], r)
 
+# ---------------------------------------------------------------- the living city (0.9.0): presence pass, friends, quarters
+s, r = call("presence_token", token=tok_a)
+pt = r["data"] if r.get("ok") else {}
+check("presence pass: who I am (guild, look, slaps on by default)", s == 200 and pt["me"]["id"] == id_a
+      and pt["me"]["profession"] == "alchemist" and 0 <= pt["me"]["look"] < 6 and pt["me"]["slaps"] is True, r)
+if pt.get("enabled"):
+    import base64, hashlib, hmac
+    body64, sig = pt["token"].split(".")
+    claims = json.loads(base64.urlsafe_b64decode(body64 + "=" * (-len(body64) % 4)))
+    check("presence pass carries name, guild and a 10-minute expiry", claims["pid"] == id_a and claims["n"] == name
+          and claims["p"] == "alchemist" and 0 < claims["exp"] - time.time() <= 600, claims)
+    check("presence pass has a realtime url", pt["url"].startswith(("ws://", "wss://")), pt)
+else:
+    print("SKIP  presence pass signature (no realtime_url/realtime_secret in config.php)")
+s, r = call("presence_token", token=register("np")[2])
+check("no presence pass before joining a guild", s == 409, r)
+s, r = call("city_prefs", {"slaps": False}, token=tok_a)
+check("turn slaps off", s == 200 and r["data"]["slaps"] is False, r)
+s, r = call("presence_token", token=tok_a)
+check("the pass says slaps are off", s == 200 and r["data"]["me"]["slaps"] is False, r)
+s, r = call("city_prefs", {"slaps": "no"}, token=tok_a)
+check("slaps must be true or false", s == 400, r)
+call("city_prefs", {"slaps": True}, token=tok_a)
+
+s, r = call("friend_add", {"player_id": id_b}, token=tok_a)
+check("add a friend", s == 200 and [f["id"] for f in r["data"]["friends"]] == [id_b] and r["data"]["friends"][0]["friend"], r)
+s, r = call("friend_add", {"player_id": id_b}, token=tok_a)
+check("adding twice is harmless", s == 200 and len(r["data"]["friends"]) == 1, r)
+s, r = call("friend_add", {"player_id": id_a}, token=tok_a)
+check("can't friend yourself", s == 400, r)
+s, r = call("friend_add", {"player_id": 999999999}, token=tok_a)
+check("can't friend an unknown player", s == 404, r)
+s, r = call("player_profile", {"player_id": id_b}, token=tok_a)
+check("profile says they're a friend", s == 200 and r["data"]["friend"] is True and r["data"]["profession_id"] == "blacksmith", r)
+s, r = call("quarter", {"quarter": "leatherworker"}, token=tok_a)
+stalls = r["data"]["stalls"] if r.get("ok") else []
+check("a friend's stall comes first in every quarter, whatever their guild", s == 200 and stalls and stalls[0]["id"] == id_b
+      and stalls[0]["friend"], [st.get("name") for st in stalls])
+check("the Tanners' quarter lists tanners after friends", all(st["profession_id"] == "leatherworker" for st in stalls[1:]), stalls)
+check("quarter has a name and at most 12 stalls", r["data"]["name"].startswith("Tanners") and len(stalls) <= 12, r)
+s, r = call("quarter", {"quarter": "alchemist"}, token=tok_a)
+mine = [st for st in r["data"]["stalls"] if st["me"]] if r.get("ok") else []
+check("you have a stall in your own guild's quarter, with an echo of what you did lately", mine and mine[0]["echo"]
+      and mine[0]["echo"]["ago"] <= 1800 and mine[0]["echo"]["text"], mine)
+s, r = call("quarter", {"quarter": "wizards"}, token=tok_a)
+check("unknown quarter rejected", s == 400, r)
+s, r = call("friend_remove", {"player_id": id_b}, token=tok_a)
+check("remove a friend", s == 200 and r["data"]["friends"] == [], r)
+
 # ---------------------------------------------------------------- npc market (local only)
 if TICK:
     subprocess.run(TICK, shell=True, check=True, capture_output=True)
@@ -506,6 +555,8 @@ if TICK:
         print("SKIP  fill an order (couldn't afford any order's items from the suppliers)")
 
     # Exploit guard (0.5.1): no order may be worth more than buying its items from the Guild Suppliers.
+    # Restock first: filling an order above can buy a supplier's whole stock of an item (then it has no price).
+    subprocess.run(TICK, shell=True, check=True, capture_output=True)
     s, mk = call("market", token=tok_a)
     usual = {i["item_id"]: i["usual"] for i in mk["data"]["items"]}
     supplier_price = {}
@@ -534,6 +585,41 @@ if TICK:
     check("wash trade doesn't pump the raw price", s == 200 and r["data"]["reference"] <= usual_cu * 1.5, (usual_cu, r["data"].get("reference")))
 else:
     print("SKIP  market tick checks (no --tick command)")
+
+# ---------------------------------------------------------------- the Duke's order (0.9.0)
+s, r = call("duke_order", token=tok_a)
+duke = r["data"] if r.get("ok") else {}
+check("the Duke's order: open, with lines from at least two guilds", s == 200 and duke["status"] == "open"
+      and len({l["guild"] for l in duke["lines"]}) >= 2 and duke["seconds_left"] > 0, r)
+line = duke["lines"][0] if duke.get("lines") else {}
+s, mi = call("market_item", {"item_id": line.get("item_id", "")}, token=tok_a)
+usual_line = mi["data"]["usual"] if mi.get("ok") else 0
+sup = [l for l in mi["data"]["listings"] if l["is_npc"] and l["seller"] == SUPPLIERS] if mi.get("ok") else []
+check("Duke pays 1.25 x usual now, 0.15 x on completion", line.get("unit_pay") == int(usual_line * 1.25)
+      and line.get("unit_bonus") == int(usual_line * 0.15), (line, usual_line))
+check("Duke's whole reward is below the suppliers' price (no supplier profit)",
+      sup and line["unit_pay"] + line["unit_bonus"] < min(l["unit_price"] for l in sup), (line, sup[:1]))
+s, r = call("duke_contribute", {"item_id": line.get("item_id", ""), "quantity": 1}, token=tok_c)
+if line.get("item_id") and r.get("error", {}).get("code") == "not_enough_items":
+    check("can't give what you don't have", True)
+if sup:
+    call("buy_listing", {"listing_id": sup[0]["id"], "quantity": 2}, token=tok_c)
+    s, before = call("get_state", token=tok_c)
+    s, r = call("duke_contribute", {"item_id": line["item_id"], "quantity": 2}, token=tok_c)
+    given = r["data"]["given"] if r.get("ok") else {}
+    check("give 2 to the Duke: paid at once, items gone", s == 200 and given["quantity"] == 2 and given["paid"] == int(2 * usual_line * 1.25)
+          and r["data"]["state"]["player"]["gold"] == before["data"]["player"]["gold"] + given["paid"]
+          and have(r["data"]["state"], line["item_id"]) == have(before["data"], line["item_id"]) - 2, r)
+    b = r["data"]["board"] if r.get("ok") else {}
+    check("the public board lists you as a helper", s == 200 and any(h["me"] and h["items"] >= 2 for h in b["helpers"]), b.get("helpers"))
+    check("the line counts your goods", s == 200 and b["lines"][0]["delivered"] >= 2 and b["lines"][0]["mine"] >= 2, b.get("lines"))
+    check("the gift shows in activity", s == 200 and r["data"]["state"]["activity"][0]["type"] == "duke_contributed", r)
+s, r = call("duke_contribute", {"item_id": "copper_ore", "quantity": 1}, token=tok_c)
+check("the Duke doesn't want raw ore", s == 400, r)
+with ThreadPoolExecutor(max_workers=4) as pool:
+    results = list(pool.map(lambda _: call("duke_order", token=tok_b), range(4)))
+check("4 board loads at once: one order, no errors", all(st == 200 for st, _ in results)
+      and len({x["data"]["id"] for _, x in results}) == 1, [st for st, _ in results])
 
 s, r = call("logout", {}, token=tok_a)
 s, r = call("get_state", token=tok_a)

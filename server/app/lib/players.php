@@ -124,6 +124,8 @@ function player_profile(int $viewerId, int $playerId): array
         'me'             => (int) $p['id'] === $viewerId,
         'title'          => (int) $p['id'] === players_factotum_id($pdo) ? city_top_title() : null,
         'can_trade'      => (int) $p['id'] !== $viewerId && player_profession_id($pdo, $viewerId) !== null,
+        'friend'         => in_array((int) $p['id'], friends_ids($pdo, $viewerId), true),
+        'profession_id'  => $p['profession_id'],
         'listings'       => array_map(fn($l) => [
             'id'         => (int) $l['id'],
             'item_id'    => $l['item_id'],

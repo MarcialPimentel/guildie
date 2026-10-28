@@ -42,6 +42,15 @@ function guildie_actions(): array
         'order_fill'        => [['POST'],        true,  'action_order_fill'],
         'order_skip'        => [['POST'],        true,  'action_order_skip'],
         'news'              => [['GET'],         true,  'action_news'],
+        // The living city (0.9.0, docs/living-city.md)
+        'presence_token'    => [['GET', 'POST'], true,  'action_presence_token'],
+        'city_prefs'        => [['POST'],        true,  'action_city_prefs'],
+        'quarter'           => [['GET', 'POST'], true,  'action_quarter'],
+        'friends'           => [['GET'],         true,  'action_friends'],
+        'friend_add'        => [['POST'],        true,  'action_friend_add'],
+        'friend_remove'     => [['POST'],        true,  'action_friend_remove'],
+        'duke_order'        => [['GET'],         true,  'action_duke_order'],
+        'duke_contribute'   => [['POST'],        true,  'action_duke_contribute'],
     ];
 }
 
@@ -247,6 +256,55 @@ function action_offer_cancel(array $body, ?int $playerId): array
 {
     offer_cancel($playerId, body_int($body, 'offer_id', 0, 1, PHP_INT_MAX));
     return ['offers' => offers_list($playerId), 'state' => player_state($playerId)];
+}
+
+// ---------------------------------------------------------------- the living city (0.9.0)
+
+function action_presence_token(array $body, ?int $playerId): array
+{
+    return city_presence_token($playerId);
+}
+
+function action_city_prefs(array $body, ?int $playerId): array
+{
+    if (!isset($body['slaps']) || !is_bool($body['slaps'])) {
+        throw new ApiError('bad_request', "Field 'slaps' must be true or false.");
+    }
+    return city_set_prefs($playerId, $body['slaps']);
+}
+
+function action_quarter(array $body, ?int $playerId): array
+{
+    $quarter = isset($body['quarter']) ? body_string($body, 'quarter') : (string) ($_GET['quarter'] ?? '');
+    return city_quarter($playerId, $quarter);
+}
+
+function action_friends(array $body, ?int $playerId): array
+{
+    return friends_list($playerId);
+}
+
+function action_friend_add(array $body, ?int $playerId): array
+{
+    friends_add($playerId, body_int($body, 'player_id', 0, 1, PHP_INT_MAX));
+    return friends_list($playerId);
+}
+
+function action_friend_remove(array $body, ?int $playerId): array
+{
+    friends_remove($playerId, body_int($body, 'player_id', 0, 1, PHP_INT_MAX));
+    return friends_list($playerId);
+}
+
+function action_duke_order(array $body, ?int $playerId): array
+{
+    return duke_board($playerId);
+}
+
+function action_duke_contribute(array $body, ?int $playerId): array
+{
+    $given = duke_contribute($playerId, body_string($body, 'item_id'), body_int($body, 'quantity', 1, 1, 10000));
+    return ['given' => $given, 'board' => duke_board($playerId), 'state' => player_state($playerId)];
 }
 
 /**
