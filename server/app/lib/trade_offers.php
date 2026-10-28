@@ -112,13 +112,15 @@ function offer_create(int $fromId, int $toId, mixed $giveList, int $giveGold, mi
     $note = mb_substr(trim($note), 0, OFFER_NOTE_MAX);
 
     return tx(function (PDO $pdo) use ($fromId, $toId, $give, $giveGold, $ask, $askGold, $note, $s) {
+        // Lock the sender's row FIRST, before any other read: InnoDB fixes a transaction's view of the data
+        // at its first plain read, so locking later would still count offers from a stale view and let two
+        // offers sent at once both slip under the limit (0.5.2).
+        gold_get($pdo, $fromId, true);
         require_profession($pdo, $fromId);
         if (player_profession_id($pdo, $toId) === null) {
             throw new ApiError('not_found', 'That player is not in a guild yet.', 404);
         }
-        // Lock the sender's row so two offers sent at once can't both slip under the limit.
-        gold_get($pdo, $fromId, true);
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM trade_offers WHERE from_player_id = ? AND status = 'open'");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM trade_offers WHERE from_player_id = ? AND status = 'open' FOR UPDATE");
         $stmt->execute([$fromId]);
         if ((int) $stmt->fetchColumn() >= $s['max_open']) {
             throw new ApiError('too_many_offers', sprintf('You can have at most %d open offers. Cancel one first.', $s['max_open']));
