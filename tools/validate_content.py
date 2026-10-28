@@ -150,6 +150,92 @@ for entry in calendar.get("week", []) + calendar.get("events", {}).get("list", [
             if not (0 < x <= 5):
                 err(f"calendar: {entry.get('name', entry.get('id'))}: {kind} multiplier for {item_id} out of range")
 
+# ---- progression (0.8.0, #30, #49): ranks, XP, recipe skills, starters, rare recipes, raw unlocks
+pr = economy.get("progression", {})
+ranks = pr.get("ranks", [])
+froms = [r.get("from") for r in ranks]
+if not ranks or froms[0] != 1 or froms != sorted(set(froms)):
+    err("economy: progression.ranks must start at skill 1 and go up")
+max_skill = pr.get("max_skill", 100)
+for key in ("recipe_xp_by_rank", "trainer_price_by_rank"):
+    vals = pr.get(key, [])
+    if len(vals) != len(ranks) or any(not isinstance(v, (int, float)) or v <= 0 for v in vals):
+        err(f"economy: progression.{key} needs one positive number per rank")
+cols = pr.get("colours", [])
+if not cols or [c.get("below", 0) for c in cols] != sorted(c.get("below", 0) for c in cols) \
+        or any(not (0 <= c.get("factor", -1) <= 1) for c in cols) or [c["factor"] for c in cols] != sorted((c["factor"] for c in cols), reverse=True):
+    err("economy: progression.colours need rising 'below' values and falling factors between 0 and 1")
+if not (pr.get("trade_bonus", -1) >= 0 and pr.get("first_craft_of_day", 0) >= 1 and pr.get("xp_base", 0) > 0 and pr.get("xp_scale", 0) > 0):
+    err("economy: progression needs trade_bonus >= 0, first_craft_of_day >= 1, xp_base > 0 and xp_scale > 0")
+rank_ids = [r.get("id") for r in ranks]
+if pr.get("bundle_orders_rank") not in rank_ids:
+    err("economy: progression.bundle_orders_rank must be one of the rank ids")
+
+
+def rank_of(skill):
+    idx = 0
+    for i, f in enumerate(froms):
+        if skill >= f:
+            idx = i
+    return idx
+
+
+item_by_id = {it["id"]: it for it in items}
+unlock = {}
+for prof in professions:
+    for o in prof.get("station", {}).get("outputs", []):
+        unlock[o.get("item_id")] = o.get("unlock_skill", 1)
+        if not (isinstance(unlock[o.get("item_id")], int) and 1 <= unlock[o.get("item_id")] <= max_skill):
+            err(f"profession {prof.get('id')}: unlock_skill of {o.get('item_id')} must be 1..{max_skill}")
+    if not any(o.get("unlock_skill", 1) == 1 for o in prof.get("station", {}).get("outputs", [])):
+        err(f"profession {prof.get('id')}: a new player must be able to gather something (one output at unlock_skill 1)")
+
+for prof in prof_ids:
+    mine = [r for r in recipes if r.get("profession") == prof]
+    starters = {}
+    for r in mine:
+        rid, sk = r.get("id"), r.get("skill")
+        if not (isinstance(sk, int) and 1 <= sk <= max_skill):
+            err(f"recipe {rid}: skill must be a whole number 1..{max_skill}")
+            continue
+        if r.get("rare") and r.get("starter"):
+            err(f"recipe {rid}: can't be both rare and a starter")
+        if r.get("rare") and not r.get("name"):
+            err(f"recipe {rid}: rare recipes need a name")
+        if "xp_multiplier" in r and not r["xp_multiplier"] > 0:
+            err(f"recipe {rid}: xp_multiplier must be > 0")
+        if r.get("starter"):
+            if sk != froms[rank_of(sk)]:
+                err(f"recipe {rid}: a starter must sit at the first skill of its rank ({froms[rank_of(sk)]})")
+            starters.setdefault(rank_of(sk), []).append(rid)
+        imports = [i["item_id"] for i in r.get("inputs", []) if item_by_id.get(i["item_id"], {}).get("profession") != prof]
+        # W1: Apprentice recipes import nothing.
+        if imports and rank_of(sk) == 0:
+            err(f"recipe {rid}: Apprentice recipes must not use other guilds' goods (rule W1)")
+        for i in r.get("inputs", []):
+            iid = i["item_id"]
+            # No recipe uses its own guild's raw before the station unlocks it (W4).
+            if iid in unlock and item_by_id.get(iid, {}).get("profession") == prof and unlock[iid] > sk:
+                err(f"recipe {rid} (skill {sk}) uses {iid} before the station unlocks it (skill {unlock[iid]}) (rule W4)")
+        # W4: an import must be craftable by its owner at the same skill or lower (a trainer recipe).
+        for iid in imports:
+            owner = item_by_id.get(iid, {}).get("profession")
+            makers = [x.get("skill", 1) for x in recipes if x.get("profession") == owner and x.get("output", {}).get("item_id") == iid and not x.get("rare")]
+            if iid not in unlock and (not makers or min(makers) > sk):
+                err(f"recipe {rid} (skill {sk}) imports {iid} before {owner} can make it (rule W4)")
+    if not starters.get(0):
+        err(f"profession {prof}: needs a free Apprentice starter recipe at skill 1")
+    for rank, ids in starters.items():
+        if len(ids) > 1:
+            err(f"profession {prof}: one starter per rank, found {ids}")
+
+os_ = orders.get("settings", {})
+for kind in kinds:
+    if not os_.get("xp_multiplier", {}).get(kind, -1) >= 0:
+        err(f"orders: settings.xp_multiplier.{kind} must be >= 0")
+    if not (0 <= os_.get("rare_recipe_chance", {}).get(kind, -1) <= 1):
+        err(f"orders: settings.rare_recipe_chance.{kind} must be between 0 and 1")
+
 g = economy.get("guild_sale", {})
 if not (0 < g.get("floor_multiplier", 0) < g.get("base_multiplier", 0) < m.get("trader_buy_below", 0)):
     err("economy: need 0 < guild_sale.floor_multiplier < guild_sale.base_multiplier < market.trader_buy_below (listing must pay better)")

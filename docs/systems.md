@@ -213,6 +213,23 @@ These rules apply to every system.
 
 **Milestones:** M1 = choice + a fixed starter recipe list. M2 = skill, colours, ranks, learning recipes.
 
+### 5.1b Progression as built *(0.8.0, #30, #49)*
+
+| | |
+|---|---|
+| **Owns** | `player_professions.skill`, `.xp` (toward the next level), `.bonus_day` (daily double XP used), `.progress_version`; `player_recipes` (known recipes, how each was learned, first craft) |
+| **Verbs** | Learn recipe (`trainer`, `learn_recipe`); skill and XP change only on Collect crafts and Fill order |
+| **Code** | `server/app/lib/progression.php`; numbers in `content/economy.json` → `progression`, recipe `skill` / `starter` / `rare` in `content/recipes.json`, `unlock_skill` on station outputs |
+
+**Rules (server-side)**
+- Ranks: Apprentice 1, Journeyman 26, Expert 51, Master 76. XP for level L to L+1 = 20 × (1 + L/20)².
+- XP per craft = recipe XP by its rank (10 / 20 / 40 / 80) × a rare recipe's multiplier × 1.25 if it uses another guild's goods × its colour: orange 100% until 5 above its skill, yellow 60% until 12, green 20% until 20, then grey 0%. These replace the 75% / 25% guesses in 5.1.
+- The first batch with XP collected each UTC day pays double. The first craft of each recipe gives +1 skill (discovery).
+- Orders pay XP (no fall-off) and sometimes teach a rare recipe of your guild (up to 10 skill above yours).
+- Reaching a rank teaches that rank's free starter recipe. Station outputs with `unlock_skill` start gathering once skill reaches it.
+- Crafting requires a known recipe (`recipe_not_known`). The trainer refuses rare recipes, recipes above your skill, other guilds' recipes and recipes you know.
+- Players from before 0.8.0 are upgraded once (their first request, or the market tick): every non-rare recipe of their guild becomes known and their collected crafts are replayed into skill and XP.
+
 ### 5.2 Gathering
 
 | | |

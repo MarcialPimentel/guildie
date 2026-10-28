@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Professions & Progression (systems.md 5.1). M1: a one-time choice; skill arrives in M2.
+ * Professions & Progression (systems.md 5.1). A one-time choice; skill, XP and recipes are in progression.php (0.8.0).
  */
 
 /** The player's profession id, or null if they haven't chosen yet. */
@@ -38,10 +38,11 @@ function choose_profession(int $playerId, string $professionId): void
         }
 
         $now = game_now();
-        $pdo->prepare('INSERT INTO player_professions (player_id, profession_id, chosen_at) VALUES (?, ?, ?)')
-            ->execute([$playerId, $profession['id'], $now]);
+        $pdo->prepare('INSERT INTO player_professions (player_id, profession_id, skill, xp, progress_version, chosen_at) VALUES (?, ?, 1, 0, ?, ?)')
+            ->execute([$playerId, $profession['id'], PROGRESS_VERSION, $now]);
 
         gathering_init($pdo, $playerId, $profession, $now);
+        progression_learn_starters($pdo, $playerId, $profession['id'], 0, $now);   // the Apprentice starter recipe
         activity_log($pdo, $playerId, 'profession_chosen', ['profession_id' => $profession['id'], 'profession_name' => $profession['name']]);
     });
 }
@@ -51,7 +52,7 @@ function professions_for_choice(): array
 {
     $out = [];
     foreach (content_professions() as $p) {
-        $makes = array_map(fn($r) => item_name($r['output']['item_id']), content_recipes_for($p['id']));
+        $makes = array_map(fn($r) => recipe_name($r), array_values(array_filter(content_recipes_for($p['id']), fn($r) => !recipe_is_rare($r))));
         $out[] = [
             'id'                => $p['id'],
             'name'              => $p['name'],

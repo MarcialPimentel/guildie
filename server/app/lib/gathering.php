@@ -12,15 +12,43 @@ function gathering_seconds_per_unit(array $output): float
     return 3600.0 * pace() / max(0.0001, (float) $output['rate_per_hour']);
 }
 
-/** Create station rows when a profession is chosen, starting partly full. */
+/** The skill at which a new player starts gathering this output (raw 2 at 15, 0.8.0). */
+function gathering_unlock_skill(array $output): int
+{
+    return max(1, (int) ($output['unlock_skill'] ?? 1));
+}
+
+/** Create station rows when a profession is chosen, starting partly full. Locked raws come later (gathering_unlock). */
 function gathering_init(PDO $pdo, int $playerId, array $profession, int $now): void
 {
     $fill = (float) econ('new_player.station_start_fill', 0.5);
     foreach ($profession['station']['outputs'] as $output) {
+        if (gathering_unlock_skill($output) > 1) {
+            continue;
+        }
         $head = (int) floor($fill * $output['cap'] * gathering_seconds_per_unit($output));
         $pdo->prepare('INSERT INTO gathering (player_id, item_id, last_at) VALUES (?, ?, ?)')
             ->execute([$playerId, $output['item_id'], $now - $head]);
     }
+}
+
+/**
+ * Start gathering every output the player's skill now reaches (empty, from now). A station row is the
+ * player's right to gather that raw, so players from before 0.8.0 keep both raws. Returns new item names.
+ */
+function gathering_unlock(PDO $pdo, int $playerId, array $profession, int $skill, int $now): array
+{
+    $new = [];
+    $stmt = $pdo->prepare('INSERT IGNORE INTO gathering (player_id, item_id, last_at) VALUES (?, ?, ?)');
+    foreach ($profession['station']['outputs'] as $output) {
+        if (gathering_unlock_skill($output) <= $skill) {
+            $stmt->execute([$playerId, $output['item_id'], $now]);
+            if ($stmt->rowCount() === 1) {
+                $new[] = item_name($output['item_id']);
+            }
+        }
+    }
+    return $new;
 }
 
 /** How many units are ready for one output. */
@@ -40,8 +68,13 @@ function gathering_status(int $playerId, string $professionId): array
     $now = game_now();
 
     $outputs = [];
+    $locked = [];
     foreach ($profession['station']['outputs'] as $output) {
-        $last = (int) ($lastAt[$output['item_id']] ?? $now);
+        if (!isset($lastAt[$output['item_id']])) {
+            $locked[] = ['item_id' => $output['item_id'], 'name' => item_name($output['item_id']), 'unlock_skill' => gathering_unlock_skill($output)];
+            continue;
+        }
+        $last = (int) $lastAt[$output['item_id']];
         $ready = gathering_ready($output, $last, $now);
         $spu = gathering_seconds_per_unit($output);
         $fullAt = $last + (int) ceil($output['cap'] * $spu);
@@ -54,7 +87,7 @@ function gathering_status(int $playerId, string $professionId): array
             'seconds_to_full' => max(0, $fullAt - $now),
         ];
     }
-    return ['id' => $profession['station']['id'], 'name' => $profession['station']['name'], 'outputs' => $outputs];
+    return ['id' => $profession['station']['id'], 'name' => $profession['station']['name'], 'outputs' => $outputs, 'locked' => $locked];
 }
 
 /** Collect everything ready at the player's station. Returns what was collected. */
@@ -70,7 +103,10 @@ function gathering_collect(int $playerId): array
         $collected = [];
         foreach ($profession['station']['outputs'] as $output) {
             $itemId = $output['item_id'];
-            $last = (int) ($lastAt[$itemId] ?? $now);
+            if (!isset($lastAt[$itemId])) {
+                continue;   // not unlocked yet
+            }
+            $last = (int) $lastAt[$itemId];
             $ready = gathering_ready($output, $last, $now);
             if ($ready <= 0) {
                 continue;
@@ -102,8 +138,8 @@ function gathering_collect(int $playerId): array
             inventory_add($pdo, $playerId, $common, $bonus);
             $surprises[] = ['text' => sprintf('%s +%d %s', $label, $bonus, item_name($common)), 'item_id' => $common, 'quantity' => $bonus];
         }
-        if (count($outputs) > 1 && rand_between(0, 1) < (float) econ('surprises.rare_find_chance', 0.08)) {
-            $rare = end($outputs)['item_id'];
+        $rare = end($outputs)['item_id'];
+        if (count($outputs) > 1 && isset($lastAt[$rare]) && rand_between(0, 1) < (float) econ('surprises.rare_find_chance', 0.08)) {
             $bonus = mt_rand(1, (int) econ('surprises.rare_find_max', 2));
             inventory_add($pdo, $playerId, $rare, $bonus);
             $surprises[] = ['text' => sprintf('Rare find! +%d %s', $bonus, item_name($rare)), 'item_id' => $rare, 'quantity' => $bonus];

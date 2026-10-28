@@ -315,7 +315,7 @@ The Herb Garden (Alchemist) and the Trapper's Lodge (Leatherworker) get matching
 
 ## 9. M2 build order
 
-Built in an order that proves the fun first. If step 1 doesn't make the game feel alive, we learn that before building 36+ recipes on top of it. **Step 1 shipped on its own as 0.5.0** so it could be playtested (2026-10-28); the remaining steps follow.
+Built in an order that proves the fun first. If step 1 doesn't make the game feel alive, we learn that before building 36+ recipes on top of it. **Step 1 shipped on its own as 0.5.0** so it could be playtested (2026-10-28); **step 2 is 0.8.0** (see "Step 2 as built" below); steps 3 and 4 follow.
 
 | Step | What | Why first |
 |---|---|---|
@@ -325,6 +325,14 @@ Built in an order that proves the fun first. If step 1 doesn't make the game fee
 | **4. Milestones** | Workshop upgrades (§8), machine running costs | The rank-up moments |
 
 Then a simulator pass, slowing the pace (`pace.time_multiplier`, now that gold sinks exist), and the M2 playtest. M2's exit question: **"Do I want to come back tomorrow?"**
+
+### Step 2 as built (0.8.0)
+
+- **Today's 12 recipes got their ladder skill** (§6): e.g. Blacksmith Brass Fittings 1 (starter), Copper Lantern 6, Iron Ingot 26 (Journeyman starter), Iron Sword 32. Expert and Master starters arrive with the ladder (step 3).
+- **Rare recipes (6):** for now each is a better pattern for an existing good, so no new items or icons were needed: Arsenale Fittings (8) and Corsair's Sword (34) for Blacksmiths, Cliffside Draught (8) and The Doge's Tonic (30) for Alchemists, Trapper's Grips (8) and Bosun's Jerkin (34) for Leatherworkers. Each makes 2 per craft and gives 1.5× XP. Orders teach them (about 4% of standard orders, 10% of bundles, 25% of collectors [tune]), up to 10 skill above yours.
+- **Order XP:** 3× the recipe XP of every item asked (4× for collectors), no fall-off [tune].
+- **The 3rd craft slot stays with the workshop upgrade** (§8, step 4), not with the Journeyman rank.
+- **Known gap until step 3:** with only 12 recipes, the stretch from about skill 20 to 26 has few orange or yellow recipes (Blacksmiths and Leatherworkers have nothing between 6 and 26). Orders and the daily double carry players through it. The simulator (`tools/econ_sim.php`) now reports time-to-rank: at today's fast playtest pace, bots reach Journeyman in 0.5–1.5 days, mostly from order XP. The balance pass (#52) tunes this together with the pace.
 
 ---
 

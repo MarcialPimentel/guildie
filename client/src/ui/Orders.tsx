@@ -4,8 +4,9 @@ import { useMemo } from 'preact/hooks'
 import { duration } from '../format'
 import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
-import type { Order } from '../types'
+import type { Order, ProgressGain } from '../types'
 import { ActionButton, useGame, useLoad, useNow } from './common'
+import { celebrate, gainText } from './Progress'
 
 export function Orders() {
   const s = useSession()
@@ -69,7 +70,13 @@ function OrderCard({ order, elapsed, skipIn, after, say }: {
       <p class="small">
         Pays <span class="accent"><Coins n={order.reward_gold} /></span>
         {order.reward_items.map((r) => <> + <span class="surprise">{r.quantity} {r.name}</span></>)}
+        {order.reward_xp > 0 && <> + <span class="accent" data-testid="order-xp">{order.reward_xp} XP</span></>}
       </p>
+      {order.reward_recipe && (
+        <p class="small surprise" data-testid="order-recipe">
+          …and teaches you a rare recipe: {order.reward_recipe.name} ({order.reward_recipe.quantity > 1 ? `${order.reward_recipe.quantity} ` : ''}{order.reward_recipe.output} per craft).
+        </p>
+      )}
       <div class="btnrow">
         <ActionButton
           class="small"
@@ -77,8 +84,12 @@ function OrderCard({ order, elapsed, skipIn, after, say }: {
           action={() => session.orderFill(order.id)}
           after={(ok, r) => {
             if (ok && r.ok) {
-              const d = r.data as { filled?: { customer: string; reward_text: string } }
-              if (d.filled) say(`${d.filled.customer} paid ${d.filled.reward_text}.`)
+              const d = r.data as { filled?: { customer: string; reward_text: string; progress?: ProgressGain } }
+              if (d.filled) {
+                const gain = gainText(d.filled.progress)
+                say(`${d.filled.customer} paid ${d.filled.reward_text}.${gain ? ` ${gain}` : ''}`)
+                celebrate(d.filled.progress)
+              }
             }
             after()
           }}

@@ -58,7 +58,7 @@ function players_directory(int $viewerId, string $sort): array
     }
     $pdo = db();
     $rows = $pdo->query(
-        'SELECT p.id, p.name, p.gold, pp.profession_id FROM players p JOIN player_professions pp ON pp.player_id = p.id'
+        'SELECT p.id, p.name, p.gold, pp.profession_id, pp.skill FROM players p JOIN player_professions pp ON pp.player_id = p.id'
     )->fetchAll();
     $crafts = players_craft_stats($pdo);
     $seen = players_last_seen($pdo);
@@ -72,6 +72,8 @@ function players_directory(int $viewerId, string $sort): array
             'profession'  => content_profession($p['profession_id'])['name'] ?? $p['profession_id'],
             'gold'        => (int) $p['gold'],
             'crafted'     => $crafts[$id]['crafted'] ?? 0,
+            'skill'       => (int) $p['skill'],
+            'rank_name'   => progression_rank((int) $p['skill'])['name'],
             'seen_ago'    => $seen[$id] ?? null,
             'me'          => $id === $viewerId,
             'title'       => $id === $factotum ? city_top_title() : null,
@@ -93,11 +95,11 @@ function players_directory(int $viewerId, string $sort): array
     ];
 }
 
-/** One player's profile: stats, recipes discovered, and their Exchange listings (buyable). */
+/** One player's profile: stats, skill and rank, recipes known (rare ones count on top), and their Exchange listings (buyable). */
 function player_profile(int $viewerId, int $playerId): array
 {
     $pdo = db();
-    $stmt = $pdo->prepare('SELECT p.id, p.name, p.gold, pp.profession_id FROM players p JOIN player_professions pp ON pp.player_id = p.id WHERE p.id = ?');
+    $stmt = $pdo->prepare('SELECT p.id, p.name, p.gold, pp.profession_id, pp.skill FROM players p JOIN player_professions pp ON pp.player_id = p.id WHERE p.id = ?');
     $stmt->execute([$playerId]);
     $p = $stmt->fetch();
     if (!$p) {
@@ -118,8 +120,10 @@ function player_profile(int $viewerId, int $playerId): array
         'profession'     => content_profession($p['profession_id'])['name'] ?? $p['profession_id'],
         'gold'           => (int) $p['gold'],
         'crafted'        => $crafts['crafted'],
-        'recipes_known'  => $crafts['recipes'],
-        'recipes_total'  => count(content_recipes_for($p['profession_id'])),
+        'skill'          => (int) $p['skill'],
+        'rank_name'      => progression_rank((int) $p['skill'])['name'],
+        'recipes_known'  => count(progression_known($pdo, (int) $p['id'])),
+        'recipes_total'  => count(array_filter(content_recipes_for($p['profession_id']), fn($r) => !recipe_is_rare($r))),
         'seen_ago'       => $seen,
         'me'             => (int) $p['id'] === $viewerId,
         'title'          => (int) $p['id'] === players_factotum_id($pdo) ? city_top_title() : null,
