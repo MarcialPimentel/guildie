@@ -155,3 +155,44 @@ Single object centered on a plain white background, no text, no people.
 - Technology: **add Three.js** (with step 2). Built with plain Three.js in Preact instead of React Three Fiber; see §5.
 - Timing: **steps 1 and 2 now, beside M2.** Step 1 shipped as 0.6.0.
 - Machine running cost: **lamp oil and wages.** How it maps onto the recipe ladder (`professions.md` §8) is settled when workshop upgrades are built.
+
+## 9. Blob merchants and the slap glove (0.9.0 look pass)
+
+**Status:** Marz's direction of 2026-10-28 for the living city ([living-city.md](living-city.md)): people become wobbly, chunky **blob merchants** (in the spirit of Gang Beasts) in Portovela dress and hats, and players can slap each other with an oversized cartoon glove (in Renaissance Italy a glove slap was a duel challenge). This replaces the capsule-and-sphere customers of 0.7.0. Built in code like the rest of the harbor; the in-game quarters are the mock-up.
+
+**Why blobs:** they read from far away (a few big shapes, one color each), they are funny without words, they hide the lack of faces and hands at this camera distance, and wobble is cheap to animate (a spring on scale, no skeleton).
+
+**Shape**
+
+| Part | Shape | Notes |
+|---|---|---|
+| Body | Capsule squashed to about 1 : 1.25 (width : height), 1.4 m tall | No neck; the face is two dark dot eyes and a soft blush, high on the body |
+| Hands | Two mitten spheres, 0.22 m | Float a little off the body; swing when walking |
+| Feet | Two flattened spheres | Just peek out; step in turn |
+| Hat | One chunky piece per guild | The guild read: must be visible from the default camera |
+| Total | 4–5 meshes, about 600 triangles | Merged into body + hat + hands so a blob costs 3–4 draw calls |
+
+**Dress by guild** (colors from the palette in §2)
+
+| Guild | Dress | Hat |
+|---|---|---|
+| Smiths (*Fabbri*) | Soot-dark leather apron `#4B3A2E` over the body color | Red felt cap `#B83A3A`, slightly crushed |
+| Alchemists (*Speziali*) | Teal robe `#1F8A87` | Tall pointed hat `#2A4C9A` with a lemon tassel `#F2C53D` |
+| Tanners (*Conciatori*) | Olive jerkin `#4E6F2C` | Wide straw hat `#E3C27A` with a ribbon |
+| Townsfolk | Cream or majolica-blue smock | Bare head, a headscarf, or a priest's black cap |
+
+The **body color** is one of the plaster pastels (`#F2B98B #F3D27A #EFA9A0 #BFE3D9 #E9D5F0 #F6C9A2`), picked from the player number so it's stable. Your own merchant gets a soft lemon ring under their feet so you can always find yourself.
+
+**Motion**
+
+- Walk: bob 0.08 m and squash 6% per step, lean 8° into the direction of travel.
+- Stop: one overshoot wobble (spring, about 0.4 s).
+- Wave: one hand up, three waggles.
+- Slapped: squash 25% sideways, slide back 0.8 m over 0.3 s, a wobble, then a "Challenge!" bubble.
+- Reduced motion: no wobble or squash; positions still update.
+
+**The glove:** an oversized white cartoon glove (`#F7F3EA`, ink outline by darker flat shading) with a lemon cuff, about the size of a blob's head. It pops in beside the slapper (scale 0 → 1 in 0.08 s), swings in a 100° arc in 0.15 s, and pops out. The hit shows three small white stars.
+
+**Labels:** names float above heads in the same label style as places (Nunito on whitewash), smaller; friends get a lemon star. A player with slaps off shows a small white flag on their hat.
+
+**Budget:** 30 players + 8 townsfolk/echoes ≈ 120 draw calls in a quarter (the quay stays under 150 without them); shadows only from blobs near the camera.
