@@ -25,6 +25,7 @@ import urllib.request
 args = sys.argv[1:]
 BASE = args[0] if args and not args[0].startswith("--") else "http://127.0.0.1:8080/games/guildie/api/index.php"
 TICK = args[args.index("--tick") + 1] if "--tick" in args else None
+SUPPLIERS = "the guild suppliers"   # economy.json personas.suppliers.label (how NPC sellers are named)
 FEEDBACK_KEY = args[args.index("--feedback-key") + 1] if "--feedback-key" in args else None
 failures = 0
 
@@ -492,6 +493,34 @@ if TICK:
         break
     if not filled:
         print("SKIP  fill an order (couldn't afford any order's items from the suppliers)")
+
+    # Exploit guard (0.5.1): no order may be worth more than buying its items from the Guild Suppliers.
+    s, mk = call("market", token=tok_a)
+    usual = {i["item_id"]: i["usual"] for i in mk["data"]["items"]}
+    supplier_price = {}
+    for item_id in usual:
+        s2, mi = call("market_item", {"item_id": item_id}, token=tok_a)
+        npc = [l["unit_price"] for l in mi["data"]["listings"] if l["is_npc"] and l["seller"] == SUPPLIERS]
+        supplier_price[item_id] = min(npc) if npc else None
+    s, r = call("orders", token=tok_a)
+    profitable = []
+    for o in r["data"]["orders"]:
+        cost = sum(i["quantity"] * supplier_price[i["item_id"]] for i in o["items"] if supplier_price[i["item_id"]])
+        worth = o["reward_gold"] + sum(x["quantity"] * usual[x["item_id"]] for x in o["reward_items"])
+        if worth >= cost:
+            profitable.append((o["customer"], o["kind"], worth, cost))
+    check("no order can be filled at a profit from the Guild Suppliers", not profitable and all(supplier_price.values()), profitable)
+
+    # Exploit guard (0.5.1): two players trading a raw at 20x between themselves don't move its price.
+    s, r = call("market_item", {"item_id": "copper_ore"}, token=tok_b)
+    usual_cu = r["data"]["usual"]
+    s, r = call("list_item", {"item_id": "copper_ore", "quantity": 1, "unit_price": usual_cu * 20, "duration_hours": 12}, token=tok_b)
+    wash_id = r["data"]["listing"]["listing_id"] if r.get("ok") else 0
+    s, r = call("buy_listing", {"listing_id": wash_id, "quantity": 1}, token=tok_a)
+    check("wash trade at 20x goes through (it's allowed, just pointless)", s == 200, r)
+    subprocess.run(TICK, shell=True, check=True, capture_output=True)
+    s, r = call("market_item", {"item_id": "copper_ore"}, token=tok_a)
+    check("wash trade doesn't pump the raw price", s == 200 and r["data"]["reference"] <= usual_cu * 1.5, (usual_cu, r["data"].get("reference")))
 else:
     print("SKIP  market tick checks (no --tick command)")
 

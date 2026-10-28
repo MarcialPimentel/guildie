@@ -1,5 +1,5 @@
 {
-  "_comment": "Order board (#44, professions.md section 2). Customers who post orders in each player's Workshop. 'kinds' says which order types a customer posts: standard (your own goods), bundle (your goods plus another guild's; from 'bundle_min_crafts' crafts made, a stand-in for Journeyman until skill ranks arrive), collector (one item at a high price). Lines use {items} for what's asked. Every number is [tune].",
+  "_comment": "Order board (#44, professions.md section 2). Customers who post orders in each player's Workshop. 'kinds' says which order types a customer posts: standard (your own goods), bundle (your goods plus another guild's; from 'bundle_min_crafts' crafts made, a stand-in for Journeyman until skill ranks arrive), collector (one item at a high price). Lines use {items} for what's asked. Rewards are priced from each item's usual value; reward_multiplier is the WHOLE reward (gold + any rare material at its usual value) and must stay below market.ceiling_multiplier, so orders can't be filled at a profit from the Guild Suppliers (validator rule). Collectors get a guaranteed rare material instead of a big gold multiple (until quality tiers let them ask for Masterwork goods suppliers don't sell). Every number is [tune].",
   "settings": {
     "board_size": 3,
     "deadline_hours_min": 2,
@@ -13,9 +13,10 @@
     "bundle_chance": 0.35,
     "collector_chance": 0.08,
     "collector_chance_sunday": 0.25,
-    "reward_multiplier": { "standard": 1.4, "bundle": 1.7, "collector": 3.0 },
-    "rare_material_chance": 0.35,
-    "rare_material_max": 3
+    "reward_multiplier": { "standard": 1.35, "bundle": 1.45, "collector": 1.45 },
+    "rare_material_chance": { "standard": 0.3, "bundle": 0.5, "collector": 1.0 },
+    "rare_material_max": 3,
+    "max_rare_share": 0.4
   },
   "customers": [
     { "id": "lady_ashworth", "name": "Lady Ashworth", "kinds": ["standard", "bundle"], "line": "Needs {items} before tonight's ball. Discretion appreciated." },

@@ -65,7 +65,7 @@ Orders live in the **Workshop**, because they're about *making*. The Market is a
 - Filling an order **consumes the items** (a sink) and pays a reward.
 
 **Rewards: things the market can't give you.** Otherwise an order is just a slightly better NPC buyer.
-- **Gold** (above market value) and **XP** (a large chunk; the best XP for the time spent).
+- **Gold** (above market value) and **XP** (a large chunk; the best XP for the time spent). Rewards are priced from usual value and the whole reward stays below what the Guild Suppliers charge, so orders reward *crafting*, not buying from NPCs (0.5.1).
 - **Rare materials**, sometimes another guild's (cross-pollination: a Leatherworker might be paid in Starbloom).
 - **Rare recipes** (§4): the only way to get some recipes, which makes them trophies.
 - Later, reputation with customer types (Townsfolk, Adventurers, Collectors).

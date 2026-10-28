@@ -6,6 +6,10 @@ declare(strict_types=1);
  * Named NPC customers ask for specific items with a deadline and pay rewards the market can't:
  * gold above market value and sometimes rare materials from another guild. Content: content/orders.json.
  *
+ * Rewards are priced from each item's USUAL value (content reference_value), not today's price, and the
+ * whole reward (gold + rare materials at their usual value) stays below what the Guild Suppliers charge
+ * (ceiling_multiplier x usual or more). So an order can't be filled at a profit with supplier stock (0.5.1).
+ *
  * The board is resolved lazily (like every timer in Guildie): reading or acting on it expires
  * overdue orders and fills empty slots. An open order whose created_at is in the future is a
  * customer on the way. Order kinds:
@@ -81,18 +85,22 @@ function orders_pick(array $list): mixed
     return $list[mt_rand(0, count($list) - 1)];
 }
 
-/** Quantity of an item worth roughly $target gold (at least 1, at most max_quantity). */
-function orders_quantity_for(string $itemId, float $target, array $refs): int
+/** An item's usual value (its content reference value): what orders are priced from. */
+function orders_usual(string $itemId): float
 {
-    $ref = max(1.0, (float) ($refs[$itemId] ?? 1));
-    return max(1, min((int) orders_settings()['max_quantity'], (int) round($target / $ref)));
+    return max(1.0, (float) (content_item($itemId)['reference_value'] ?? 1));
+}
+
+/** Quantity of an item worth roughly $target gold at its usual value (at least 1, at most max_quantity). */
+function orders_quantity_for(string $itemId, float $target): int
+{
+    return max(1, min((int) orders_settings()['max_quantity'], (int) round($target / orders_usual($itemId))));
 }
 
 /** Generate one new order for a player. Returns the row values to insert (without slot/times). */
 function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now): array
 {
     $s = orders_settings();
-    $refs = market_reference_values($pdo);
     $crafts = (int) (players_craft_stats($pdo, $playerId)[$playerId]['crafted'] ?? 0);
     $sunday = calendar_weekday($now) === 7;
 
@@ -113,24 +121,27 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
     } elseif ($kind === 'bundle') {
         $own = orders_pick(orders_own_items($professionId, false));
         $other = orders_pick(orders_other_guild_items($professionId));
-        $items[$own] = orders_quantity_for($own, $target * 0.65, $refs);
-        $items[$other] = orders_quantity_for($other, $target * 0.35, $refs);
+        $items[$own] = orders_quantity_for($own, $target * 0.65);
+        $items[$other] = orders_quantity_for($other, $target * 0.35);
     } else {
         // Before bundles unlock, standard orders only ask for goods you can make on your own.
         $pool = orders_own_items($professionId, $crafts < (int) $s['bundle_min_crafts']);
         $item = orders_pick($pool);
-        $items[$item] = orders_quantity_for($item, $target, $refs);
+        $items[$item] = orders_quantity_for($item, $target);
     }
 
+    // The whole reward is worth reward_multiplier x the items' usual value (validator: below the
+    // suppliers' ceiling_multiplier). A rare material is paid out of that budget, not on top of it.
     $value = 0.0;
     foreach ($items as $id => $q) {
-        $value += $q * (float) ($refs[$id] ?? 1);
+        $value += $q * orders_usual((string) $id);
     }
-    $gold = (int) ceil($value * (float) $s['reward_multiplier'][$kind]);
+    $budget = $value * (float) $s['reward_multiplier'][$kind];
 
-    // Sometimes a rare material from another guild's station (cross-pollination).
+    // Sometimes a rare material from another guild's station (cross-pollination), up to max_rare_share of the budget.
     $rewardItems = [];
-    if (rand_between(0, 1) < (float) $s['rare_material_chance']) {
+    $rareValue = 0.0;
+    if (rand_between(0, 1) < (float) ($s['rare_material_chance'][$kind] ?? 0)) {
         $raws = [];
         foreach (content_professions() as $id => $p) {
             if ($id !== $professionId) {
@@ -138,8 +149,15 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
                 $raws[] = end($outputs)['item_id'];   // the station's rarer raw
             }
         }
-        $rewardItems[orders_pick($raws)] = mt_rand(1, (int) $s['rare_material_max']);
+        $raw = orders_pick($raws);
+        $affordable = (int) floor($budget * (float) $s['max_rare_share'] / orders_usual($raw));
+        $qty = min(mt_rand(1, (int) $s['rare_material_max']), $affordable);
+        if ($qty > 0) {
+            $rewardItems[$raw] = $qty;
+            $rareValue = $qty * orders_usual($raw);
+        }
     }
+    $gold = max(1, (int) floor($budget - $rareValue));
 
     $customers = array_values(array_filter(orders_customers(), fn($c) => in_array($kind, $c['kinds'], true)));
     $customer = orders_pick($customers);
