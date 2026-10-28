@@ -18,18 +18,80 @@ export interface RecipeInput {
   from_other_profession: boolean
 }
 
+/** A recipe's colour at your skill (#30): XP falls off as it gets easy. */
+export type Colour = 'orange' | 'yellow' | 'green' | 'grey'
+
 export interface Recipe {
   id: string
   name: string
+  output: { item_id: string; quantity: number }
   value: number
   inputs: RecipeInput[]
   seconds_each: number
   can_make: number
+  skill: number
+  colour: Colour
+  xp_each: number
+  trade_bonus: boolean
+  rare: boolean
+  discovered: boolean
+}
+
+/** Skill and rank (#30), from state.profession.progress. */
+export interface Progress {
+  skill: number
+  max_skill: number
+  xp: number
+  xp_needed: number
+  rank: string
+  rank_id: string
+  next_rank: { name: string; at: number } | null
+  first_craft_bonus: boolean
+}
+
+/** What a collect or a filled order changed (#30, #49). */
+export interface ProgressGain {
+  xp: number
+  skill_from: number
+  skill_to: number
+  rank_up: string | null
+  learned: string[]
+  unlocked: string[]
+  doubled: boolean
+  discoveries: string[]
+  taught?: string | null
+}
+
+/** A recipe at the guild trainer (#49). */
+export interface TrainerRecipe {
+  id: string
+  name: string
+  output: { item_id: string; name: string; quantity: number }
+  inputs: { item_id: string; name: string; quantity: number; guild: string | null }[]
+  imports_from: string[]
+  skill: number
+  rank: string
+  rare: boolean
+  starter: boolean
+  price: number
+  status: 'known' | 'learn' | 'locked' | 'rare'
+  colour: Colour
+  xp_each: number
+  value: number
+  seconds_each: number
+}
+
+export interface Trainer {
+  trainer: string
+  skill: number
+  gold: number
+  recipes: TrainerRecipe[]
 }
 
 export interface CraftJob {
   id: number
   recipe_id: string
+  item_id?: string
   name: string
   quantity: number
   ends_at: number
@@ -58,8 +120,9 @@ export interface GameState {
     id: string
     name: string
     tagline: string
-    station: { id: string; name: string; outputs: StationOutput[] }
+    station: { id: string; name: string; outputs: StationOutput[]; locked?: { item_id: string; name: string; unlock_skill: number }[] }
     recipes: Recipe[]
+    progress: Progress
   }
   inventory: InventoryItem[]
   crafts: CraftJob[]
@@ -124,6 +187,8 @@ export interface Order {
   items: OrderLine[]
   reward_gold: number
   reward_items: { item_id: string; name: string; quantity: number }[]
+  reward_xp: number
+  reward_recipe: { id: string; name: string; output: string; quantity: number; skill: number } | null
 }
 
 export interface OrderBoard {
@@ -212,6 +277,8 @@ export interface DirectoryPlayer {
   profession: string
   gold: number
   crafted: number
+  skill: number
+  rank_name: string
   seen_ago: number | null
   me: boolean
   rank: number
@@ -231,6 +298,8 @@ export interface Profile {
   profession: string
   gold: number
   crafted: number
+  skill: number
+  rank_name: string
   recipes_known: number
   recipes_total: number
   seen_ago: number | null

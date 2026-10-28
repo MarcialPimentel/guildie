@@ -26,7 +26,9 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   // --- choose a guild
   await expect(page.locator(id('guild-alchemist'))).toBeVisible()
   await page.click(id('join-alchemist'))
-  await expect(page.locator(id('who'))).toContainText(`${name} · Alchemist`)
+  await expect(page.locator(id('who'))).toContainText(name)
+  await expect(page.locator(id('skill'))).toHaveText('Alchemist 1/100 · Apprentice')   // skill and rank (#30)
+  await expect(page.locator(id('xp-bar'))).toBeVisible()
   await expect(page.locator(id('gold'))).toHaveText(/^[\d,]+ ducats?$/)
   await expect(page.locator('.tabbar button')).toHaveCount(4)
   await expect(page.locator(id('world'))).toHaveCount(0)   // no 3D on the classic view (phones: never downloaded)
@@ -38,18 +40,35 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   // --- the order board (#44): three customers, or a customer on the way
   await expect(page.locator(id('orders'))).toBeVisible()
   await expect(page.locator(`${id('order')}, ${id('order-arriving')}`)).toHaveCount(3)
+  await expect(page.locator(id('order-xp')).first()).toContainText(/\d+ XP/)   // orders pay XP (#30)
   await page.locator(id('order-skip')).first().click()
   await message(page, /turned down/)
   await expect(page.locator(id('order-skip')).first()).toBeDisabled()   // skip cooldown
   const draught = page.locator(id('recipe-healing_draught'))
   await expect(draught).toBeVisible()
+  await expect(page.locator(`${id('recipes')} [data-testid^="recipe-"]`)).toHaveCount(1)   // only the free starter is known (#49)
+  await expect(draught.locator(id('xp-chip'))).toHaveText('+10 XP')
+  await expect(page.locator(id('double-xp'))).toBeVisible()
   await draught.getByRole('button', { name: 'plus 1' }).click()
   await page.click(id('craft-healing_draught'))
   await message(page, /Started 2 × Healing Draught/)
   await expect(page.locator(id('crafts'))).toContainText('Ready!', { timeout: 60_000 })
   await expect(page.locator(id('collect-crafts'))).toBeEnabled()
   await page.click(id('collect-crafts'))
-  await expect(page.locator(id('message'))).toBeVisible()
+  // 2 crafts x 10 XP, doubled for the first craft of the day; the first Healing Draught adds a skill point: 1 -> 3.
+  await message(page, /\+40 XP \(first craft today: double\) · skill 1 → 3/)
+  await expect(page.locator(id('skill'))).toHaveText('Alchemist 3/100 · Apprentice')
+  await expect(page.locator(id('double-xp'))).toHaveCount(0)
+
+  // --- the guild trainer (#49): in the recipes column; what each recipe needs, costs and gives
+  await page.click(id('trainer-open'))
+  await expect(page.locator(id('lesson-smelting_flux'))).toContainText('Learn from skill 15')
+  await expect(page.locator(id('lesson-steam_tonic'))).toContainText('Uses Blacksmith goods')
+  await expect(page.locator(id('lesson-cliffside_draught'))).toContainText('Only a customer can teach this')
+  await expect(page.locator(id('lesson-healing_draught')).locator(id('known'))).toBeVisible()
+  await expect(page.locator('[data-testid^="learn-"]')).toHaveCount(0)   // nothing learnable at skill 3
+  await page.click(id('trainer-close'))
+  await expect(draught).toBeVisible()
   await expect(page.locator(id('footer'))).toContainText(/Client .+ · Server (?!\?)\S/)
 
   // --- bag -> sell form: the Exchange comes first, the guild sale below (#37)

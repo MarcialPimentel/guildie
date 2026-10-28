@@ -6,7 +6,10 @@ declare(strict_types=1);
  * A job holds one queue slot until collected. A batch crafts several of one recipe in a single slot.
  */
 
-/** Recipes for the craft screen, with what the player has of each input. */
+/**
+ * Known recipes for the craft screen, with what the player has of each input, and each recipe's colour and
+ * XP per craft at the player's skill (0.8.0: only known recipes can be crafted).
+ */
 function crafting_recipes(int $playerId, string $professionId): array
 {
     $inventory = [];
@@ -15,9 +18,15 @@ function crafting_recipes(int $playerId, string $professionId): array
             $inventory[$row['item_id']] = $row['quantity'];
         }
     }
+    $pdo = db();
+    $skill = progression_row($pdo, $playerId)['skill'] ?? 1;
+    $known = progression_known($pdo, $playerId);
 
     $out = [];
     foreach (content_recipes_for($professionId) as $recipe) {
+        if (!isset($known[$recipe['id']])) {
+            continue;
+        }
         $inputs = [];
         $maxBatch = (int) econ('crafting.max_batch', 10);
         foreach ($recipe['inputs'] as $in) {
@@ -33,12 +42,18 @@ function crafting_recipes(int $playerId, string $professionId): array
         }
         $out[] = [
             'id'           => $recipe['id'],
-            'name'         => item_name($recipe['output']['item_id']),
+            'name'         => recipe_name($recipe),
             'output'       => ['item_id' => $recipe['output']['item_id'], 'quantity' => (int) $recipe['output']['quantity']],
-            'value'        => (int) round(market_reference_value($recipe['output']['item_id'])),
+            'value'        => (int) round(market_reference_value($recipe['output']['item_id']) * (int) $recipe['output']['quantity']),
             'inputs'       => $inputs,
             'seconds_each' => (int) ceil($recipe['time_seconds'] * pace()),
             'can_make'     => max(0, $maxBatch),
+            'skill'        => recipe_skill($recipe),
+            'colour'       => recipe_colour($recipe, $skill)['id'],
+            'xp_each'      => recipe_xp_each($recipe, $skill),
+            'trade_bonus'  => (bool) recipe_import_guilds($recipe),
+            'rare'         => recipe_is_rare($recipe),
+            'discovered'   => $known[$recipe['id']]['first_crafted_at'] !== null,
         ];
     }
     return $out;
@@ -58,7 +73,8 @@ function crafting_jobs(int $playerId): array
         return [
             'id'           => (int) $job['id'],
             'recipe_id'    => $job['recipe_id'],
-            'name'         => item_name($recipe['output']['item_id'] ?? $job['recipe_id']),
+            'item_id'      => $recipe['output']['item_id'] ?? $job['recipe_id'],
+            'name'         => $recipe ? recipe_name($recipe) : $job['recipe_id'],
             'quantity'     => (int) $job['quantity'] * (int) ($recipe['output']['quantity'] ?? 1),
             'started_at'   => (int) $job['started_at'],
             'ends_at'      => (int) $job['ends_at'],
@@ -84,6 +100,12 @@ function crafting_start(int $playerId, string $recipeId, int $quantity): void
         if ($recipe['profession'] !== $profession['id']) {
             throw new ApiError('wrong_profession', 'That recipe belongs to another profession.');
         }
+        if (!progression_knows($pdo, $playerId, $recipe['id'])) {
+            $name = recipe_name($recipe);
+            throw new ApiError('recipe_not_known', recipe_is_rare($recipe)
+                ? "$name is a rare recipe you haven't been taught. Customers sometimes teach rare recipes."
+                : sprintf("You haven't learned %s yet. The guild trainer teaches it from skill %d.", $name, recipe_skill($recipe)));
+        }
 
         // Lock the player's open jobs so two quick taps can't both take the last slot.
         $stmt = $pdo->prepare('SELECT COUNT(*) FROM craft_jobs WHERE player_id = ? AND collected_at IS NULL FOR UPDATE');
@@ -107,20 +129,33 @@ function crafting_start(int $playerId, string $recipeId, int $quantity): void
     });
 }
 
-/** Collect every finished craft. Returns what was collected. */
+/**
+ * Collect every finished craft. Each batch pays XP (recipe XP x its colour at the current skill, trade bonus
+ * included); the first batch with XP each day pays double; the first craft of each recipe adds a skill point.
+ * Returns what was collected and what changed (progress).
+ */
 function crafting_collect(int $playerId): array
 {
     return tx(function (PDO $pdo) use ($playerId) {
+        gold_get($pdo, $playerId, true);   // player row first, the same lock order as every action
         $now = game_now();
         $stmt = $pdo->prepare(
             'SELECT id, recipe_id, quantity FROM craft_jobs
-             WHERE player_id = ? AND collected_at IS NULL AND ends_at <= ? FOR UPDATE'
+             WHERE player_id = ? AND collected_at IS NULL AND ends_at <= ? ORDER BY id FOR UPDATE'
         );
         $stmt->execute([$playerId, $now]);
         $jobs = $stmt->fetchAll();
         if (!$jobs) {
             throw new ApiError('nothing_to_collect', 'No crafts are finished yet.');
         }
+
+        $row = progression_row($pdo, $playerId, true);
+        $today = progression_day($now);
+        $progress = null;
+        $xpTotal = 0;
+        $doubled = false;
+        $discoveries = [];
+        $mark = $pdo->prepare('UPDATE player_recipes SET first_crafted_at = ? WHERE player_id = ? AND recipe_id = ? AND first_crafted_at IS NULL');
 
         $collected = [];
         $surprises = [];
@@ -132,6 +167,24 @@ function crafting_collect(int $playerId): array
             activity_log($pdo, $playerId, 'crafted', ['item_id' => $recipe['output']['item_id'], 'quantity' => $qty]);
             $collected[] = ['item_id' => $recipe['output']['item_id'], 'quantity' => $qty];
 
+            // Skill and XP (#30), worked out here on the server at collection.
+            if ($row !== null) {
+                $xp = (int) round((int) $job['quantity'] * recipe_base_xp($recipe) * recipe_colour($recipe, $row['skill'])['factor']);
+                if ($xp > 0 && $row['bonus_day'] < $today) {
+                    $xp *= (int) prog('first_craft_of_day', 2);
+                    $row['bonus_day'] = $today;
+                    $doubled = true;
+                }
+                $mark->execute([$now, $playerId, $recipe['id']]);
+                $discovery = $mark->rowCount() === 1 ? (int) prog('discovery_skill', 1) : 0;
+                if ($discovery > 0) {
+                    $discoveries[] = recipe_name($recipe);
+                }
+                $report = progression_apply($pdo, $playerId, $row, $xp, $discovery, $now);
+                $progress = $progress === null ? $report : progression_merge($progress, $report);
+                $xpTotal += $xp;
+            }
+
             // Small surprise (#48): sometimes a batch yields an extra item.
             if (rand_between(0, 1) < (float) econ('surprises.bonus_craft_chance', 0.1)) {
                 inventory_add($pdo, $playerId, $recipe['output']['item_id'], 1);
@@ -140,6 +193,11 @@ function crafting_collect(int $playerId): array
                 $surprises[] = ['text' => $text, 'item_id' => $recipe['output']['item_id'], 'quantity' => 1];
             }
         }
-        return ['collected' => $collected, 'surprises' => $surprises];
+
+        if ($progress !== null) {
+            $progress += ['xp' => $xpTotal, 'doubled' => $doubled, 'discoveries' => $discoveries];
+            progression_log_gain($pdo, $playerId, $row, $progress);
+        }
+        return ['collected' => $collected, 'surprises' => $surprises, 'progress' => $progress];
     });
 }

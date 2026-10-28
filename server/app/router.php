@@ -42,6 +42,8 @@ function guildie_actions(): array
         'order_fill'        => [['POST'],        true,  'action_order_fill'],
         'order_skip'        => [['POST'],        true,  'action_order_skip'],
         'news'              => [['GET'],         true,  'action_news'],
+        'trainer'           => [['GET'],         true,  'action_trainer'],
+        'learn_recipe'      => [['POST'],        true,  'action_learn_recipe'],
     ];
 }
 
@@ -182,6 +184,17 @@ function action_news(array $body, ?int $playerId): array
     return ['news' => calendar_news(game_now())];
 }
 
+function action_trainer(array $body, ?int $playerId): array
+{
+    return trainer_list($playerId);
+}
+
+function action_learn_recipe(array $body, ?int $playerId): array
+{
+    $learned = trainer_learn($playerId, body_string($body, 'recipe_id'));
+    return ['learned' => $learned, 'trainer' => trainer_list($playerId), 'state' => player_state($playerId)];
+}
+
 function action_sell_to_guild(array $body, ?int $playerId): array
 {
     $expected = isset($body['expected_total']) ? body_int($body, 'expected_total', 0, 0, PHP_INT_MAX) : null;
@@ -282,6 +295,9 @@ function guildie_handle_request(): void
         }
 
         $playerId = $needsLogin ? require_player_id() : null;
+        if ($playerId !== null) {
+            progression_ensure($playerId);   // players from before 0.8.0: count their skill once
+        }
         $data = $handler($body, $playerId);
         if (isset($data['_html'])) {
             http_response_code(200);

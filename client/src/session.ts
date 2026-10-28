@@ -5,7 +5,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { callAction, setTokenProvider, type ApiResult } from './api'
 import type {
   Activity, Directory, GameState, ItemCount, MarketItem, MarketRow, MyListing, NewsItem, Offers, OrderBoard, Profile,
-  ProfessionChoice, SellQuote, Surprise,
+  ProfessionChoice, ProgressGain, SellQuote, Surprise, Trainer,
 } from './types'
 
 const TOKEN_KEY = 'guildie.token'
@@ -103,7 +103,14 @@ class Session {
     return this.stateCall<GameState>('start_craft', { recipe_id: recipeId, quantity })
   }
   collectCrafts() {
-    return this.stateCall<{ surprises?: Surprise[] }>('collect_crafts', {}, 'state')
+    return this.stateCall<{ surprises?: Surprise[]; progress?: ProgressGain | null }>('collect_crafts', {}, 'state')
+  }
+  /** The guild trainer (#49): every recipe of your guild, what it needs, and what it costs. */
+  trainer() {
+    return this.call<Trainer>('trainer')
+  }
+  learnRecipe(recipeId: string) {
+    return this.stateCall<{ learned: { name: string; price: number }; trainer: Trainer }>('learn_recipe', { recipe_id: recipeId }, 'state')
   }
   market() {
     return this.call<{ items: MarketRow[]; news: NewsItem[] }>('market')
@@ -152,7 +159,7 @@ class Session {
     return this.call<OrderBoard>('orders')
   }
   orderFill(orderId: number) {
-    return this.stateCall<{ filled: { customer: string; reward_text: string }; board: OrderBoard }>('order_fill', { order_id: orderId }, 'state')
+    return this.stateCall<{ filled: { customer: string; reward_text: string; progress?: ProgressGain }; board: OrderBoard }>('order_fill', { order_id: orderId }, 'state')
   }
   orderSkip(orderId: number) {
     return this.stateCall<{ board: OrderBoard }>('order_skip', { order_id: orderId }, 'state')

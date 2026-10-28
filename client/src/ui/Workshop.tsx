@@ -4,10 +4,12 @@ import { useState } from 'preact/hooks'
 import { ago, CLIENT_BUILD, duration, trimNumber } from '../format'
 import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
-import type { GameState, Recipe } from '../types'
+import type { GameState, ProgressGain, Recipe } from '../types'
 import type { ApiResult } from '../api'
 import { ActionButton, Stepper, useGame, useNow } from './common'
 import { Orders } from './Orders'
+import { celebrate, gainText, XpChip } from './Progress'
+import { Trainer } from './Trainer'
 
 export function Workshop() {
   const s = useSession()
@@ -48,13 +50,15 @@ export function Ledger({ state, now }: { state: GameState; now: number }) {
   )
 }
 
-/** After a collect: show any surprises (#48) instead of the plain success message. */
+/** After a collect: show any surprises (#48) and the XP and skill gained (#30) instead of the plain success message. */
 function useSurpriseMessage() {
   const game = useGame()
   return (ok: boolean, r: ApiResult<unknown>) => {
     if (!ok || !r.ok) return
-    const surprises = (r.data as { surprises?: { text: string }[] }).surprises ?? []
-    if (surprises.length) game.say(surprises.map((x) => x.text).join(' · '))
+    const data = r.data as { surprises?: { text: string }[]; progress?: ProgressGain | null }
+    const parts = [...(data.surprises ?? []).map((x) => x.text), gainText(data.progress)].filter(Boolean)
+    if (parts.length) game.say(parts.join(' · '))
+    celebrate(data.progress)
   }
 }
 
@@ -87,6 +91,12 @@ export function Station({ state, now }: { state: GameState; now: number }) {
           </div>
         )
       })}
+      {(station.locked ?? []).map((l) => (
+        <div class="row muted" data-testid="station-locked">
+          <ItemIcon id={l.item_id} />
+          <span class="grow small">{l.name}: yours to gather from skill {l.unlock_skill}.</span>
+        </div>
+      ))}
       <ActionButton action={() => session.collectStation()} success="Collected." after={onCollected} disabled={!anyReady} testid="collect-station">
         Collect
       </ActionButton>
@@ -107,7 +117,7 @@ export function Crafts({ state, now }: { state: GameState; now: number }) {
       {crafts.length === 0 && <p class="muted">Nothing crafting. Pick a recipe{window.innerWidth >= 900 ? ' on the right' : ' below'}.</p>}
       {crafts.map((job) => (
         <div class="row">
-          <ItemIcon id={job.recipe_id} />
+          <ItemIcon id={job.item_id ?? job.recipe_id} />
           <span class="grow">{job.name} ×{job.quantity}</span>
           <span class="ok num">{job.ends_at <= now ? 'Ready!' : duration(job.ends_at - now)}</span>
         </div>
@@ -121,16 +131,31 @@ export function Crafts({ state, now }: { state: GameState; now: number }) {
   )
 }
 
+/** Your recipes, or the guild trainer (#49) in their place. */
 export function Recipes({ state }: { state: GameState }) {
+  const [trainer, setTrainer] = useState(false)
   const free = state.craft_slots - state.crafts.length
+  const progress = state.profession!.progress
   return (
     <section class="stack" data-testid="recipes">
       <div class="row">
-        <h2 class="grow">Recipes</h2>
-        <span class={`small ${free > 0 ? 'ok' : 'error'}`}>{free} free slot{free === 1 ? '' : 's'}</span>
+        <h2 class="grow">{trainer ? 'Guild trainer' : 'Recipes'}</h2>
+        {!trainer && <span class={`small ${free > 0 ? 'ok' : 'error'}`}>{free} free slot{free === 1 ? '' : 's'}</span>}
+        <button class="secondary small" onClick={() => setTrainer(!trainer)} data-testid={trainer ? 'trainer-close' : 'trainer-open'}>
+          {trainer ? '‹ Your recipes' : 'Guild trainer'}
+        </button>
       </div>
-      {state.profession!.recipes.map((r) => <RecipeCard recipe={r} slotFree={free > 0} maxBatch={state.max_batch} />)}
-      <p class="npc small">Blue inputs come from other guilds: buy them at the Mercato.</p>
+      {trainer ? <Trainer /> : <>
+        {progress?.first_craft_bonus && (
+          <p class="small surprise" data-testid="double-xp">Your first finished craft today pays double XP.</p>
+        )}
+        {state.profession!.recipes.map((r) => <RecipeCard recipe={r} slotFree={free > 0} maxBatch={state.max_batch} />)}
+        <p class="npc small">Blue inputs come from other guilds: buy them at the Mercato. Recipes that use them give +25% XP (⇄).</p>
+        <p class="muted small">
+          Easy recipes give less XP as your skill grows: orange full, yellow 60%, green 20%, grey none.
+          Learn new ones from the <button class="link inline" onClick={() => setTrainer(true)}>guild trainer</button>.
+        </p>
+      </>}
     </section>
   )
 }
@@ -144,10 +169,16 @@ function RecipeCard({ recipe, slotFree, maxBatch }: { recipe: Recipe; slotFree: 
   return (
     <div class="card" data-testid={`recipe-${recipe.id}`}>
       <div class="row">
-        <ItemIcon id={recipe.id} big />
-        <h3 class="grow">{recipe.name}</h3>
-        <span class="muted small">value ~<Coins n={recipe.value} /></span>
+        <ItemIcon id={recipe.output?.item_id ?? recipe.id} big />
+        <h3 class="grow">
+          {recipe.name}
+          {recipe.output?.quantity > 1 && <span class="muted small"> ×{recipe.output.quantity}</span>}
+          {recipe.rare && <span class="tag rare">rare</span>}
+          {!recipe.discovered && <span class="tag" title="Your first craft of a recipe gives +1 skill">new: +1 skill</span>}
+        </h3>
+        <XpChip colour={recipe.colour} xp={recipe.xp_each} trade={recipe.trade_bonus} />
       </div>
+      <p class="muted small">value ~<Coins n={recipe.value} /> · skill {recipe.skill}</p>
       {recipe.inputs.map((input) => (
         <div class="row">
           <span class={`grow ${input.from_other_profession ? 'npc' : ''}`}>{input.quantity} × {input.name}</span>

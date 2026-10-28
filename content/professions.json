@@ -1,8 +1,9 @@
 {
-  "_comment": "Professions and their gathering stations (GDD 5.4, systems.md 5.1-5.2). Rates are units per hour and caps are the most a station holds; both are scaled by economy.pace.time_multiplier.",
+  "_comment": "Professions and their gathering stations (GDD 5.4, systems.md 5.1-5.2). Rates are units per hour and caps are the most a station holds; both are scaled by economy.pace.time_multiplier. unlock_skill (default 1): the skill at which a new player starts gathering that raw; players who already gathered it before 0.8.0 keep it.",
   "professions": [
     {
       "id": "blacksmith",
+      "trainer": "Mastro Ferrante, forge master of the Arsenale",
       "name": "Blacksmith",
       "tagline": "Ore, fire and brass.",
       "description": "Mine copper and iron, forge brass fittings every crafter needs, and make lanterns and swords for the Regatta crowd.",
@@ -12,12 +13,13 @@
         "name": "The Mine",
         "outputs": [
           { "item_id": "copper_ore", "rate_per_hour": 30, "cap": 30 },
-          { "item_id": "iron_ore",   "rate_per_hour": 12, "cap": 12 }
+          { "item_id": "iron_ore",   "rate_per_hour": 12, "cap": 12, "unlock_skill": 15 }
         ]
       }
     },
     {
       "id": "alchemist",
+      "trainer": "Dottoressa Livia, keeper of the guild still",
       "name": "Alchemist",
       "tagline": "Herbs, flasks and fumes.",
       "description": "Grow sunleaf and ember moss, brew the harbor's healing draughts, and supply the fluxes and solutions other guilds rely on.",
@@ -27,12 +29,13 @@
         "name": "The Herb Garden",
         "outputs": [
           { "item_id": "sunleaf",    "rate_per_hour": 30, "cap": 30 },
-          { "item_id": "ember_moss", "rate_per_hour": 12, "cap": 12 }
+          { "item_id": "ember_moss", "rate_per_hour": 12, "cap": 12, "unlock_skill": 15 }
         ]
       }
     },
     {
       "id": "leatherworker",
+      "trainer": "Zio Tobia, the old master tanner",
       "name": "Leatherworker",
       "tagline": "Hides, stitches and buckles.",
       "description": "Send trappers out for hides, stitch grips and satchels, and craft armour for sailors and ships' guards.",
@@ -42,7 +45,7 @@
         "name": "The Trapper's Lodge",
         "outputs": [
           { "item_id": "raw_hide",   "rate_per_hour": 30, "cap": 30 },
-          { "item_id": "thick_hide", "rate_per_hour": 12, "cap": 12 }
+          { "item_id": "thick_hide", "rate_per_hour": 12, "cap": 12, "unlock_skill": 15 }
         ]
       }
     }

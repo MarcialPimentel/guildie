@@ -14,9 +14,11 @@ declare(strict_types=1);
  * overdue orders and fills empty slots. An open order whose created_at is in the future is a
  * customer on the way. Order kinds:
  *   standard  : your own goods
- *   bundle    : your goods plus another guild's (from bundle_min_crafts crafts made, standing in for
- *               Journeyman until skill ranks arrive in M2 step 2)
+ *   bundle    : your goods plus another guild's (from Journeyman, economy.progression.bundle_orders_rank)
  *   collector : one item at a high price (more likely on Sunday, Market Day)
+ *
+ * 0.8.0 (#30, #49): orders ask only for goods from recipes you know or can learn now, pay XP (no fall-off,
+ * the best XP for the time), and sometimes teach one of your guild's rare recipes.
  */
 
 function orders_settings(): array
@@ -54,8 +56,11 @@ function order_items_text(array $items): string
     return implode(', ', $parts) . ' and ' . $last;
 }
 
-/** Items a profession can make (its recipe outputs). $selfSufficientOnly: only recipes with no other guild's inputs. */
-function orders_own_items(string $professionId, bool $selfSufficientOnly): array
+/**
+ * Items a profession can make (its recipe outputs). $selfSufficientOnly: only recipes with no other guild's inputs.
+ * With $skill, only recipes the player knows ($known) or can learn now (skill reached, not rare).
+ */
+function orders_own_items(string $professionId, bool $selfSufficientOnly, ?int $skill = null, array $known = []): array
 {
     $items = [];
     foreach (content_recipes_for($professionId) as $recipe) {
@@ -63,9 +68,38 @@ function orders_own_items(string $professionId, bool $selfSufficientOnly): array
         if ($selfSufficientOnly && $imports) {
             continue;
         }
+        if ($skill !== null && !isset($known[$recipe['id']]) && (recipe_is_rare($recipe) || recipe_skill($recipe) > $skill)) {
+            continue;
+        }
         $items[] = $recipe['output']['item_id'];
     }
     return array_values(array_unique($items));
+}
+
+/** XP an order pays: xp_multiplier[kind] x each item's recipe XP (by rank), with no fall-off. */
+function orders_xp(array $items, string $kind): int
+{
+    $xp = 0.0;
+    foreach ($items as $id => $q) {
+        $xp += $q * item_order_xp((string) $id);
+    }
+    return (int) round($xp * (float) (orders_settings()['xp_multiplier'][$kind] ?? 1));
+}
+
+/** A rare recipe this order could teach: one of the guild's rare recipes the player doesn't know and isn't already offered. */
+function orders_pick_rare_recipe(PDO $pdo, int $playerId, string $professionId, int $skill, array $known): ?string
+{
+    $stmt = $pdo->prepare("SELECT reward_recipe FROM orders WHERE player_id = ? AND status = 'open' AND reward_recipe IS NOT NULL");
+    $stmt->execute([$playerId]);
+    $offered = array_flip($stmt->fetchAll(PDO::FETCH_COLUMN));
+    $reach = (int) (orders_settings()['rare_recipe_reach'] ?? 10);
+    $pool = [];
+    foreach (content_recipes_for($professionId) as $r) {
+        if (recipe_is_rare($r) && !isset($known[$r['id']]) && !isset($offered[$r['id']]) && recipe_skill($r) <= $skill + $reach) {
+            $pool[] = $r['id'];
+        }
+    }
+    return $pool ? orders_pick($pool) : null;
 }
 
 /** Crafted goods other guilds make with no imports (what a bundle may ask for from another guild). */
@@ -101,7 +135,9 @@ function orders_quantity_for(string $itemId, float $target): int
 function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now): array
 {
     $s = orders_settings();
-    $crafts = (int) (players_craft_stats($pdo, $playerId)[$playerId]['crafted'] ?? 0);
+    $skill = (int) (progression_row($pdo, $playerId)['skill'] ?? 1);
+    $known = progression_known($pdo, $playerId);
+    $bundles = progression_rank_index($skill) >= progression_rank_index_by_id((string) prog('bundle_orders_rank', 'journeyman'));
     $sunday = calendar_weekday($now) === 7;
 
     $roll = rand_between(0, 1);
@@ -109,23 +145,23 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
     $kind = 'standard';
     if ($roll < $collectorChance) {
         $kind = 'collector';
-    } elseif ($crafts >= (int) $s['bundle_min_crafts'] && $roll < $collectorChance + (float) $s['bundle_chance']) {
+    } elseif ($bundles && $roll < $collectorChance + (float) $s['bundle_chance']) {
         $kind = 'bundle';
     }
 
     $target = rand_between((float) $s['target_value_min'], (float) $s['target_value_max']);
     $items = [];
     if ($kind === 'collector') {
-        $item = orders_pick(orders_own_items($professionId, false));
+        $item = orders_pick(orders_own_items($professionId, !$bundles, $skill, $known));
         $items[$item] = mt_rand(1, 2);
     } elseif ($kind === 'bundle') {
-        $own = orders_pick(orders_own_items($professionId, false));
+        $own = orders_pick(orders_own_items($professionId, false, $skill, $known));
         $other = orders_pick(orders_other_guild_items($professionId));
         $items[$own] = orders_quantity_for($own, $target * 0.65);
         $items[$other] = orders_quantity_for($other, $target * 0.35);
     } else {
-        // Before bundles unlock, standard orders only ask for goods you can make on your own.
-        $pool = orders_own_items($professionId, $crafts < (int) $s['bundle_min_crafts']);
+        // Before bundles unlock (Journeyman), standard orders only ask for goods you can make on your own.
+        $pool = orders_own_items($professionId, !$bundles, $skill, $known);
         $item = orders_pick($pool);
         $items[$item] = orders_quantity_for($item, $target);
     }
@@ -159,9 +195,15 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
     }
     $gold = max(1, (int) floor($budget - $rareValue));
 
+    // Sometimes the customer also teaches a rare recipe (#49): a trophy the trainer doesn't sell.
+    $recipe = null;
+    if (rand_between(0, 1) < (float) ($s['rare_recipe_chance'][$kind] ?? 0)) {
+        $recipe = orders_pick_rare_recipe($pdo, $playerId, $professionId, $skill, $known);
+    }
+
     $customers = array_values(array_filter(orders_customers(), fn($c) => in_array($kind, $c['kinds'], true)));
     $customer = orders_pick($customers);
-    return ['customer_id' => $customer['id'], 'kind' => $kind, 'items' => $items, 'reward_gold' => $gold, 'reward_items' => $rewardItems];
+    return ['customer_id' => $customer['id'], 'kind' => $kind, 'items' => $items, 'reward_gold' => $gold, 'reward_items' => $rewardItems, 'reward_recipe' => $recipe];
 }
 
 /** Expire overdue orders and fill empty slots. Runs inside a transaction. */
@@ -187,10 +229,10 @@ function orders_insert(PDO $pdo, int $playerId, string $professionId, int $slot,
     $hours = rand_between((float) $s['deadline_hours_min'], (float) $s['deadline_hours_max']);
     $expires = $arrivesAt + (int) round($hours * 3600 * pace());
     $pdo->prepare(
-        'INSERT INTO orders (player_id, slot, customer_id, kind, items, reward_gold, reward_items, created_at, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO orders (player_id, slot, customer_id, kind, items, reward_gold, reward_items, reward_recipe, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )->execute([$playerId, $slot, $o['customer_id'], $o['kind'], order_items_to_json($o['items']), $o['reward_gold'],
-        order_items_to_json($o['reward_items']), $arrivesAt, $expires]);
+        order_items_to_json($o['reward_items']), $o['reward_recipe'], $arrivesAt, $expires]);
 }
 
 /** The board for the client. */
@@ -238,9 +280,22 @@ function orders_board(int $playerId): array
             'reward_gold'  => (int) $row['reward_gold'],
             'reward_items' => array_map(fn($id, $q) => ['item_id' => $id, 'name' => item_name((string) $id), 'quantity' => $q],
                 array_keys(order_items_from_json($row['reward_items'])), order_items_from_json($row['reward_items'])),
+            'reward_xp'    => orders_xp($items, $row['kind']),
+            'reward_recipe' => orders_recipe_reward($row['reward_recipe'] ?? null),
         ];
     }
     return ['orders' => $orders, 'skip_in' => max(0, $board['skip_ready_at'] - $now)];
+}
+
+/** The rare recipe an order teaches, for the client: {id, name, output} or null. */
+function orders_recipe_reward(?string $recipeId): ?array
+{
+    $recipe = $recipeId ? content_recipe($recipeId) : null;
+    if ($recipe === null) {
+        return null;
+    }
+    return ['id' => $recipe['id'], 'name' => recipe_name($recipe), 'output' => item_name($recipe['output']['item_id']),
+        'quantity' => (int) $recipe['output']['quantity'], 'skill' => recipe_skill($recipe)];
 }
 
 /** Lock an open, arrived order of this player. */
@@ -285,13 +340,28 @@ function orders_fill(int $playerId, int $orderId): array
             inventory_add($pdo, $playerId, (string) $id, $q);
         }
         $pdo->prepare("UPDATE orders SET status = 'filled', resolved_at = ? WHERE id = ?")->execute([$now, $orderId]);
-        $arrives = $now + (int) round((float) orders_settings()['refill_minutes'] * 60 * pace());
-        orders_insert($pdo, $playerId, $professionId, (int) $order['slot'], $arrives, $now);
 
         $customer = orders_customers()[$order['customer_id']]['name'] ?? 'A customer';
         $rewardText = ducats((int) $order['reward_gold']) . ($rewardItems ? ' and ' . order_items_text($rewardItems) : '');
         activity_log($pdo, $playerId, 'order_filled', ['customer' => $customer, 'items' => order_items_text($items), 'reward' => $rewardText]);
-        return ['customer' => $customer, 'reward_gold' => (int) $order['reward_gold'], 'reward_text' => $rewardText];
+
+        // XP (#30) and, sometimes, a rare recipe (#49).
+        $row = progression_row($pdo, $playerId, true);
+        $xp = orders_xp($items, $order['kind']);
+        $progress = progression_apply($pdo, $playerId, $row, $xp, 0, $now) + ['xp' => $xp, 'doubled' => false, 'discoveries' => []];
+        progression_log_gain($pdo, $playerId, $row, $progress);
+        $taught = null;
+        $recipe = !empty($order['reward_recipe']) ? content_recipe((string) $order['reward_recipe']) : null;
+        if ($recipe !== null && $recipe['profession'] === $professionId && progression_learn($pdo, $playerId, $recipe['id'], 'order', $now)) {
+            $taught = recipe_name($recipe);
+            activity_log($pdo, $playerId, 'recipe_taught', ['customer' => $customer, 'recipe' => $taught]);
+        }
+        $progress['taught'] = $taught;
+
+        // The next customer arrives after refill_minutes (generated after learning, so it can't offer the same recipe).
+        $arrives = $now + (int) round((float) orders_settings()['refill_minutes'] * 60 * pace());
+        orders_insert($pdo, $playerId, $professionId, (int) $order['slot'], $arrives, $now);
+        return ['customer' => $customer, 'reward_gold' => (int) $order['reward_gold'], 'reward_text' => $rewardText, 'progress' => $progress];
     });
 }
 
