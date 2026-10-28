@@ -361,7 +361,10 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   canvas.addEventListener('pointerleave', () => setHover(null))
 
   // ------------------------------------------------------------ keyboard: WASD / arrows walk (camera-relative)
-  const keys = new Set<string>()
+  // Each held key remembers when its walking was last applied. A key released before the next frame (a quick
+  // tap on a slow machine, where frames can be far apart) still moves you for as long as it was held.
+  const keys = new Map<string, number>()
+  const tapped: [string, number][] = []
   const MOVE_KEYS: Record<string, [number, number]> = {
     KeyW: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1], KeyA: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0],
   }
@@ -372,14 +375,20 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey || e.altKey || typing(e)) return
     if (MOVE_KEYS[e.code]) {
-      keys.add(e.code)
+      if (!keys.has(e.code)) keys.set(e.code, performance.now())
       me.target = null
       follow = true
       e.preventDefault()
       wake()
     }
   }
-  const onKeyUp = (e: KeyboardEvent) => { keys.delete(e.code) }
+  const onKeyUp = (e: KeyboardEvent) => {
+    const since = keys.get(e.code)
+    if (since === undefined) return
+    keys.delete(e.code)
+    tapped.push([e.code, Math.min((performance.now() - since) / 1000, 1)])
+    wake()
+  }
   const onBlur = () => keys.clear()
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
@@ -824,7 +833,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
 
     // Full frame rate while something moves (camera, people, tweens, hover); 30 fps for the ambient sea
     // otherwise; with reduced motion, nothing ambient at all.
-    const peopleMoving = keys.size > 0 || !!me.target || [...peers.values()].some((p) => p.target)
+    const peopleMoving = keys.size > 0 || tapped.length > 0 || !!me.target || [...peers.values()].some((p) => p.target)
     if (peopleMoving) wake(300)
     const moving = tweens.length > 0 || now < awakeUntil || Math.abs(nightGoal - night) > 0.001
     const ambient = !reduceMotion
@@ -838,13 +847,23 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     if (ambient) t += step
 
     // your merchant: keys (camera-relative) or a walk target
+    // Each key counts for as long as it was held since the last frame, so slow machines walk the same distance.
     moveDir.set(0, 0, 0)
-    for (const k of keys) {
-      const [sx, sz] = MOVE_KEYS[k]
-      moveDir.x += sx * Math.cos(goal.yaw) - sz * Math.sin(goal.yaw)
-      moveDir.z += -sx * Math.sin(goal.yaw) - sz * Math.cos(goal.yaw)
+    let keyTime = 0
+    const push = (code: string, secs: number) => {
+      const [sx, sz] = MOVE_KEYS[code]
+      moveDir.x += (sx * Math.cos(goal.yaw) - sz * Math.sin(goal.yaw)) * secs
+      moveDir.z += (-sx * Math.sin(goal.yaw) - sz * Math.cos(goal.yaw)) * secs
+      keyTime = Math.max(keyTime, secs)
     }
-    const meMoved = stepWalker(me, walkStep, keys.size ? moveDir : null)
+    for (const [code, since] of keys) {
+      push(code, Math.min((now - since) / 1000, 1))
+      keys.set(code, now)
+    }
+    for (const [code, secs] of tapped) push(code, secs)
+    tapped.length = 0
+    const walking = moveDir.lengthSq() > 0
+    const meMoved = stepWalker(me, walking ? Math.min(moveDir.length(), keyTime) : walkStep, walking ? moveDir : null)
     if (meMoved) clampWalk(me.pos), me.blob.root.position.copy(me.pos)
     reportMove(!meMoved && !keys.size && !me.target)
     if (follow && (meMoved || keys.size)) goal.target.set(me.pos.x, 2, me.pos.z), clampGoal()
