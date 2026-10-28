@@ -177,7 +177,7 @@ New API actions: `presence_token`, `city_prefs`, `friends`, `friend_add`, `frien
 
 Short look pass; details and rules in [art-direction.md](art-direction.md) §9.
 
-- **Body:** a chunky rounded blob (a squashed capsule) with no neck, two mitten hands, short stumpy feet. About 1.4 m tall, so stalls and doors still read as big.
+- **Body:** a chunky rounded blob (a squashed capsule) with no neck, two mitten hands, short stumpy feet. About 2 m tall: big enough to read from the default camera, still smaller than a doorway.
 - **Wobble:** squash and stretch on a spring when walking, landing, waving or slapped; a little lean into turns. No ragdoll.
 - **Dress by guild** (one glance tells you who's who): Smiths wear a soot-dark leather apron and a red felt cap; Alchemists a teal robe and a tall pointed hat with a lemon tassel; Tanners an olive jerkin and a wide straw hat. The body color varies per player from the plaster pastels.
 - **The glove:** an oversized white cartoon glove with a lemon cuff, about the size of a blob's head. It pops in, swings, and pops out.

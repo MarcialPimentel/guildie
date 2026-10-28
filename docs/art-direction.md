@@ -166,7 +166,7 @@ Single object centered on a plain white background, no text, no people.
 
 | Part | Shape | Notes |
 |---|---|---|
-| Body | Capsule squashed to about 1 : 1.25 (width : height), 1.4 m tall | No neck; the face is two dark dot eyes and a soft blush, high on the body |
+| Body | Capsule squashed to about 1 : 1.25 (width : height), about 2 m tall | No neck; the face is two dark dot eyes and a soft blush, high on the body |
 | Hands | Two mitten spheres, 0.22 m | Float a little off the body; swing when walking |
 | Feet | Two flattened spheres | Just peek out; step in turn |
 | Hat | One chunky piece per guild | The guild read: must be visible from the default camera |

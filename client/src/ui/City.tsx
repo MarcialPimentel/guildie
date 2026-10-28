@@ -1,14 +1,20 @@
 // City (#31, #32, #38): every crafter in one list (gold and crafts columns, the Factotum title), their profiles
 // and shop windows, and direct trades. Views: players -> profile -> compose; trades (offers to you, yours, recent).
+// 0.9.0 (the living city): the guild quarters and friends as lists, and the Duke's order.
 import { useEffect, useState } from 'preact/hooks'
 import { duration, gold, seen } from '../format'
 import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
 import type { ItemCount, MarketRow, Offer } from '../types'
 import { ActionButton, Modes, Stepper, useGame, useLoad } from './common'
+import { DukeOrder } from './Duke'
+import { FriendsList, QuarterList } from './Quarters'
 
 type View =
   | { name: 'players' }
+  | { name: 'quarters' }
+  | { name: 'friends' }
+  | { name: 'duke' }
   | { name: 'profile'; id: number }
   | { name: 'compose'; id: number; playerName: string }
   | { name: 'trades' }
@@ -18,22 +24,31 @@ const MAX_ITEM_QTY = 999
 export function City({ onView }: { onView: (v: string) => void }) {
   const s = useSession()
   const [view, setView] = useState<View>({ name: 'players' })
+  const [from, setFrom] = useState<'players' | 'quarters' | 'friends'>('players')
   useEffect(() => onView(view.name), [view.name])
   const offers = s.state!.incoming_offers ?? 0
-  const mode = view.name === 'trades' ? 'trades' : 'players'
+  type Mode = 'players' | 'quarters' | 'friends' | 'duke' | 'trades'
+  const mode: Mode = view.name === 'profile' || view.name === 'compose' ? from : view.name
+  const open = (id: number) => {
+    if (view.name === 'players' || view.name === 'quarters' || view.name === 'friends') setFrom(view.name)
+    setView({ name: 'profile', id })
+  }
 
   return (
     <>
-      <Modes
+      <Modes<Mode>
         value={mode}
-        options={[['players', 'Players'], ['trades', offers > 0 ? `Trades (${offers})` : 'Trades']]}
-        onChange={(m) => setView(m === 'trades' ? { name: 'trades' } : { name: 'players' })}
+        options={[['players', 'Players'], ['quarters', 'Quarters'], ['friends', 'Friends'], ['duke', "Duke's order"], ['trades', offers > 0 ? `Trades (${offers})` : 'Trades']]}
+        onChange={(m) => setView({ name: m } as View)}
       />
-      {view.name === 'players' && <Players open={(id) => setView({ name: 'profile', id })} />}
+      {view.name === 'players' && <Players open={open} />}
+      {view.name === 'quarters' && <QuarterList open={open} />}
+      {view.name === 'friends' && <FriendsList open={open} />}
+      {view.name === 'duke' && <DukeOrder />}
       {view.name === 'profile' && (
         <ProfileView
           id={view.id}
-          back={() => setView({ name: 'players' })}
+          back={() => setView({ name: from } as View)}
           trade={(playerName) => setView({ name: 'compose', id: view.id, playerName })}
         />
       )}
@@ -95,12 +110,24 @@ function Players({ open }: { open: (id: number) => void }) {
 
 // ---------------------------------------------------------------- profile + shop window
 
-function ProfileView({ id, back, trade }: { id: number; back: () => void; trade: (name: string) => void }) {
+/**
+ * A crafter's shop window and trade form, for the 3D world's side panel (tap a player or their stall).
+ * `extra` adds buttons under the profile (e.g. Wave and Slap when they're in the quarter with you).
+ */
+export function Crafter({ id, extra }: { id: number; extra?: preact.ComponentChildren }) {
+  const [composing, setComposing] = useState<string | null>(null)
+  if (composing !== null) {
+    return <Compose to={id} playerName={composing} back={() => setComposing(null)} sent={() => setComposing(null)} />
+  }
+  return <ProfileView id={id} back={null} trade={setComposing} extra={extra} />
+}
+
+function ProfileView({ id, back, trade, extra }: { id: number; back: (() => void) | null; trade: (name: string) => void; extra?: preact.ComponentChildren }) {
   const [p, reload] = useLoad(() => session.playerProfile(id), [id], true)
   if (!p) return <p class="muted">Loading…</p>
   return (
     <div class="stack" data-testid="profile">
-      <button class="secondary small" onClick={back}>‹ All crafters</button>
+      {back && <button class="secondary small" onClick={back}>‹ Back</button>}
       <section class="card">
         <h1>{p.name}{p.me ? ' (you)' : ''}</h1>
         {p.title && <p class="accent">{p.title}: the richest crafter in the city</p>}
@@ -112,6 +139,10 @@ function ProfileView({ id, back, trade }: { id: number; back: () => void; trade:
         </div>
       </section>
       {p.can_trade && <button onClick={() => trade(p.name)} data-testid="propose-trade">Propose a trade</button>}
+      {!p.me && (p.friend
+        ? <ActionButton class="secondary small" action={() => session.friendRemove(p.id)} success={`${p.name} removed from your friends.`} after={() => reload()} testid="friend-remove">★ Friend · remove</ActionButton>
+        : <ActionButton class="secondary small" action={() => session.friendAdd(p.id)} success={`${p.name} is now your friend: their stall shows first in every quarter.`} after={() => reload()} testid="friend-add">Add friend</ActionButton>)}
+      {extra}
       <h2>Shop window</h2>
       {p.listings.length === 0 && <p class="muted">Nothing listed at the Mercato right now.</p>}
       {p.listings.map((l) => (

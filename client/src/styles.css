@@ -309,3 +309,18 @@ body.in-world .header-inner { height: 60px; padding-top: 0; padding-bottom: 0; }
 .side-head .grow { flex: 1 1 auto; min-width: 0; }
 .header button { white-space: nowrap; }
 @media (max-width: 899px) { .world-hint { display: none; } }
+
+/* ---------------------------------------------------------------- the living city (0.9.0) */
+.world-label.person { font-size: 12px; padding: 3px 10px; background: rgba(248, 252, 251, 0.92); color: #10323A; }
+.world-bubble {
+  position: absolute; left: 0; top: 0; pointer-events: none; white-space: nowrap; min-height: 0;
+  font: 800 14px/1.2 var(--display); color: #10323A; background: #F8FCFB; border: 2px solid #10323A;
+  border-radius: 12px; padding: 4px 10px; box-shadow: 0 3px 10px rgba(16, 50, 58, 0.25);
+}
+.world-bubble.echo { pointer-events: auto; font: italic 600 12px/1.2 var(--body); background: rgba(248, 252, 251, 0.8); border-color: rgba(16, 50, 58, 0.35); }
+.world-fade { position: absolute; inset: 0; background: #F8FCFB; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+.world-fade.on { opacity: 1; }
+.world-status { position: absolute; left: 14px; bottom: 64px; margin: 0; color: #10323A; background: rgba(248, 252, 251, 0.86); padding: 4px 12px; border-radius: 999px; font-weight: 700; }
+.bar { height: 10px; border-radius: 999px; background: var(--panel-light); overflow: hidden; border: 1px solid var(--line); }
+.bar > span { display: block; height: 100%; background: var(--lemon); }
+.helper-me { font-weight: 800; }

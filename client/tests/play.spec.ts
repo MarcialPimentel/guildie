@@ -102,6 +102,17 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await page.click(id('mode-trades'))
   await expect(page.locator(id('trades'))).toContainText('Offers to you')
 
+  // --- the living city as lists (0.9.0): your guild's quarter (your own stall is there), friends, the Duke's order
+  await page.click(id('mode-quarters'))
+  await expect(page.locator(id('quarters'))).toContainText('Alchemists')
+  await expect(page.locator(id('stall-me'))).toContainText(name)
+  await page.click(id('mode-friends'))
+  await expect(page.locator(id('friends'))).toContainText('No friends yet')
+  await page.click(id('mode-duke'))
+  await expect(page.locator(id('duke'))).toBeVisible()
+  await expect(page.locator(id('duke-status'))).toBeVisible()
+  await expect(page.locator('[data-testid^="duke-line-"]').first()).toBeVisible()
+
   // --- feedback (#29)
   await page.click(id('feedback-open'))
   await page.fill(id('feedback-text'), `Browser test feedback (${info.project.name})`)

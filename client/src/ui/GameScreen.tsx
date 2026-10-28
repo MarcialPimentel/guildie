@@ -141,6 +141,7 @@ export function GameScreen() {
         <HarborView
           panel={panel}
           open={openPanel}
+          show={setPanel}
           close={closePanel}
           onView={setView}
           onFail={() => { setMode('classic'); say('The 3D harbor could not start in this browser, so the classic view is on.', true) }}
