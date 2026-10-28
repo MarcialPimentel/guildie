@@ -33,25 +33,42 @@ export function GameScreen() {
     messageTimer.current = window.setTimeout(() => setMessage(null), 6000)
   }
 
-  // Background refresh: new state every 20 s, and open views reload their data.
+  // Background refresh: new state every 20 s while the game is on screen, and open views reload their data.
+  // Paused while the tab is hidden; refreshes at once when it comes back. Stops for good once this screen
+  // is gone (e.g. logged out), so no stray timer keeps polling (0.5.2).
+  const mounted = useRef(true)
+  const refreshNow = async () => {
+    await session.refresh()
+    if (!mounted.current) return
+    setRefreshTick((n) => n + 1)
+    if (document.visibilityState === 'visible' && session.state) markSeen(session.state.player.id)
+  }
   const scheduleRefresh = () => {
     clearTimeout(refreshTimer.current)
+    if (!mounted.current) return
     refreshTimer.current = window.setTimeout(async () => {
-      await session.refresh()
-      setRefreshTick((n) => n + 1)
-      if (document.visibilityState === 'visible' && session.state) markSeen(session.state.player.id)
+      if (document.visibilityState === 'visible') await refreshNow()
       scheduleRefresh()
     }, REFRESH_MS)
   }
   useEffect(() => {
+    mounted.current = true
     scheduleRefresh()
-    // Leaving the page counts as the last time the player was here (for "While you were away").
-    const onHide = () => document.visibilityState === 'hidden' && session.state && markSeen(session.state.player.id)
-    document.addEventListener('visibilitychange', onHide)
+    const onVisibility = () => {
+      if (!session.state) return
+      if (document.visibilityState === 'hidden') {
+        // Leaving counts as the last time the player was here (for "While you were away").
+        markSeen(session.state.player.id)
+      } else {
+        refreshNow().then(scheduleRefresh)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
     return () => {
+      mounted.current = false
       clearTimeout(refreshTimer.current)
       clearTimeout(messageTimer.current)
-      document.removeEventListener('visibilitychange', onHide)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 

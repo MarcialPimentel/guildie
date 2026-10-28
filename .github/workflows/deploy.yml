@@ -65,6 +65,11 @@ jobs:
       - name: Content validator
         run: python3 tools/validate_content.py
 
+      - name: Migration check (numbering, "-- END NNN" markers, no edits to applied files)
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          python3 tools/check_migrations.py --base FETCH_HEAD
+
       - name: Start the API against a throwaway database (fast-pace content)
         run: |
           mkdir -p ci/private ci/www/games/guildie ci/content
@@ -91,7 +96,8 @@ jobs:
           echo "GUILDIE_PRIVATE=$GUILDIE_PRIVATE" >> "$GITHUB_ENV"
           echo "GUILDIE_CONTENT=$GUILDIE_CONTENT" >> "$GITHUB_ENV"
           echo "GUILDIE_MIGRATIONS=$GUILDIE_MIGRATIONS" >> "$GITHUB_ENV"
-          (cd ci/www && nohup php -S 127.0.0.1:8080 -t . > ../php-server.log 2>&1 &)
+          # Several workers so the smoke test can send requests at the same moment (race tests).
+          (cd ci/www && PHP_CLI_SERVER_WORKERS=4 nohup php -S 127.0.0.1:8080 -t . > ../php-server.log 2>&1 &)
           for i in $(seq 20); do curl -s -o /dev/null http://127.0.0.1:8080/ && break; sleep 0.5; done
           # The first request applies all migrations to the empty database.
           out=$(curl -s "http://127.0.0.1:8080/games/guildie/api/index.php?action=ping" || true)
@@ -213,6 +219,36 @@ jobs:
           local-dir: upload/public/
           server-dir: ${{ env.PUBLIC_DIR }}
 
-      - name: Done
+      # Fail the run unless the live site really is the new build: the server reports the new build and
+      # database version (the ping also applies any new migrations), and the game page serves the new client.
+      - name: Live check (ping + game page)
         if: steps.check.outputs.ready == 'true'
-        run: echo "::notice::Deployed. Check https://marz.gg/games/guildie/api/index.php?action=ping for the new build."
+        run: |
+          set -u
+          GAME=https://marz.gg/games/guildie
+          BUILD=$(grep -o "'.*'" upload/private/app/version.php | tr -d "'")
+          SCHEMA=$(ls upload/private/migrations | sed -n 's/^\([0-9][0-9][0-9]\)_.*/\1/p' | sort | tail -1 | sed 's/^0*//')
+          ASSET=$(grep -o 'assets/index-[^"]*\.js' upload/public/index.html | head -1)
+          echo "Expecting build '$BUILD', schema $SCHEMA, client $ASSET"
+          ok=""
+          for i in $(seq 20); do
+            out=$(curl -s --max-time 20 "$GAME/api/index.php?action=ping&v=$RANDOM" || true)
+            if echo "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('ok') and d['data']['build']=='$BUILD' and int(d['data']['schema'])==$SCHEMA else 1)" 2>/dev/null; then
+              ok=1; break
+            fi
+            echo "Not live yet (attempt $i): $(echo "$out" | head -c 200)"; sleep 15
+          done
+          if [ -z "$ok" ]; then
+            echo "::error title=Live check failed::The server never reported build '$BUILD' with schema $SCHEMA. Last answer: $(echo "$out" | head -c 300)"
+            exit 1
+          fi
+          fresh=$(curl -s --max-time 20 "$GAME/?v=$RANDOM" | grep -o 'assets/index-[^"]*\.js' | head -1)
+          if [ "$fresh" != "$ASSET" ]; then
+            echo "::error title=Live check failed::The game page serves '$fresh', expected '$ASSET'."
+            exit 1
+          fi
+          served=$(curl -s --max-time 20 "$GAME/" | grep -o 'assets/index-[^"]*\.js' | head -1)
+          if [ "$served" != "$ASSET" ]; then
+            echo "::warning title=Stale cache::Players still get the old game page ('$served'). Flush the SiteGround cache: Site Tools > Speed > Caching > Dynamic Cache > Flush."
+          fi
+          echo "::notice::Live: build $BUILD, schema $SCHEMA, client $ASSET."

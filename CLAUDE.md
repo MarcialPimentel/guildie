@@ -17,7 +17,7 @@ Guildie is a mobile-first browser crafting and trading game (TypeScript + Preact
 - **Static game data lives in `/content` as JSON**, shared by server and client.
 - **Merging to `main` deploys to marz.gg automatically** (`.github/workflows/deploy.yml`). Marz approves in chat by saying "merge #N"; merge only the PR named. Never push to `main` directly.
 - **Bump the `VERSION` file** for each release. `tools/package.sh` stamps it (plus the CI run number) into the server and the client footer.
-- **Database changes are new numbered files in `server/migrations/`** (never edit an applied one). The server applies them itself after a deploy, so they must be safe to re-run and backward-compatible.
+- **Database changes are new numbered files in `server/migrations/`** (never edit an applied one). The server applies them itself after a deploy, so they must be safe to re-run and backward-compatible, and **from 006 on must end with the line `-- END NNN`** (see `server/migrations/README.md`; `tools/check_migrations.py` checks it in CI).
 - **Test before opening a PR:** `tools/smoke_test.py` against a local server, `npm run build` in `client/` (type check + build), and the Playwright browser test `client/tests/play.spec.ts` (CI runs all of them on every PR, on a phone and a desktop screen). Deploy details live in `docs/deploy.md`.
 - **Private hosting details** (paths, account names, which secrets exist) are in Marz's private doc "Guildie — Hosting & Session Handoff (private)", never in the repo.
 

@@ -9,7 +9,24 @@ declare(strict_types=1);
  *
  * Migrations must be safe to re-run (CREATE TABLE IF NOT EXISTS, INSERT IGNORE, ...) because
  * MySQL can't roll back table changes if a file fails halfway.
+ *
+ * From 006 on, every migration must end with the line `-- END NNN` (its own number). The deploy
+ * uploads files one at a time, so a request can arrive while a migration is only half written; the
+ * marker proves the whole file is there. A file without it is skipped (with everything after it)
+ * until a later request finds it complete (0.5.2).
  */
+
+const MIGRATION_FIRST_WITH_END_MARKER = 6;
+
+/** True when the migration file is fully uploaded: from 006 on it must end with `-- END NNN`. */
+function migration_complete(int $number, string $sql): bool
+{
+    if ($number < MIGRATION_FIRST_WITH_END_MARKER) {
+        return true;
+    }
+    $lines = preg_split('/\r?\n/', rtrim($sql));
+    return trim((string) end($lines)) === sprintf('-- END %03d', $number);
+}
 
 function migrations_dir(): string
 {
@@ -59,12 +76,24 @@ function migrate_if_needed(): array
     try {
         $applied = [];
         $current = schema_version($pdo);   // re-check: another request may have just finished
+        $pdo->exec('SET SESSION lock_wait_timeout = 10');   // don't hang forever behind a long query
         foreach ($available as $number => $path) {
             if ($number <= $current) {
                 continue;
             }
-            foreach (sql_statements((string) file_get_contents($path)) as $sql) {
-                $pdo->exec($sql);
+            $file = (string) file_get_contents($path);
+            if (!migration_complete($number, $file)) {
+                // Still uploading (or missing its END line): try again on a later request.
+                error_log('Guildie: migration ' . basename($path) . ' is incomplete (no "-- END" line yet); waiting');
+                break;
+            }
+            foreach (sql_statements($file) as $sql) {
+                try {
+                    $pdo->exec($sql);
+                } catch (Throwable $e) {
+                    error_log('Guildie: migration ' . basename($path) . ' failed: ' . $e->getMessage() . ' | statement: ' . substr($sql, 0, 300));
+                    throw $e;
+                }
             }
             $pdo->prepare("INSERT INTO game_state (k, v) VALUES ('schema_version', ?) ON DUPLICATE KEY UPDATE v = VALUES(v)")
                 ->execute([(string) $number]);
