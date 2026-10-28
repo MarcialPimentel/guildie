@@ -9,6 +9,9 @@ declare(strict_types=1);
  *   - Guild Workshops buy a little of every component, so making components is never a dead end
  *   - Reference values move with scarcity for goods NPCs consume (unmet demand pushes up, a glut
  *     pushes down), and toward real trade prices for everything else
+ *   - 0.5.0 (#45, #46): Guild Week and world events (calendar.php) multiply NPC demand and set where
+ *     prices drift; every price drifts back toward its (event-adjusted) usual value with a little
+ *     constant movement, and each tick records prices for the ticker's sparklines.
  */
 
 /** Current reference value of every item (falls back to content before the first tick). */
@@ -54,11 +57,14 @@ function market_tick(PDO $pdo, int $now, int $elapsed): array
     market_ensure_rows($pdo, $now);
     $refs = market_reference_values($pdo);
 
+    $stats['event_announced'] = calendar_tick($pdo, $now, $elapsed);
+    $mods = calendar_modifiers($pdo, $now);
     $stats['demand_scale'] = market_demand_scale($pdo, $now);
-    market_consumers($pdo, $now, $elapsed, $refs, $stats);
+    market_consumers($pdo, $now, $elapsed, $refs, $stats, $mods['demand']);
     market_traders($pdo, $now, $refs, $stats);
     market_suppliers($pdo, $now, $refs);
-    market_drift($pdo, $now, $elapsed, $refs, $stats);
+    market_drift($pdo, $now, $elapsed, $refs, $stats, $mods);
+    market_record_history($pdo, $now);
 
     $pdo->prepare('DELETE FROM activity WHERE created_at < ?')->execute([$now - 30 * 86400]);
     return $stats;
@@ -79,7 +85,7 @@ function market_demand_scale(PDO $pdo, int $now): float
 }
 
 /** Consumers (Townsfolk, Adventurers, Guild Workshops): buy the cheapest acceptable listings, then consume the goods. */
-function market_consumers(PDO $pdo, int $now, int $elapsed, array $refs, array &$stats): void
+function market_consumers(PDO $pdo, int $now, int $elapsed, array $refs, array &$stats, array $demandMods = []): void
 {
     $pace = pace();
     $scale = $stats['demand_scale'] ?? 1.0;
@@ -91,7 +97,8 @@ function market_consumers(PDO $pdo, int $now, int $elapsed, array $refs, array &
             $pdo->prepare('INSERT IGNORE INTO market_demand (persona, item_id, carry) VALUES (?, ?, 0)')->execute([$persona, $itemId]);
             $stmt = $pdo->prepare('SELECT carry FROM market_demand WHERE persona = ? AND item_id = ? FOR UPDATE');
             $stmt->execute([$persona, $itemId]);
-            $carry = (float) $stmt->fetchColumn() + (float) $perHour * $scale * $elapsed / 3600 / $pace;
+            $perHour = (float) $perHour * ($demandMods[$itemId] ?? 1.0);   // Guild Week and events
+            $carry = (float) $stmt->fetchColumn() + $perHour * $scale * $elapsed / 3600 / $pace;
             $units = (int) floor($carry);
             $pdo->prepare('UPDATE market_demand SET carry = ? WHERE persona = ? AND item_id = ?')
                 ->execute([$carry - $units, $persona, $itemId]);
@@ -184,6 +191,45 @@ function market_suppliers(PDO $pdo, int $now, array $refs): void
     }
 }
 
+/** Save every item's price at this tick for the ticker's sparklines; keep 8 days. */
+function market_record_history(PDO $pdo, int $now): void
+{
+    $pdo->prepare('INSERT IGNORE INTO market_history (item_id, at, reference_value) SELECT item_id, ?, reference_value FROM market_items')
+        ->execute([$now]);
+    $pdo->prepare('DELETE FROM market_history WHERE at < ?')->execute([$now - 8 * 86400]);
+}
+
+/**
+ * Price history per item, one point per bucket (the last price in each), oldest first.
+ * Returns [item_id => [float, ...]].
+ */
+function market_history(PDO $pdo, int $now, int $seconds, int $buckets, ?string $itemId = null): array
+{
+    $from = $now - $seconds;
+    $sql = 'SELECT item_id, at, reference_value FROM market_history WHERE at >= ?' . ($itemId ? ' AND item_id = ?' : '') . ' ORDER BY at';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($itemId ? [$from, $itemId] : [$from]);
+    $size = max(1, intdiv($seconds, $buckets));
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $bucket = min($buckets - 1, intdiv((int) $row['at'] - $from, $size));
+        $out[$row['item_id']][$bucket] = (float) $row['reference_value'];
+    }
+    foreach ($out as $id => $points) {
+        ksort($points);
+        $out[$id] = array_map(fn($v) => round($v, 1), array_values($points));
+    }
+    return $out;
+}
+
+/** Ticker fields for one item: usual value, % versus usual, hot flag. */
+function market_ticker(string $itemId, float $ref): array
+{
+    $usual = (float) (content_item($itemId)['reference_value'] ?? $ref);
+    $pct = $usual > 0 ? (int) round(($ref / $usual - 1) * 100) : 0;
+    return ['usual' => (int) round($usual), 'change_pct' => $pct, 'hot' => abs($pct) >= (int) econ('market.hot_percent', 15)];
+}
+
 /** Items that NPC consumers (any persona with demand) want. */
 function market_consumer_items(): array
 {
@@ -205,9 +251,14 @@ function market_consumer_items(): array
  *  - Everything else (raw materials): move toward the last day's player trade prices,
  *    or slowly back to base if nothing traded.
  */
-function market_drift(PDO $pdo, int $now, int $elapsed, array $refs, array $stats): void
+function market_drift(PDO $pdo, int $now, int $elapsed, array $refs, array $stats, array $mods = []): void
 {
     $hours = $elapsed / 3600;
+    $priceMods = $mods['price'] ?? [];
+    // Every price drifts back toward its usual value (adjusted by Guild Week and events), with a little
+    // constant movement, so the ticker always has something to show and "buy the dip" works (#45).
+    $revert = 1 - pow(1 - (float) econ('market.reversion_per_hour', 0.1), $hours / pace());
+    $noise = (float) econ('market.noise_per_hour', 0.02) * sqrt($hours / pace());
     $min = (float) econ('market.drift_min_multiplier', 0.5);
     $max = (float) econ('market.drift_max_multiplier', 2.0);
     $up = (float) econ('market.scarcity_up_per_hour', 0.04);
@@ -231,7 +282,8 @@ function market_drift(PDO $pdo, int $now, int $elapsed, array $refs, array $stat
     );
 
     foreach ($refs as $itemId => $ref) {
-        $base = (float) content_item($itemId)['reference_value'];
+        $usual = (float) content_item($itemId)['reference_value'];
+        $base = $usual * ($priceMods[$itemId] ?? 1.0);   // where the price wants to be right now
         $new = $ref;
 
         if (isset($consumerItems[$itemId])) {
@@ -254,7 +306,9 @@ function market_drift(PDO $pdo, int $now, int $elapsed, array $refs, array $stat
             $new = $ref + ($traded ? $factor : $factor * 0.25) * ($target - $ref);
         }
 
-        $new = max($base * $min, min($base * $max, $new));
+        $new += $revert * ($base - $new);
+        $new *= 1 + rand_between(-$noise, $noise);
+        $new = max($usual * $min, min($usual * $max, $new));
         $pdo->prepare('UPDATE market_items SET reference_value = ?, updated_at = ? WHERE item_id = ?')
             ->execute([round($new, 2), $now, $itemId]);
     }

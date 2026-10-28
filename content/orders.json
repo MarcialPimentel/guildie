@@ -1,0 +1,31 @@
+{
+  "_comment": "Order board (#44, professions.md section 2). Customers who post orders in each player's Workshop. 'kinds' says which order types a customer posts: standard (your own goods), bundle (your goods plus another guild's; from 'bundle_min_crafts' crafts made, a stand-in for Journeyman until skill ranks arrive), collector (one item at a high price). Lines use {items} for what's asked. Every number is [tune].",
+  "settings": {
+    "board_size": 3,
+    "deadline_hours_min": 2,
+    "deadline_hours_max": 8,
+    "refill_minutes": 10,
+    "skip_cooldown_minutes": 30,
+    "target_value_min": 50,
+    "target_value_max": 140,
+    "max_quantity": 5,
+    "bundle_min_crafts": 30,
+    "bundle_chance": 0.35,
+    "collector_chance": 0.08,
+    "collector_chance_sunday": 0.25,
+    "reward_multiplier": { "standard": 1.4, "bundle": 1.7, "collector": 3.0 },
+    "rare_material_chance": 0.35,
+    "rare_material_max": 3
+  },
+  "customers": [
+    { "id": "lady_ashworth", "name": "Lady Ashworth", "kinds": ["standard", "bundle"], "line": "Needs {items} before tonight's ball. Discretion appreciated." },
+    { "id": "squire_pell", "name": "Squire Pell", "kinds": ["standard", "bundle"], "line": "Nervous about the tournament. Wants {items}, and quickly." },
+    { "id": "mother_hale", "name": "Mother Hale", "kinds": ["standard"], "line": "Keeps the orphanage on Tallow Street running. Asks for {items}." },
+    { "id": "foreman_grigg", "name": "Foreman Grigg", "kinds": ["standard", "bundle"], "line": "The new pumping station is behind schedule. Needs {items}." },
+    { "id": "captain_vos", "name": "Captain Vos", "kinds": ["standard", "bundle"], "line": "Her airship leaves at dawn. She'll pay well for {items}." },
+    { "id": "brother_amon", "name": "Brother Amon", "kinds": ["standard"], "line": "The infirmary is short again. Requests {items}." },
+    { "id": "madame_orsini", "name": "Madame Orsini", "kinds": ["bundle"], "line": "Opening a shop on the Canal Row. Wants {items} for the shelves." },
+    { "id": "collector_quill", "name": "Alistair Quill, collector", "kinds": ["collector"], "line": "Only the finest. Will pay handsomely for {items}." },
+    { "id": "collector_marchesa", "name": "La Marchesa", "kinds": ["collector"], "line": "Visiting from the south, buying curiosities: {items}." }
+  ]
+}

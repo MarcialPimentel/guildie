@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M1 playtest (build 0.4.0)
+**Version:** 0.5 · **Date:** 2026-10-27 · **Status:** M2 in progress (build 0.5.0)
 **Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -83,6 +83,19 @@ Every feature must clearly serve at least one pillar. If it serves none, cut it.
 | 5 | **You need other crafters.** | At higher tiers, your best work depends on what others make. | Does this give players a reason to trade with each other? |
 
 ---
+
+### 2.1 What makes Guildie fun (the M2 bets)
+
+Playtest 0.3.0 found the game was a working machine with no tension: everything was done in 20 minutes. The fix is **decisions on three timescales**: *now* (sell or hold: the market ticker), *this session* (which orders to fill: the order board), and *this week* (which recipes to learn and which upgrade to save for). Each bet is checked in the playtest:
+
+| Bet | Playtest question |
+|---|---|
+| Customers with wants give every check-in a purpose | "Did you open the game to fill an order?" |
+| Readable price moves make trading a skill | "Did you ever sell or buy *because* of the arrows?" |
+| Choosing recipes creates anticipation and identity | "What recipe are you saving up for, and why that one?" |
+| Workshop upgrades make ranks feel like events | "What did reaching Journeyman feel like?" |
+
+Every new feature should serve one of these bets or a pillar. Details: [professions.md](professions.md) §1–§5 and §8.
 
 ## 3. Setting & Tone
 
@@ -182,6 +195,8 @@ Apprentice → Journeyman → Expert → Master
 
 ### 5.1 Design principle
 
+> **The profession web** ([professions.md](professions.md)): the M2 fun loop (orders, market ticker, learning recipes), skill 1–100 and XP, the full recipe ladder, how the guilds need each other (rules W1–W7), and workshop upgrades.
+
 All professions share **one framework**. Each profession adds **one signature mechanic**. This keeps content cost manageable and lets new professions be added mostly as data.
 
 ### 5.2 Shared systems
@@ -202,7 +217,7 @@ All professions share **one framework**. Each profession adds **one signature me
 This turns leveling into a light routing puzzle: what's the cheapest path to the next rank, given current market prices?
 
 **Recipes**
-- Learned from the guild trainer (gold sink), found as rare drops, or bought on the Exchange.
+- **Chosen and bought at the guild trainer** (gold sink): one free starter recipe per rank, the rest bought as you choose. **Rare recipes** come only from orders and rare finds, and they're trophies. No specialization branches for now. Details: [professions.md](professions.md) §4.
 - Rare recipes are trophies and a major collection goal.
 
 **Quality tiers**
@@ -563,7 +578,7 @@ Each milestone ends with a playtest and a clear exit question.
 |---|---|---|
 | **M0 Foundation** ✅ | Repo, Godot project, MySQL database and PHP API on SiteGround (step-by-step setup guide), name + password login, read and write one inventory item through the server, cron job running a test tick, deploy steps, build number | Open on a phone, log in, see server-owned gold and an item |
 | **M1 Market Prototype** (live, playtesting) | 3 professions (choice + starter recipes), 18 items, gathering stations, crafting with timers and batches, the Exchange with 3 NPC personas, liquidity band, market tick, Activity Log, economy simulator. Plain text UI. See [systems.md §9](systems.md#9-milestone-matrix). | **"Is making one good trade fun?"** |
-| **M2 Crafting Depth** | Skill ranks and colors, quality tiers, procs, gathering decisions, crafting orders, workshop upgrades, Guild Week, "while you were away" screen, Focus prototype | **"Do I want to come back tomorrow?"** |
+| **M2 Crafting Depth** | Built fun-first, shipped in steps (0.5.0 = step 1) ([professions.md](professions.md) §9): **1.** order board, market ticker with Guild Week and events, "while you were away" screen, surprises on collect · **2.** skill and XP, learning recipes, rare recipes · **3.** the recipe ladder to 100 and the web rules · **4.** workshop upgrades as rank-up milestones. Quality tiers, gathering decisions and the Focus prototype follow if time allows | **"Do I want to come back tomorrow?"** |
 | **M3 Real Players** | Shared market with multiple players, NPC scaling, leaderboards (gold and rank progress; a simple City directory shipped early in 0.3.0), anti-abuse | **"Does trading with real people feel different and better?"** |
 | **M4 Look & Feel** | Isometric workshop art, steam progression visuals, events and news board, onboarding polish, installable web app | **"Would I show this to a stranger?"** |
 | **Later** | Guilds, specializations, second profession, more professions | — |
@@ -653,6 +668,17 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-27 | City shows one list with gold and crafts columns; #1 by gold is "Il Factotum della Città" | Two sorted lists repeated the same people; separate columns leave room for skill; a title gives the top a name (#38) |
 | 2026-10-27 | Sell form lists on the Exchange first, guild sale below; raw materials say they have no city buyers | The Exchange is the main way to sell (Pillar 2); answers "will it sell if I'm alone?" (#37) |
 | 2026-10-27 | **Client moves from Godot 4 to a TypeScript + Preact web app** (0.4.0) | Guildie is almost all menus and lists, which browsers do natively: about 20 KB instead of tens of MB, loads in a second, adapts to phone and desktop, real text boxes and keyboard. Only the client was rewritten; server, database, API tests and content are unchanged. Isometric art (M4) can use a canvas library (#40) |
+| 2026-10-28 | M2's goal is fun before content: decisions on three timescales (market ticker, order board, recipe choice); see §2.1 | Playtest 0.3.0: "done everything in 20 minutes"; more recipes alone wouldn't fix a loop with no decisions |
+| 2026-10-28 | Order board lives in the Workshop; orders can ask for several items, including other guilds' goods (from Journeyman); rewards include things the market can't give (XP, rare materials, rare recipes) | Making belongs to the Workshop; bundle orders drive trade |
+| 2026-10-28 | Market ticker: every price shown versus usual with green/red arrows, moved by learnable causes (Guild Week, news events, supply) and drifting back to usual | Price moves must be readable to make trading a skill, not a gamble |
+| 2026-10-28 | Recipes are chosen and bought at the trainer (one free starter per rank); rare recipes from orders; no specialization branches for now | Anticipation, identity, and the gold sink the economy needs |
+| 2026-10-28 | XP falls off on easy recipes (orange/yellow/green/grey), +25% on recipes using another guild's goods, double XP on the first craft of the day | Push players to new recipes; reward trade partners; reward short check-ins |
+| 2026-10-28 | Workshop upgrades are the rank-up milestones, capped by rank and costing gold plus other guilds' parts | Ranks should feel like events; the strongest everyday reason to trade |
+| 2026-10-28 | Web rules W1–W7 and the 16-recipe ladder per guild adopted ([professions.md](professions.md)); one big M2 release | A framework every recipe follows, checked by the validator |
+| 2026-10-28 | New professions, specialization branches and the second profession are on hold | Make the three guilds fun first |
+| 2026-10-28 | M2 step 1 (the fun core) ships on its own as 0.5.0 | Marz asked to ship it, so the fun bets get playtested before the content is built |
+| 2026-10-28 | Until skill ranks exist, bundle orders unlock at 30 crafts made (standing in for Journeyman); collectors are rare high-paying orders (more on Sunday) | Lets 0.5.0 test bundle orders and collectors without waiting for step 2 |
+| 2026-10-28 | "While you were away" shows after 15 minutes away, even if nothing happened | Predictable; a quiet summary still tells the player the world kept going |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
 
 ---

@@ -64,9 +64,9 @@ flowchart LR
 | Exchange | **The Exchange** | Player-facing auction house | ✅ M1; 0.2.2: deposit from the sale, Sell to guild |
 | | **Direct Trades** | Player-to-player offers | ✅ 0.3.0 |
 | | **Market Simulation** | NPC demand and supply that keeps the market alive | ✅ M1 |
-| | **Crafting Orders** | Specific requests with rewards | M2 |
+| | **Crafting Orders** | Specific requests with rewards | ✅ 0.5.0 (order board) |
 | Meta | **Workshop & Buildings** | Capacity and speed upgrades | M2 |
-| | **Calendar & Events** | Weekly rhythm and world events | M2 (week), M4 (events) |
+| | **Calendar & Events** | Weekly rhythm and world events | ✅ 0.5.0 (Guild Week, events, news board); polish M4 |
 | | **Leaderboards** | Public rankings | City directory ✅ 0.3.0; full boards M3 |
 | | **Guilds** | Social layer | Later |
 | Cross-cutting | **Economy Balance** | Faucets, sinks, and monitoring | ✅ M1 (simulator), ongoing |
@@ -94,7 +94,7 @@ Everything a player can *do*, and which system owns it. If a new feature adds a 
 | **Buy** a listing | Exchange | 5–30 min | M1 |
 | **Cancel / relist** | Exchange | 30 s | M1 |
 | **Read** prices, history, news | Exchange, Calendar | 5–30 min | M1 (prices), M2 (news) |
-| **Fulfill** an order | Crafting Orders | 5 min | M2 |
+| **Fill / turn down** an order | Crafting Orders | 30 s | 0.5.0 |
 | **Learn** a recipe | Professions | 5 min | M2 |
 | **Upgrade** a building | Workshop | 5 min | M2 |
 
@@ -189,6 +189,8 @@ These rules apply to every system.
 ## 5. Production systems
 
 ### 5.1 Professions & Progression
+
+> Skill curve, recipe ladder and the cross-profession web rules: [professions.md](professions.md).
 
 | | |
 |---|---|
@@ -343,7 +345,12 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 
 **Tuning knobs:** band multipliers, base demand per item, persona price ranges, drift speed, NPC stock size. These are the most important numbers in the game and need an **economy simulator** (see 8.1) before going live.
 
-**Milestones:** M1 = R, band, five personas, scarcity pricing, demand scaled by active players. M2 = Collectors, Prospectors, Steam Factory, calendar hooks. M3 = per-item scaling with real-player volume.
+**0.5.0, the ticker (#45):**
+- Every price **drifts back toward its usual value** (`market.reversion_per_hour`), adjusted by Guild Week and events, with a little constant movement (`market.noise_per_hour`), so prices always move and "buy the dip" works.
+- Each tick records prices in `market_history` (kept 8 days).
+- The Market shows each price **versus usual**, with a green ▲ or red ▼, a sparkline, and **Hot** at ±15% (`market.hot_percent`).
+
+**Milestones:** M1 = R, band, five personas, scarcity pricing, demand scaled by active players. 0.5.0 = ticker, calendar hooks. Later = Collectors, Prospectors, Steam Factory personas. M3 = per-item scaling with real-player volume.
 
 ### 6.3 Crafting Orders
 
@@ -355,7 +362,13 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 | **Inputs** | Market Simulation and Calendar post orders |
 | **Outputs** | Rewards (gold, rare materials, recipes) to Inventory; events to Activity Log |
 
-**Rules:** NPCs post orders sized to the player's rank; fulfilling removes the items (consumed: a sink) and pays the reward. Rare-recipe rewards make orders the main way to discover recipes. Player-posted orders are in the backlog.
+**Rules** (decided 2026-10-28, details in [professions.md](professions.md) §2):
+- Orders show on an **order board in the Workshop**: 3 at a time, from named NPC customers, scaled to the player's rank.
+- From Journeyman on, an order can be a **bundle of several items, including other guilds' goods**.
+- Each order has a deadline in hours. Skipping one has a cooldown.
+- Fulfilling **removes the items** (consumed: a sink) and pays rewards the market can't give: XP, rare materials (sometimes another guild's), and **rare recipes**, the only way to get some recipes.
+
+Player-posted orders are in the backlog.
 
 **Milestone:** M2.
 
@@ -411,7 +424,12 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 
 **Rules:** The **Guild Week** cycle (GDD 6.5): Monday restock, Wednesday tournament announced, Friday tournament, Sunday market day. **World events** (mine collapse, plague, factory strike, royal commission) layer on top and are announced in advance on the news board, so information has value.
 
-**Milestone:** M2 (Guild Week), M4 (world events, news board polish).
+**0.5.0 (#46):** `content/calendar.json` defines each Guild Week day and the world events.
+- Each day or event can multiply an item's **NPC demand** and set where its **price** drifts toward.
+- In the market tick, an event is announced on the **news board** about 6 hours ahead (`world_events` table), one at a time, and then runs for about 10–12 hours. Both durations scale with the pace.
+- The news board is at the top of the Market.
+
+**Milestone:** 0.5.0 (Guild Week, events, news board), M4 (news board polish).
 
 ### 7.3 Leaderboards
 

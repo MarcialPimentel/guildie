@@ -114,6 +114,31 @@ if economy.get("pace", {}).get("time_multiplier", 0) <= 0:
 m = economy.get("market", {})
 if not (0 < m.get("floor_multiplier", 0) < m.get("trader_buy_below", 0) < 1 < m.get("ceiling_multiplier", 0)):
     err("economy: need 0 < floor_multiplier < trader_buy_below < 1 < ceiling_multiplier")
+orders = load("orders.json")
+kinds = {"standard", "bundle", "collector"}
+for c in orders.get("customers", []):
+    if not set(c.get("kinds", [])) <= kinds or not c.get("kinds"):
+        err(f"orders: customer {c.get('id')!r} needs kinds from {sorted(kinds)}")
+    if "{items}" not in c.get("line", ""):
+        err(f"orders: customer {c.get('id')!r} line must contain {{items}}")
+for kind in kinds:
+    if not any(kind in c.get("kinds", []) for c in orders.get("customers", [])):
+        err(f"orders: no customer posts {kind!r} orders")
+    if kind not in orders.get("settings", {}).get("reward_multiplier", {}):
+        err(f"orders: settings.reward_multiplier needs {kind!r}")
+
+calendar = load("calendar.json")
+days = sorted(d.get("day") for d in calendar.get("week", []))
+if days != list(range(1, 8)):
+    err("calendar: week needs exactly one entry for each day 1..7")
+for entry in calendar.get("week", []) + calendar.get("events", {}).get("list", []):
+    for kind in ("demand", "price"):
+        for item_id, x in entry.get(kind, {}).items():
+            if item_id not in item_ids:
+                err(f"calendar: {entry.get('name', entry.get('id'))}: unknown item {item_id!r}")
+            if not (0 < x <= 5):
+                err(f"calendar: {entry.get('name', entry.get('id'))}: {kind} multiplier for {item_id} out of range")
+
 g = economy.get("guild_sale", {})
 if not (0 < g.get("floor_multiplier", 0) < g.get("base_multiplier", 0) < m.get("trader_buy_below", 0)):
     err("economy: need 0 < guild_sale.floor_multiplier < guild_sale.base_multiplier < market.trader_buy_below (listing must pay better)")

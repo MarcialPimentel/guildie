@@ -1,0 +1,301 @@
+<?php
+declare(strict_types=1);
+
+/*
+ * Crafting Orders (systems.md 6.3, #44): the order board in each player's Workshop.
+ * Named NPC customers ask for specific items with a deadline and pay rewards the market can't:
+ * gold above market value and sometimes rare materials from another guild. Content: content/orders.json.
+ *
+ * The board is resolved lazily (like every timer in Guildie): reading or acting on it expires
+ * overdue orders and fills empty slots. An open order whose created_at is in the future is a
+ * customer on the way. Order kinds:
+ *   standard  : your own goods
+ *   bundle    : your goods plus another guild's (from bundle_min_crafts crafts made, standing in for
+ *               Journeyman until skill ranks arrive in M2 step 2)
+ *   collector : one item at a high price (more likely on Sunday, Market Day)
+ */
+
+function orders_settings(): array
+{
+    return content_file('orders.json')['settings'];
+}
+
+function orders_customers(): array
+{
+    return content_index('orders.json', 'customers');
+}
+
+function order_items_from_json(string $json): array
+{
+    $out = [];
+    foreach (json_decode($json, true) ?: [] as $e) {
+        $out[$e['item_id']] = ($out[$e['item_id']] ?? 0) + (int) $e['quantity'];
+    }
+    return $out;
+}
+
+function order_items_to_json(array $items): string
+{
+    return json_encode(array_map(fn($id, $q) => ['item_id' => $id, 'quantity' => $q], array_keys($items), $items));
+}
+
+/** "3 Copper Lantern and 1 Smelting Flux" */
+function order_items_text(array $items): string
+{
+    $parts = array_map(fn($id, $q) => $q . ' ' . item_name((string) $id), array_keys($items), $items);
+    if (count($parts) <= 1) {
+        return $parts[0] ?? '';
+    }
+    $last = array_pop($parts);
+    return implode(', ', $parts) . ' and ' . $last;
+}
+
+/** Items a profession can make (its recipe outputs). $selfSufficientOnly: only recipes with no other guild's inputs. */
+function orders_own_items(string $professionId, bool $selfSufficientOnly): array
+{
+    $items = [];
+    foreach (content_recipes_for($professionId) as $recipe) {
+        $imports = array_filter($recipe['inputs'], fn($in) => (content_item($in['item_id'])['profession'] ?? '') !== $professionId);
+        if ($selfSufficientOnly && $imports) {
+            continue;
+        }
+        $items[] = $recipe['output']['item_id'];
+    }
+    return array_values(array_unique($items));
+}
+
+/** Crafted goods other guilds make with no imports (what a bundle may ask for from another guild). */
+function orders_other_guild_items(string $professionId): array
+{
+    $items = [];
+    foreach (content_professions() as $id => $p) {
+        if ($id !== $professionId) {
+            $items = array_merge($items, orders_own_items($id, true));
+        }
+    }
+    return $items;
+}
+
+function orders_pick(array $list): mixed
+{
+    return $list[mt_rand(0, count($list) - 1)];
+}
+
+/** Quantity of an item worth roughly $target gold (at least 1, at most max_quantity). */
+function orders_quantity_for(string $itemId, float $target, array $refs): int
+{
+    $ref = max(1.0, (float) ($refs[$itemId] ?? 1));
+    return max(1, min((int) orders_settings()['max_quantity'], (int) round($target / $ref)));
+}
+
+/** Generate one new order for a player. Returns the row values to insert (without slot/times). */
+function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now): array
+{
+    $s = orders_settings();
+    $refs = market_reference_values($pdo);
+    $crafts = (int) (players_craft_stats($pdo, $playerId)[$playerId]['crafted'] ?? 0);
+    $sunday = calendar_weekday($now) === 7;
+
+    $roll = rand_between(0, 1);
+    $collectorChance = (float) ($sunday ? $s['collector_chance_sunday'] : $s['collector_chance']);
+    $kind = 'standard';
+    if ($roll < $collectorChance) {
+        $kind = 'collector';
+    } elseif ($crafts >= (int) $s['bundle_min_crafts'] && $roll < $collectorChance + (float) $s['bundle_chance']) {
+        $kind = 'bundle';
+    }
+
+    $target = rand_between((float) $s['target_value_min'], (float) $s['target_value_max']);
+    $items = [];
+    if ($kind === 'collector') {
+        $item = orders_pick(orders_own_items($professionId, false));
+        $items[$item] = mt_rand(1, 2);
+    } elseif ($kind === 'bundle') {
+        $own = orders_pick(orders_own_items($professionId, false));
+        $other = orders_pick(orders_other_guild_items($professionId));
+        $items[$own] = orders_quantity_for($own, $target * 0.65, $refs);
+        $items[$other] = orders_quantity_for($other, $target * 0.35, $refs);
+    } else {
+        // Before bundles unlock, standard orders only ask for goods you can make on your own.
+        $pool = orders_own_items($professionId, $crafts < (int) $s['bundle_min_crafts']);
+        $item = orders_pick($pool);
+        $items[$item] = orders_quantity_for($item, $target, $refs);
+    }
+
+    $value = 0.0;
+    foreach ($items as $id => $q) {
+        $value += $q * (float) ($refs[$id] ?? 1);
+    }
+    $gold = (int) ceil($value * (float) $s['reward_multiplier'][$kind]);
+
+    // Sometimes a rare material from another guild's station (cross-pollination).
+    $rewardItems = [];
+    if (rand_between(0, 1) < (float) $s['rare_material_chance']) {
+        $raws = [];
+        foreach (content_professions() as $id => $p) {
+            if ($id !== $professionId) {
+                $outputs = $p['station']['outputs'];
+                $raws[] = end($outputs)['item_id'];   // the station's rarer raw
+            }
+        }
+        $rewardItems[orders_pick($raws)] = mt_rand(1, (int) $s['rare_material_max']);
+    }
+
+    $customers = array_values(array_filter(orders_customers(), fn($c) => in_array($kind, $c['kinds'], true)));
+    $customer = orders_pick($customers);
+    return ['customer_id' => $customer['id'], 'kind' => $kind, 'items' => $items, 'reward_gold' => $gold, 'reward_items' => $rewardItems];
+}
+
+/** Expire overdue orders and fill empty slots. Runs inside a transaction. */
+function orders_refresh(PDO $pdo, int $playerId, string $professionId, int $now): void
+{
+    $s = orders_settings();
+    $pdo->prepare("UPDATE orders SET status = 'expired', resolved_at = ? WHERE player_id = ? AND status = 'open' AND expires_at <= ?")
+        ->execute([$now, $playerId, $now]);
+    $stmt = $pdo->prepare("SELECT slot FROM orders WHERE player_id = ? AND status = 'open'");
+    $stmt->execute([$playerId]);
+    $taken = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    for ($slot = 0; $slot < (int) $s['board_size']; $slot++) {
+        if (!in_array($slot, $taken, true)) {
+            orders_insert($pdo, $playerId, $professionId, $slot, $now, $now);
+        }
+    }
+}
+
+function orders_insert(PDO $pdo, int $playerId, string $professionId, int $slot, int $arrivesAt, int $now): void
+{
+    $s = orders_settings();
+    $o = orders_generate($pdo, $playerId, $professionId, $now);
+    $hours = rand_between((float) $s['deadline_hours_min'], (float) $s['deadline_hours_max']);
+    $expires = $arrivesAt + (int) round($hours * 3600 * pace());
+    $pdo->prepare(
+        'INSERT INTO orders (player_id, slot, customer_id, kind, items, reward_gold, reward_items, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    )->execute([$playerId, $slot, $o['customer_id'], $o['kind'], order_items_to_json($o['items']), $o['reward_gold'],
+        order_items_to_json($o['reward_items']), $arrivesAt, $expires]);
+}
+
+/** The board for the client. */
+function orders_board(int $playerId): array
+{
+    $board = tx(function (PDO $pdo) use ($playerId) {
+        $professionId = require_profession($pdo, $playerId)['id'];
+        $now = game_now();
+        gold_get($pdo, $playerId, true);   // one board refresh at a time per player
+        orders_refresh($pdo, $playerId, $professionId, $now);
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE player_id = ? AND status = 'open' ORDER BY slot");
+        $stmt->execute([$playerId]);
+        $rows = $stmt->fetchAll();
+        $stmt = $pdo->prepare('SELECT skip_ready_at FROM order_boards WHERE player_id = ?');
+        $stmt->execute([$playerId]);
+        return ['rows' => $rows, 'skip_ready_at' => (int) ($stmt->fetchColumn() ?: 0), 'now' => $now];
+    });
+
+    $pdo = db();
+    $now = $board['now'];
+    $customers = orders_customers();
+    $orders = [];
+    foreach ($board['rows'] as $row) {
+        $items = order_items_from_json($row['items']);
+        $customer = $customers[$row['customer_id']] ?? ['name' => 'A customer', 'line' => 'Wants {items}.'];
+        $arriving = (int) $row['created_at'] > $now;
+        $orders[] = [
+            'id'           => (int) $row['id'],
+            'slot'         => (int) $row['slot'],
+            'kind'         => $row['kind'],
+            'customer'     => $customer['name'],
+            'line'         => str_replace('{items}', order_items_text($items), $customer['line']),
+            'arriving_in'  => $arriving ? (int) $row['created_at'] - $now : 0,
+            'seconds_left' => max(0, (int) $row['expires_at'] - $now),
+            'items'        => array_map(fn($id, $q) => [
+                'item_id'  => $id,
+                'name'     => item_name((string) $id),
+                'quantity' => $q,
+                'have'     => inventory_count($pdo, $playerId, (string) $id),
+                'own_guild' => (content_item((string) $id)['profession'] ?? '') === player_profession_id($pdo, $playerId),
+            ], array_keys($items), $items),
+            'reward_gold'  => (int) $row['reward_gold'],
+            'reward_items' => array_map(fn($id, $q) => ['item_id' => $id, 'name' => item_name((string) $id), 'quantity' => $q],
+                array_keys(order_items_from_json($row['reward_items'])), order_items_from_json($row['reward_items'])),
+        ];
+    }
+    return ['orders' => $orders, 'skip_in' => max(0, $board['skip_ready_at'] - $now)];
+}
+
+/** Lock an open, arrived order of this player. */
+function orders_lock(PDO $pdo, int $playerId, int $orderId, int $now): array
+{
+    $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ? AND player_id = ? FOR UPDATE');
+    $stmt->execute([$orderId, $playerId]);
+    $order = $stmt->fetch();
+    if (!$order) {
+        throw new ApiError('not_found', 'Order not found.', 404);
+    }
+    if ($order['status'] !== 'open' || (int) $order['expires_at'] <= $now) {
+        throw new ApiError('order_closed', 'That order is no longer open.', 409);
+    }
+    if ((int) $order['created_at'] > $now) {
+        throw new ApiError('order_closed', 'That customer hasn\'t arrived yet.', 409);
+    }
+    return $order;
+}
+
+/** Fill an order: hand over the items, get paid. A new customer arrives after refill_minutes. */
+function orders_fill(int $playerId, int $orderId): array
+{
+    return tx(function (PDO $pdo) use ($playerId, $orderId) {
+        $professionId = require_profession($pdo, $playerId)['id'];
+        $now = game_now();
+        $order = orders_lock($pdo, $playerId, $orderId, $now);
+        $items = order_items_from_json($order['items']);
+        foreach ($items as $id => $q) {
+            $have = inventory_count($pdo, $playerId, (string) $id, QUALITY_COMMON, true);
+            if ($have < $q) {
+                throw new ApiError('not_enough_items', sprintf('You need %d %s for this order but have %d.', $q, item_name((string) $id), $have));
+            }
+        }
+        foreach ($items as $id => $q) {
+            inventory_remove($pdo, $playerId, (string) $id, $q);   // consumed by the customer: a sink
+        }
+        gold_add($pdo, $playerId, (int) $order['reward_gold']);
+        $rewardItems = order_items_from_json($order['reward_items']);
+        foreach ($rewardItems as $id => $q) {
+            inventory_add($pdo, $playerId, (string) $id, $q);
+        }
+        $pdo->prepare("UPDATE orders SET status = 'filled', resolved_at = ? WHERE id = ?")->execute([$now, $orderId]);
+        $arrives = $now + (int) round((float) orders_settings()['refill_minutes'] * 60 * pace());
+        orders_insert($pdo, $playerId, $professionId, (int) $order['slot'], $arrives, $now);
+
+        $customer = orders_customers()[$order['customer_id']]['name'] ?? 'A customer';
+        $rewardText = $order['reward_gold'] . 'g' . ($rewardItems ? ' and ' . order_items_text($rewardItems) : '');
+        activity_log($pdo, $playerId, 'order_filled', ['customer' => $customer, 'items' => order_items_text($items), 'reward' => $rewardText]);
+        return ['customer' => $customer, 'reward_gold' => (int) $order['reward_gold'], 'reward_text' => $rewardText];
+    });
+}
+
+/** Turn an order down. A new customer arrives at once; the next skip waits skip_cooldown_minutes. */
+function orders_skip(int $playerId, int $orderId): void
+{
+    tx(function (PDO $pdo) use ($playerId, $orderId) {
+        $professionId = require_profession($pdo, $playerId)['id'];
+        $now = game_now();
+        $pdo->prepare('INSERT IGNORE INTO order_boards (player_id, skip_ready_at) VALUES (?, 0)')->execute([$playerId]);
+        $stmt = $pdo->prepare('SELECT skip_ready_at FROM order_boards WHERE player_id = ? FOR UPDATE');
+        $stmt->execute([$playerId]);
+        $ready = (int) $stmt->fetchColumn();
+        if ($ready > $now) {
+            throw new ApiError('skip_cooldown', sprintf('You can turn down another order in %s.', orders_duration_text($ready - $now)), 409);
+        }
+        $order = orders_lock($pdo, $playerId, $orderId, $now);
+        $pdo->prepare("UPDATE orders SET status = 'skipped', resolved_at = ? WHERE id = ?")->execute([$now, $orderId]);
+        orders_insert($pdo, $playerId, $professionId, (int) $order['slot'], $now, $now);
+        $cooldown = (int) round((float) orders_settings()['skip_cooldown_minutes'] * 60 * pace());
+        $pdo->prepare('UPDATE order_boards SET skip_ready_at = ? WHERE player_id = ?')->execute([$now + $cooldown, $playerId]);
+    });
+}
+
+function orders_duration_text(int $seconds): string
+{
+    return $seconds >= 3600 ? sprintf('%dh %02dm', intdiv($seconds, 3600), intdiv($seconds % 3600, 60))
+        : ($seconds >= 60 ? sprintf('%dm', intdiv($seconds, 60)) : sprintf('%ds', $seconds));
+}

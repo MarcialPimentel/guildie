@@ -265,9 +265,10 @@ function exchange_overview(): array
     }
 
     $refs = market_reference_values();
+    $spark = market_history($pdo, $now, 86400, 24);
     $out = [];
     foreach (content_items() as $id => $item) {
-        $out[] = [
+        $out[] = market_ticker($id, (float) $refs[$id]) + ['spark' => $spark[$id] ?? []] + [
             'item_id'       => $id,
             'name'          => $item['name'],
             'type'          => $item['type'],
@@ -311,7 +312,7 @@ function exchange_item(int $playerId, string $itemId): array
     $names = player_names($pdo, $ids);
     $ref = market_reference_value($itemId);
 
-    return [
+    return market_ticker($itemId, $ref) + ['spark' => market_history($pdo, $now, 7 * 86400, 28, $itemId)[$itemId] ?? []] + [
         'item_id'   => $itemId,
         'name'      => $item['name'],
         'description' => $item['description'] ?? '',
