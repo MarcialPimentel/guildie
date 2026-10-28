@@ -1,10 +1,12 @@
 # Checks every pull request, and on every merge to main deploys Guildie to marz.gg over FTPS.
 #
 #   checks  (PRs and main): PHP syntax, content validator, API smoke test against a throwaway
-#           MySQL, web client build (TypeScript), browser test (Playwright, phone + desktop)
-#           -> downloadable packages (Artifacts)
+#           MySQL, web client build (TypeScript), realtime room tests, browser test (Playwright,
+#           phone + desktop, with a local realtime room server) -> downloadable packages (Artifacts)
 #   deploy  (main only):    uploads the server code into guildie-private/, then the game into
 #           public_html/games/guildie/. The server applies new migrations itself.
+#   realtime (main only):   deploys the living city's realtime rooms (realtime/) to Cloudflare
+#           (docs/realtime-setup.md). Skipped until its secrets are set; never blocks the game deploy.
 #
 # Two SiteGround FTP accounts, each limited to the folder it needs (see docs/deploy.md):
 #   server-code account  home = the guildie-private/ folder        -> server code
@@ -15,6 +17,8 @@
 #   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD               (server-code account)
 #   FTP_PUBLIC_USERNAME, FTP_PUBLIC_PASSWORD             (game-files account, same host)
 # Until all five are set, checks still run and the upload is skipped.
+#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, REALTIME_SECRET   (the realtime job; same
+#   REALTIME_SECRET as realtime_secret in guildie-private/config.php)
 name: Deploy
 
 on:
@@ -90,7 +94,8 @@ jobs:
           cat > ci/private/config.php <<'EOF'
           <?php
           return ['db' => ['host' => '127.0.0.1', 'name' => 'guildie_test', 'user' => 'guildie', 'pass' => 'localtestpw', 'charset' => 'utf8mb4'],
-                  'tick_interval_seconds' => 300, 'debug' => true, 'feedback_key' => 'ci-feedback-key'];
+                  'tick_interval_seconds' => 300, 'debug' => true, 'feedback_key' => 'ci-feedback-key',
+                  'realtime_url' => 'ws://127.0.0.1:8788', 'realtime_secret' => 'ci-realtime-secret-0123456789'];
           EOF
           export GUILDIE_PRIVATE="$PWD/ci/private" GUILDIE_CONTENT="$PWD/ci/content" GUILDIE_MIGRATIONS="$PWD/server/migrations"
           echo "GUILDIE_PRIVATE=$GUILDIE_PRIVATE" >> "$GITHUB_ENV"
@@ -124,6 +129,14 @@ jobs:
           # Serve it next to the API, exactly like the live folder layout.
           cp -r dist/. ../ci/www/games/guildie/
 
+      - name: Realtime rooms (rule tests, then a local room server for the browser test)
+        working-directory: realtime
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+          (REALTIME_SECRET=ci-realtime-secret-0123456789 PORT=8788 nohup node src/dev-server.mjs > ../ci/realtime.log 2>&1 &)
+          for i in $(seq 20); do curl -s http://127.0.0.1:8788/ && break; sleep 0.5; done
+
       - name: Browser test (plays the real game against the API, phone + desktop)
         working-directory: client
         run: |
@@ -135,7 +148,9 @@ jobs:
 
       - name: Server log (on failure)
         if: failure()
-        run: cat ci/php-server.log || true
+        run: |
+          cat ci/php-server.log || true
+          cat ci/realtime.log || true
 
       - name: Browser test traces (on failure)
         if: failure()
@@ -252,3 +267,50 @@ jobs:
             echo "::warning title=Stale cache::Players still get the old game page ('$served'). Flush the SiteGround cache: Site Tools > Speed > Caching > Dynamic Cache > Flush."
           fi
           echo "::notice::Live: build $BUILD, schema $SCHEMA, client $ASSET."
+
+  # The living city's realtime rooms on Cloudflare (docs/realtime-setup.md). Cosmetic only (positions, waves,
+  # slaps), so a failure here never blocks the game deploy; the game works without it.
+  realtime:
+    needs: checks
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Cloudflare settings
+        id: check
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          REALTIME_SECRET: ${{ secrets.REALTIME_SECRET }}
+        run: |
+          missing=""
+          for n in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID REALTIME_SECRET; do
+            [ -z "${!n}" ] && missing="$missing $n"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice::Realtime deploy skipped: these secrets aren't set yet:$missing. See docs/realtime-setup.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+
+      - name: Deploy the realtime rooms to Cloudflare
+        if: steps.check.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: realtime
+          wranglerVersion: "4.20.0"
+          secrets: |
+            REALTIME_SECRET
+        env:
+          REALTIME_SECRET: ${{ secrets.REALTIME_SECRET }}
+
+      - name: Check the rooms answer
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          echo "Deployed. The worker's address is shown in the step above (https://guildie-realtime.<your-subdomain>.workers.dev)."
+

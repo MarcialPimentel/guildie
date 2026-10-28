@@ -260,6 +260,22 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.9.0 (the living city)
+
+Automatic. Migration **007** (friends, slap settings, the Duke's order) applies itself; the ping URL shows `"build":"0.9.0 (build …)"` and `"schema":7`. It needs 0.8.0 (migration 006) merged first.
+
+**Optional, any time: live players.** Other merchants only appear live once the realtime rooms are set up on Cloudflare: [realtime-setup.md](realtime-setup.md) (about 15 minutes, free). Until then everything else works, and quarters say "Quiet day".
+
+What players notice:
+
+- **On a computer:** you have your own blob merchant. Walk with **WASD** or the arrow keys, or click the ground. Clicking a place still opens it at once while your merchant walks over.
+- **Quarters:** click **Quarters** in the dock (or the arch at the east end of the quay) and pick a guild. Its piazza has up to 12 bottegas (friends first), townsfolk, and faint "echoes" of crafters who did something in the last 30 minutes. Click a stall, an echo or a player to open their bottega: shop window, **Propose a trade**, **Add friend**.
+- **Live players** (with the rooms set up): others walk around with you. **E** waves; **F** slaps the nearest merchant (a gentlemanly duel challenge, cosmetic only). **Slaps: on/off** in the top bar opts out.
+- **The Duke's order:** the herald's board by the storehouse, the fountain in every quarter, or **City → Duke's order** on phones. Give goods, get paid at once, and a bonus for everyone if every line fills in time.
+- **On a phone:** the City tab gains **Quarters**, **Friends** and **Duke's order**.
+
+---
+
 ## Deploying 0.7.0 (the 3D harbor)
 
 Fully automatic, with no database or server changes. The ping URL shows `"build":"0.7.0 (build …)"` and `"schema":5`.
