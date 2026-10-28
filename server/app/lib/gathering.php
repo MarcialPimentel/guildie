@@ -87,6 +87,30 @@ function gathering_collect(int $playerId): array
             throw new ApiError('nothing_to_collect', 'Nothing is ready yet.');
         }
         activity_log($pdo, $playerId, 'gathered', ['items' => $collected]);
-        return $collected;
+
+        // Small surprises (#48): a rich find adds extra of the common raw; a rare find adds the rarer raw.
+        $surprises = [];
+        $outputs = $profession['station']['outputs'];
+        $label = (string) econ('surprises.labels.' . $profession['station']['id'], 'A lucky find!');
+        if (rand_between(0, 1) < (float) econ('surprises.rich_find_chance', 0.15)) {
+            $common = $outputs[0]['item_id'];
+            $got = 0;
+            foreach ($collected as $c) {
+                $got += $c['item_id'] === $common ? $c['quantity'] : 0;
+            }
+            $bonus = max(2, (int) ceil($got * (float) econ('surprises.rich_find_bonus', 0.5)));
+            inventory_add($pdo, $playerId, $common, $bonus);
+            $surprises[] = ['text' => sprintf('%s +%d %s', $label, $bonus, item_name($common)), 'item_id' => $common, 'quantity' => $bonus];
+        }
+        if (count($outputs) > 1 && rand_between(0, 1) < (float) econ('surprises.rare_find_chance', 0.08)) {
+            $rare = end($outputs)['item_id'];
+            $bonus = mt_rand(1, (int) econ('surprises.rare_find_max', 2));
+            inventory_add($pdo, $playerId, $rare, $bonus);
+            $surprises[] = ['text' => sprintf('Rare find! +%d %s', $bonus, item_name($rare)), 'item_id' => $rare, 'quantity' => $bonus];
+        }
+        foreach ($surprises as $sp) {
+            activity_log($pdo, $playerId, 'surprise', ['text' => $sp['text']]);
+        }
+        return ['collected' => $collected, 'surprises' => $surprises];
     });
 }
