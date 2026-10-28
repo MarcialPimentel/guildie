@@ -414,12 +414,12 @@ Player-posted orders are in the backlog.
 **Rules**
 - One open order at a time, resolved lazily (like the order board): reading or contributing closes an overdue order (expired) and starts the next one from `content/duke.json` in turn.
 - Each order has **lines for all three guilds**. A line's goal is `goal` × max(1, active crafters in the last 7 days ÷ `players_per_goal_step`), fixed when the order starts.
-- **Contribute** removes the items (a sink) and pays `pay_multiplier` (1.25) × the item's usual value per unit at once, in one transaction that locks the order row. Refused beyond the line's goal or beyond `max_share` (40%) of a line per player.
+- **Contribute** removes the items (a sink) and pays `pay_multiplier` (1.25) × the item's usual value per unit at once, in one transaction that locks the order row. Refused beyond the line's goal, or beyond `max_share` (40%) of a line per player until `open_share_after` (75%) of the order's time has passed; then anyone can finish it.
 - When the last line fills, the order is **fulfilled** in the same transaction and every contributor is paid `bonus_multiplier` (0.15) × usual value per unit they delivered.
 - **Supplier rule:** `pay_multiplier + bonus_multiplier` must stay below `market.ceiling_multiplier` (validator), so supplier stock can't be turned into profit (0.5.1).
 - The board shows the lines, time left, and the top helpers by value delivered.
 
-**Tuning knobs** (`content/duke.json` → `settings`): `duration_hours` 72, `pay_multiplier` 1.25, `bonus_multiplier` 0.15, `max_share` 0.4, `players_per_goal_step` 4.
+**Tuning knobs** (`content/duke.json` → `settings`): `duration_hours` 72, `pay_multiplier` 1.25, `bonus_multiplier` 0.15, `max_share` 0.4, `open_share_after` 0.75, `players_per_goal_step` 4, `max_goal_scale` 5, `board_size` 8.
 
 **Milestone:** 0.9.0.
 

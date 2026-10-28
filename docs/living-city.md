@@ -11,7 +11,7 @@
 | Today (0.7.0) | The living city (0.9.0) |
 |---|---|
 | A single-player harbor: only your quay | Your quay **plus three guild quarters** you walk to, shared with other players |
-| No avatar: clicks fly the camera | **Your own blob merchant.** WASD or the arrow keys, or click the ground to walk. Clicking a place still walks you there and opens its panel |
+| No avatar: clicks fly the camera | **Your own blob merchant.** WASD or the arrow keys, or click the ground to walk. Clicking a place opens its panel at once while your merchant walks there |
 | Other players are a list in the City tab | Other crafters **walk around the quarter live**. Their bottegas line the piazza, with their Mercato listings in the window |
 | Trades start from a profile in a list | **Tap a player or their stall**: visit their shop window (buy), propose a trade, add them as a friend, wave, or slap |
 | No friends | **Friends.** Their stalls appear first in every quarter you visit, and in a Friends list in the City panel |
@@ -24,7 +24,7 @@
 | Quarters by guild | Pillar 1 (*your profession is your identity*): you stand among your own guild, in their colors and hats |
 | Stalls and trading at the door | Pillar 5 (*you need other crafters*) and Pillar 2 (*every craft is a market decision*): you see who sells what you need, right where they stand |
 | Townsfolk and "echoes" when the quarter is quiet | Pillar 3 (*the market is always alive*): it never looks empty, even with 3 players |
-| Click a place, walk, panel opens | Pillar 4 (*thirty seconds or thirty minutes*): check-ins stay as fast as 0.7.0 (the walk is capped at about 1 second) |
+| Click a place: the panel opens at once, your merchant walks over | Pillar 4 (*thirty seconds or thirty minutes*): check-ins stay exactly as fast as 0.7.0 |
 | The Duke's order | Bet "customers with wants give every check-in a purpose", now shared: a reason to log in *together* |
 | Slaps and waves | Fun and character between players; no effect on the economy |
 
@@ -55,7 +55,7 @@ A quarter holds **30 visible players** [tune]. The 31st person to arrive opens a
 ### 2.2 When few people are online
 
 - **Townsfolk:** up to 6 non-player blobs stroll between the stalls and the fountain (porters, a priest, a fishwife). Cosmetic, client-side.
-- **Echoes:** crafters of this quarter who did something in the last 30 minutes but aren't here now appear as a faint blob at their stall, with a speech line: *"Bruno listed 3 Iron Ingots · 4 min ago."* Tap one to visit their stall. Built from the `activity` table by a new `city_echoes` action, so it works even with presence turned off.
+- **Echoes:** crafters of this quarter who did something in the last 30 minutes but aren't here now appear as a faint blob at their stall, with a speech line: *"Bruno listed 3 Iron Ingots · 4 min ago."* Tap one to visit their stall. Built from the `activity` table by the `quarter` action, so it works even with presence turned off.
 - Echoes and townsfolk thin out as real players arrive (at most 8 walkers in total that aren't real players).
 
 ---
@@ -63,7 +63,7 @@ A quarter holds **30 visible players** [tune]. The 31st person to arrive opens a
 ## 3. Your merchant
 
 - **Move:** WASD or the arrow keys; or click the ground to walk there. The camera follows gently; dragging still turns it.
-- **Click a place** (or its label, or the dock button): your merchant hurries there and the panel opens. If the walk would take more than about 1 second, they jog faster, and the panel opens anyway after 1 second, so a check-in is never slower than 0.7.0.
+- **Click a place** (or its label, or the dock button): the panel opens at once, as in 0.7.0, and your merchant hurries over (fast enough to arrive in about a second), so a check-in is never slower than before.
 - **Doors can't be blocked:** players and townsfolk are not solid. You walk through each other (with a little squash), and clicking a shop opens it wherever you're standing.
 - **Look:** a blob in your guild's dress and hat, with a body color picked from your player number (customization later; see §9).
 - **Wave:** `E` or the Wave button. **Slap:** `F` or the Slap button when you're next to someone (see §4).
@@ -91,7 +91,7 @@ One city-wide order that everyone works on together. Server-authoritative, built
 - **How long:** 72 hours [tune] (scaled by the game's pace). Then the next order starts, from a list in `content/duke.json`.
 - **Contribute:** at the Duke's herald (your quay), the fountain (any quarter), or the City tab on phones: pick a line and a quantity from your bag. You're paid **at once**: 1.25 × the item's usual value per unit.
 - **Completion bonus:** if every line is filled before the deadline, everyone who helped gets **0.15 × usual value per unit** they delivered. So the whole reward is at most **1.40 ×** usual value, which stays under the Guild Suppliers' 1.5 × (the 0.5.1 supplier rule): you can't buy from the suppliers and deliver at a profit. The validator checks this.
-- **Fair share:** one player can fill at most 40% of a line [tune], so it stays a group effort.
+- **Fair share:** one player can fill at most 40% of a line [tune] until the last quarter of the order's time; then anyone can finish it, so a quiet city can still complete it.
 - **The public board:** the herald shows the top helpers by value delivered, how far each line is, and the time left. A finished order stays on the board as "Fulfilled, with thanks to …" until the next one starts.
 - **News:** "The Duke's order is fulfilled" goes into every contributor's Activity Log (and the "While you were away" screen).
 
@@ -154,8 +154,8 @@ The room clamps positions to the piazza, drops a client that floods it, refuses 
 ### 7.4 Where the code lives
 
 - `realtime/`: the room (`room.js`: plain rules shared by both servers), the Cloudflare Worker (`worker.js`, `wrangler.toml`), and a small local server (`dev-server.mjs`) for tests and local play.
-- `server/app/lib/city.php`: the presence pass, friends, the Duke's order, echoes and the quarter lists.
-- `client/src/world/`: blob merchants (`blobs.ts`), the quarters (`quarter.ts`), presence (`presence.ts`), and the engine additions for walking and following.
+- `server/app/lib/city.php`: the presence pass, slap setting, friends, and the quarters (stalls and echoes). `server/app/lib/duke.php`: the Duke's order.
+- `client/src/world/`: blob merchants (`blobs.ts`), the quarters (`quarter.ts`) and the engine additions for walking, other players and slaps. `client/src/presence.ts`: the room connection.
 - Setup for Marz: `docs/realtime-setup.md` (create a free Cloudflare account, add two GitHub secrets, paste the shared secret into `config.php`). The worker then deploys automatically with each merge, like the game.
 
 ---
@@ -166,10 +166,10 @@ The room clamps positions to the piazza, drops a client that floods it, refuses 
 |---|---|---|
 | `friends` | Friends (7.6) | player_id, friend_id, created_at; primary key (player_id, friend_id) |
 | `city_prefs` | Presence (7.5) | player_id, slaps (on/off), updated_at |
-| `duke_orders` | The Duke's order (6.5) | id, order_key, title, line, items (JSON: item, goal, delivered), pay_multiplier, bonus_multiplier, starts_at, ends_at, status (open, fulfilled, expired), resolved_at |
+| `duke_orders` | The Duke's order (6.5) | id, order_key (title and text come from `content/duke.json`), order_lines (JSON: item, goal, delivered), pay_multiplier, bonus_multiplier, max_share, starts_at, ends_at, status (open, fulfilled, expired), resolved_at |
 | `duke_contributions` | The Duke's order (6.5) | id, duke_order_id, player_id, item_id, quantity, paid, bonus, created_at |
 
-New API actions: `presence_token`, `city_prefs`, `friends`, `friend_add`, `friend_remove`, `duke_order`, `duke_contribute`, `city_echoes`, `quarter`. Every write runs in one transaction with prepared statements.
+New API actions: `presence_token`, `city_prefs`, `quarter` (stalls with echoes), `friends`, `friend_add`, `friend_remove`, `duke_order`, `duke_contribute`. Every write runs in one transaction with prepared statements.
 
 ---
 
@@ -211,7 +211,7 @@ Phones don't show live walkers or slaps. That comes if and when phones get a 3D 
 
 Recommendations are marked; the build follows them unless you say otherwise.
 
-1. **Realtime service: Cloudflare Workers + Durable Objects** (recommended; free). Needs you to create a free Cloudflare account and add two secrets (`docs/realtime-setup.md`). Until then, the quarters work without live players.
+1. **Realtime service: Cloudflare Workers + Durable Objects** (recommended; free). Needs you to create a free Cloudflare account, add three GitHub secrets and two `config.php` lines (`docs/realtime-setup.md`). Until then, the quarters work without live players.
 2. **Friends are one-way bookmarks** (recommended): no friend requests. Alternative: requests that must be accepted.
 3. **Duke's order pays 1.25 × now plus 0.15 × on completion; 40% cap per player; 72 hours** (all [tune]).
 4. **Slaps are on by default**, with the switch in the world tools (recommended). Alternative: off by default.
