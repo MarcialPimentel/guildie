@@ -105,8 +105,11 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(page.locator(id('feedback-dialog'))).toHaveCount(0)
   await message(page, 'Thanks! Feedback sent.')
 
-  // --- "While you were away" (#47): pretend the last visit was an hour ago, then reload
-  await page.evaluate(() => {
+  // --- "While you were away" (#47): pretend the last visit was an hour ago, then reload.
+  // Leaving the page marks the player as just seen, so the old time is planted as the page loads (once).
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('pw-away')) return
+    sessionStorage.setItem('pw-away', '1')
     for (const k of Object.keys(localStorage)) if (k.startsWith('guildie.lastSeen.')) localStorage.setItem(k, String(Math.floor(Date.now() / 1000) - 3600))
   })
   await page.reload()
