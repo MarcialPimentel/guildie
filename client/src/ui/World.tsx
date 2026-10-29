@@ -10,13 +10,12 @@ import { Presence, type PresenceStatus, type RoomEvent, type RoomPlayer } from '
 import { session, useSession } from '../session'
 import type { DukeBoard, GameState, NewsItem, OrderBoard, PresenceMe, QuarterData } from '../types'
 import { worldEvents } from '../worldEvents'
-import { HAT_NAMES } from '../world/looks'
-import type { MyLook, Peer, PickId, ProfessionId, RoomEmote, Scene, StallInfo, WorldEngine, WorldLabel, WorldState } from '../world/types'
+import { guild } from '../guilds'
+import { hatNames } from './Look'
+import type { MyLook, Peer, PickId, RoomEmote, Scene, StallInfo, WorldEngine, WorldLabel, WorldState } from '../world/types'
 import { useGame, useLoad, useNow } from './common'
 import { ColorPicker, HatPicker, Portrait } from './Look'
 
-const WORKBENCH: Record<ProfessionId, string> = { blacksmith: 'Forge', alchemist: 'Alembic', leatherworker: 'Tanning bench' }
-const HALL: Record<ProfessionId, string> = { blacksmith: 'Arte dei Fabbri', alchemist: 'Arte degli Speziali', leatherworker: 'Arte dei Conciatori' }
 export const SLAP_REACH = 2.5
 
 const dukePct = (d: DukeBoard) => {
@@ -58,10 +57,10 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
     },
     workbench: {
       text: ready.length
-        ? `${WORKBENCH[prof.id as ProfessionId]} · ${ready.length} ready!`
+        ? `${guild(prof.id).workbench} · ${ready.length} ready!`
         : running.length
-          ? `${WORKBENCH[prof.id as ProfessionId]} · ${running[0].name} ${duration(running[0].ends_at - now)}${running.length > 1 ? ` +${running.length - 1}` : ''}`
-          : `${WORKBENCH[prof.id as ProfessionId]} · idle`,
+          ? `${guild(prof.id).workbench} · ${running[0].name} ${duration(running[0].ends_at - now)}${running.length > 1 ? ` +${running.length - 1}` : ''}`
+          : `${guild(prof.id).workbench} · idle`,
       tone: ready.length ? 'ready' : 'plain',
     },
     ledger: { text: `Bottega di ${state.player.name}`, tone: 'plain' },
@@ -76,7 +75,7 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
   if (customers.length) labels.orders = { text: fillable ? `Customers · ${fillable} ready to fill` : `Customers · ${customers.length} waiting`, tone: fillable ? 'ready' : 'plain' }
 
   return {
-    profession: prof.id as ProfessionId,
+    profession: prof.id,
     playerName: state.player.name,
     stationFill: outputs.map((o) => (o.cap > 0 ? o.estimate / o.cap : 0)),
     crafting: { active: running.length, ready: ready.length },
@@ -92,7 +91,7 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
 /** The bottegas around a piazza, for the engine. */
 export function stallInfos(q: QuarterData | null): StallInfo[] {
   return (q?.stalls ?? []).map((s) => ({
-    id: s.id, name: s.name, profession: s.profession_id as ProfessionId, look: s.look, hat: s.hat ?? 0, rank: s.rank ?? 0, friend: s.friend, me: s.me,
+    id: s.id, name: s.name, profession: s.profession_id, look: s.look, hat: s.hat ?? 0, rank: s.rank ?? 0, friend: s.friend, me: s.me,
     listings: s.listing_count, echo: s.echo ? `${s.echo.text} · ${duration(s.echo.ago)} ago` : null,
   }))
 }
@@ -153,7 +152,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     import('../world/engine')
       .then((m) => {
         if (!alive || !box.current) return
-        engine.current = m.createWorld(box.current, state.profession!.id as ProfessionId, state.player.name, {
+        engine.current = m.createWorld(box.current, state.profession!.id, state.player.name, {
           onPick: (id) => cbs.current.onPick(id),
           onPickPlayer: (id) => cbs.current.onPickPlayer(id),
           onMove: (x, z, h) => presence.current?.send({ t: 'mv', x, z, h }),
@@ -166,7 +165,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
         if (alive) onFail()
       })
     toPeerRef.current = (p: RoomPlayer): Peer => ({
-      id: p.id, name: p.n, profession: p.p as ProfessionId, look: p.l, hat: p.ht ?? 0, rank: p.r ?? 0, slaps: p.s === 1, x: p.x, z: p.z, h: p.h, friend: friendIds.current.has(p.id),
+      id: p.id, name: p.n, profession: p.p, look: p.l, hat: p.ht ?? 0, rank: p.r ?? 0, slaps: p.s === 1, x: p.x, z: p.z, h: p.h, friend: friendIds.current.has(p.id),
     })
     const onEvent = (m: RoomEvent) => {
       const e = engine.current
@@ -283,7 +282,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     if (scene === 'harbor') return
     engine.current?.setQuarterLabels({
       duke: dukeLabel(duke),
-      trainer: { text: `${HALL[scene]} · guild trainer`, tone: 'plain' },
+      trainer: { text: `${guild(scene).hall} · guild trainer`, tone: 'plain' },
       home: { text: 'Down to your bottega', tone: 'plain' },
     })
   }, [duke, scene, status])
@@ -357,7 +356,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
       </div>
       <p class="world-hint tiny">WASD or click to walk · drag to turn · scroll to zoom · E wave · 1 bow · 2 cheer · 3 shrug{inQuarter ? ' · F slap' : ''}</p>
       {me && status === 'ready' && (lookOpen || !me.look_chosen) && (
-        <LookSheet guild={state.profession!.id as ProfessionId} me={me} invite={!lookOpen}
+        <LookSheet guild={state.profession!.id} me={me} invite={!lookOpen}
           onDone={(m) => {
             setLookOpen(false)
             if (!m) return
@@ -375,7 +374,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
  * Choose your merchant's look (0.10.0). Accounts from before 0.10.0 see it once as an invitation; "Keep this
  * one" saves the look they already have, so the invitation doesn't come back.
  */
-function LookSheet({ guild, me, invite, onDone }: { guild: ProfessionId; me: PresenceMe; invite: boolean; onDone: (m: PresenceMe | null) => void }) {
+function LookSheet({ guild, me, invite, onDone }: { guild: string; me: PresenceMe; invite: boolean; onDone: (m: PresenceMe | null) => void }) {
   const game = useGame()
   const [color, setColor] = useState(me.look)
   const [hat, setHat] = useState(me.hat ?? 0)
@@ -386,7 +385,7 @@ function LookSheet({ guild, me, invite, onDone }: { guild: ProfessionId; me: Pre
     setBusy(false)
     if (!r.ok) return game.say(r.error.message, true)
     onDone({ ...me, look: r.data.color, hat: r.data.hat, rank: r.data.rank, look_chosen: true })
-    game.say(`Your merchant now wears the ${HAT_NAMES[guild][r.data.hat].toLowerCase()}.`)
+    game.say(`Your merchant now wears the ${(hatNames(guild)[r.data.hat] ?? 'new hat').toLowerCase()}.`)
   }
   return (
     <section class="world-look" data-testid={invite ? 'look-invite' : 'look-sheet'} aria-label="Your look">

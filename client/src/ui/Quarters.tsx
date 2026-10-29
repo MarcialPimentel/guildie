@@ -2,12 +2,14 @@
 // on desktop the Steps on your quay open the chooser, and you walk around the quarter in 3D.
 import { useState } from 'preact/hooks'
 import { seen } from '../format'
+import { GUILDS } from '../guilds'
 import { session, useSession } from '../session'
 import type { StallCard } from '../types'
 import { Coins, ItemIcon } from './art'
 import { ActionButton, Modes, useLoad } from './common'
 
-export const QUARTERS: [string, string][] = [['blacksmith', "Smiths'"], ['alchemist', "Alchemists'"], ['leatherworker', "Tanners'"]]
+/** One quarter per guild, labelled from content/professions.json (guild.quarter). */
+export const QUARTERS: [string, string][] = GUILDS.map((g) => [g.id, g.quarter])
 
 /** The Steps on your quay: pick a quarter to walk up to. */
 export function QuarterChooser({ go }: { go: (quarter: string) => void }) {
@@ -53,7 +55,7 @@ export function Stall({ st, open }: { st: StallCard; open: (id: number) => void 
 /** The classic view's list of a quarter's stalls. */
 export function QuarterList({ open }: { open: (id: number) => void }) {
   const s = useSession()
-  const [q, setQ] = useState(s.state!.profession?.id ?? 'blacksmith')
+  const [q, setQ] = useState(s.state!.profession?.id ?? GUILDS[0].id)
   const [data] = useLoad(() => session.quarter(q), [q], true)
   return (
     <section class="stack" data-testid="quarters">

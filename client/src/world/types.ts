@@ -11,7 +11,8 @@
 export type PickId = 'station' | 'workbench' | 'orders' | 'ledger' | 'bag' | 'stall' | 'mercato' | 'city' | 'news'
   | 'duke' | 'steps' | 'trainer' | 'home'
 
-export type ProfessionId = 'blacksmith' | 'alchemist' | 'leatherworker'
+/** A guild id from content/professions.json (see src/guilds.ts). Not a fixed list: guilds are content. */
+export type ProfessionId = string
 
 export interface WorldLabel {
   text: string

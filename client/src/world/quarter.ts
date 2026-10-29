@@ -4,16 +4,12 @@
 // The walkable area and arrival point match realtime/src/room.js BOUNDS and SPAWN.
 import * as THREE from 'three'
 import { bake, box, cyl, hipRoof, instanced, rng, solid, stripes, vertexColorMaterial } from './kit'
+import { guild } from '../guilds'
 import type { PickId, ProfessionId } from './types'
 
 export const QUARTER_BOUNDS = { minX: -21, maxX: 21, minZ: -13, maxZ: 15 }
 export const QUARTER_SPAWN = new THREE.Vector3(0, 1, 13)
 
-const GUILD: Record<ProfessionId, { hall: string; color: string; trim: string }> = {
-  blacksmith: { hall: 'Arte dei Fabbri', color: '#B83A3A', trim: '#4B3A2E' },
-  alchemist: { hall: 'Arte degli Speziali', color: '#2A4C9A', trim: '#1F8A87' },
-  leatherworker: { hall: 'Arte dei Conciatori', color: '#4E6F2C', trim: '#E3C27A' },
-}
 
 export interface StallSlot {
   group: THREE.Group
@@ -43,7 +39,7 @@ export function buildQuarter(quarter: ProfessionId): Quarter {
   const root = new THREE.Group()
   root.visible = false
   const r = rng(quarter.length * 31 + 5)
-  const g = GUILD[quarter]
+  const g = guild(quarter)   // hall name and banner colors (content/professions.json)
   const vc = vertexColorMaterial()
   const town = new THREE.Group()
   root.add(town)
