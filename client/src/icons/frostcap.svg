@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Frostcap">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M27 36Q26 50 24 54H40Q38 50 37 36Z" fill="#EEF3F5"/>
+  <path d="M8 36Q10 12 32 10Q54 12 56 36Q32 42 8 36Z" fill="#A9D8E8"/>
+</g>
+<circle cx="20" cy="26" r="3" fill="#FFFFFF" opacity=".9"/>
+<circle cx="34" cy="19" r="2.5" fill="#FFFFFF" opacity=".9"/>
+<circle cx="45" cy="28" r="2.2" fill="#FFFFFF" opacity=".9"/>
+<path d="M14 30q3-12 14-15" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".6"/>
+</svg>

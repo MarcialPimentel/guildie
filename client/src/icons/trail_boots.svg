@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Trail Boots">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M18 6H36V38L54 44Q58 46 58 50V54H10V40Q14 30 18 26Z" fill="#8F4E2B"/>
+  <rect x="10" y="50" width="48" height="6" rx="2" fill="#4B3A2E"/>
+  <path d="M18 14H36" fill="none" stroke-width="2.5"/>
+</g>
+<path d="M22 20l8 3M22 26l8 3M22 32l8 3" stroke="#F2C53D" stroke-width="2" stroke-linecap="round"/>
+<path d="M40 44q6 1 10 4" stroke="#C47D4F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+</svg>

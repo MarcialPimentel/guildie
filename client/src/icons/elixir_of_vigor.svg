@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Elixir of Vigor">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="27" y="10" width="10" height="10" fill="#DDF3EF"/>
+  <circle cx="32" cy="38" r="17" fill="#DDF3EF"/>
+  <path d="M15.4 34H48.6A17 17 0 1 1 15.4 34Z" fill="#F2C53D" stroke-width="0"/>
+  <circle cx="32" cy="38" r="17" fill="none"/>
+  <path d="M32 21V55M16 38H48M20 26Q32 34 44 26M20 50Q32 42 44 50" fill="none" stroke="#9AA3A8" stroke-width="2.5"/>
+  <rect x="24" y="5" width="16" height="7" rx="2.5" fill="#B83A3A"/>
+</g>
+<path d="M21 30l-2 4" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+<circle cx="40" cy="44" r="1.6" fill="#FFFFFF" opacity=".8"/>
+</svg>

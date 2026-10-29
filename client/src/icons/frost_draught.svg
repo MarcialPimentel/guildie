@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Frost Draught">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="27" y="14" width="10" height="12" fill="#DDF3EF"/>
+  <path d="M27 26L14 50Q12 56 18 56H46Q52 56 50 50L37 26Z" fill="#DDF3EF"/>
+  <path d="M20 40H44L50 51Q51 55 46 55H18Q13 55 14 51Z" fill="#7FD3F0" stroke-width="0"/>
+  <path d="M27 26L14 50Q12 56 18 56H46Q52 56 50 50L37 26Z" fill="none"/>
+  <rect x="25" y="8" width="14" height="7" rx="2.5" fill="#B07A4A"/>
+</g>
+<path d="M32 42v10M27.7 44.5l8.6 5M27.7 49.5l8.6-5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+<path d="M24 34l-3 5" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+</svg>

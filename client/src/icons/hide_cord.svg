@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hide Cord">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <ellipse cx="32" cy="34" rx="22" ry="16" fill="none" stroke="#B5683A" stroke-width="7"/>
+  <ellipse cx="32" cy="34" rx="25.5" ry="19.5" fill="none" stroke-width="2"/>
+  <ellipse cx="32" cy="34" rx="18.5" ry="12.5" fill="none" stroke-width="2"/>
+  <ellipse cx="32" cy="34" rx="12" ry="7" fill="none" stroke="#8F4E2B" stroke-width="5"/>
+  <path d="M50 46Q56 52 58 58" fill="none" stroke="#B5683A" stroke-width="5"/>
+</g>
+<path d="M14 26q2 4 0 8M50 24q-2 4 0 8M28 18q4 2 8 0" stroke="#F3DCC0" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+</svg>

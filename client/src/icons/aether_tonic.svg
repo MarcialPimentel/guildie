@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Aether Tonic">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="25" y="6" width="14" height="10" rx="2" fill="#E0B04A"/>
+  <path d="M25 16H39V22Q52 28 52 42Q52 56 32 56Q12 56 12 42Q12 28 25 22Z" fill="#DDF3EF"/>
+  <path d="M13 40Q32 46 51 40Q51 55 32 55Q13 55 13 40Z" fill="#8E5BD6" stroke-width="0"/>
+  <path d="M25 16H39V22Q52 28 52 42Q52 56 32 56Q12 56 12 42Q12 28 25 22Z" fill="none"/>
+  <circle cx="32" cy="40" r="8" fill="none" stroke="#B8891A" stroke-width="5" stroke-dasharray="2.8 2.4" stroke-linecap="butt"/>
+  <circle cx="32" cy="40" r="6.5" fill="#E0B04A" stroke-width="2"/>
+</g>
+<circle cx="32" cy="40" r="2" fill="#10323A"/>
+<path d="M18 32q2-4 6-6" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".8"/>
+<circle cx="46" cy="12" r="1.6" fill="#B49AE8"/><circle cx="52" cy="20" r="1.2" fill="#B49AE8"/>
+</svg>

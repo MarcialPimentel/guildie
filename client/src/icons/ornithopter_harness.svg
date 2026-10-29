@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ornithopter Harness">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M30 30Q20 10 4 14Q10 20 8 26Q14 24 16 30Q20 28 24 34Z" fill="#E8D9B5"/>
+  <path d="M34 30Q44 10 60 14Q54 20 56 26Q50 24 48 30Q44 28 40 34Z" fill="#E8D9B5"/>
+  <rect x="24" y="28" width="16" height="26" rx="5" fill="#8F4E2B"/>
+  <circle cx="32" cy="34" r="6" fill="none" stroke="#B8891A" stroke-width="4" stroke-dasharray="2.4 2" stroke-linecap="butt"/>
+  <circle cx="32" cy="34" r="4.5" fill="#E0B04A" stroke-width="2"/>
+</g>
+<path d="M10 18l12 10M54 18l-12 10M16 22l6 6M48 22l-6 6" stroke="#A9784A" stroke-width="1.6" stroke-linecap="round"/>
+<path d="M27 44h10M27 50h10" stroke="#E0B04A" stroke-width="2" stroke-linecap="round"/>
+</svg>

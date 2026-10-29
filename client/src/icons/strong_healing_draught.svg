@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Strong Healing Draught">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="26" y="8" width="12" height="8" rx="2.5" fill="#B07A4A"/>
+  <rect x="28" y="15" width="8" height="8" fill="#DDF3EF"/>
+  <rect x="14" y="22" width="36" height="34" rx="7" fill="#DDF3EF"/>
+  <path d="M15 34H49V50Q49 55 44 55H20Q15 55 15 50Z" fill="#D9663A" stroke-width="0"/>
+  <rect x="14" y="22" width="36" height="34" rx="7" fill="none"/>
+  <path d="M14 30H50" fill="none" stroke="#B83A3A" stroke-width="3"/>
+</g>
+<path d="M32 39v10M27 44h10" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+<path d="M19 27v4" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+</svg>

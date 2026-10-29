@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Saddle">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M8 28Q12 22 20 26Q32 34 44 24Q50 18 56 22Q58 34 50 42Q32 50 14 42Q6 36 8 28Z" fill="#8F4E2B"/>
+  <path d="M20 26Q32 38 44 24" fill="none" stroke-width="2.5"/>
+  <path d="M30 42V54" fill="none" stroke="#5A3A28" stroke-width="4"/>
+  <rect x="25" y="52" width="10" height="5" rx="1.5" fill="#E0B04A"/>
+</g>
+<path d="M14 34q8 6 16 6" stroke="#F3DCC0" stroke-width="1.5" stroke-dasharray="2 3" stroke-linecap="round" fill="none"/>
+<path d="M50 24l3 2" stroke="#C47D4F" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

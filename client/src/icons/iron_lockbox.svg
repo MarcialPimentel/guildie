@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Iron Lockbox">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="9" y="26" width="46" height="28" rx="3" fill="#5E666B"/>
+  <path d="M9 26L14 16H50L55 26Z" fill="#7C868C"/>
+  <rect x="26" y="30" width="12" height="15" rx="2" fill="#E0B04A"/>
+  <path d="M14 26V54M50 26V54" fill="none" stroke-width="2"/>
+</g>
+<circle cx="32" cy="36" r="2" fill="#10323A"/>
+<path d="M32 37v4" stroke="#10323A" stroke-width="2" stroke-linecap="round"/>
+<path d="M19 21h18" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".5"/>
+</svg>

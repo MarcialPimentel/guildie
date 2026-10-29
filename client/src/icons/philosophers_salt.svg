@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Philosopher's Salt">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <ellipse cx="32" cy="50" rx="24" ry="6" fill="#C9A877"/>
+  <path d="M18 48L22 24L30 30L28 48Z" fill="#C3A6F2"/>
+  <path d="M28 48L33 14L42 26L38 48Z" fill="#B49AE8"/>
+  <path d="M38 48L44 30L50 38L48 48Z" fill="#D9C8FA"/>
+</g>
+<path d="M33 20l-2 14" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+<path d="M12 14v6M9 17h6M52 12v5M49.5 14.5h5" stroke="#F2C53D" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
