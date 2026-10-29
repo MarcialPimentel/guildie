@@ -138,8 +138,17 @@ async function goQuarter(page: Page, quarter: string) {
   await expect(page.locator(id('world-presence'))).not.toHaveAttribute('data-status', /idle|connecting/, { timeout: 20_000 })
 }
 
-/** A taps B (their bottega opens and A walks over), closes the panel, and waits until B sees A within reach. */
+/**
+ * A taps B (their bottega opens and A walks over), closes the panel, and waits until B sees A within reach.
+ * First A must see B where B really is: right after a slap, B's step back may still be on its way to A, and
+ * A would walk to where B used to stand.
+ */
 async function walkUpTo(a: Page, b: Page, idA: number, idB: number) {
+  await expect.poll(async () => {
+    const seen = await a.evaluate((pid) => window.__guildieWorld!.peer(pid), idB)
+    const real = await b.evaluate(() => window.__guildieWorld!.me())
+    return seen ? Math.hypot(seen.x - real.x, seen.z - real.z) : 99
+  }, { timeout: 10_000 }).toBeLessThan(0.2)
   await a.click(id(`world-peer-${idB}`))
   await expect(a.locator(id('panel-visit'))).toBeVisible()
   await a.keyboard.press('Escape')
