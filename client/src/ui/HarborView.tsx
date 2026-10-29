@@ -4,7 +4,7 @@
 // marketplace (a vendor per guild and the selling desk), the Hall of honor and the city's merchants, the
 // Duke's lectern and the officials. Tapping a player there opens their bottega.
 import type { ComponentChildren } from 'preact'
-import { useCallback, useEffect, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
 import { useSession } from '../session'
 import { GUILDS, guild } from '../guilds'
 import { PALAZZO, type PickId, type Scene } from '../world/types'
@@ -86,6 +86,12 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
   const covers = width >= window.innerWidth
   const title = panel ? (panel.id === 'station' ? state.profession!.station.name : titleOf(panel.id)) : ''
   const dock = scene === 'harbor' ? DOCK : PALAZZO_DOCK
+  // Built once per panel: a new object on every redraw (the clock ticks each second) would make the
+  // Mercato treat it as a fresh request and jump back to the goods list, closing the buy screen.
+  const vendorRequest = useMemo<TabRequest | null>(
+    () => (panel?.id.startsWith('vendor:') ? { market: 'browse', guild: panel.id.slice(7), ...panel.request } : null),
+    [panel],
+  )
   let body: ComponentChildren = null
   if (panel) {
     switch (panel.id) {
@@ -103,7 +109,7 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
       case 'steward': body = <OfficialView key={panel.id} npc={panel.id} />; break
       case 'visit': body = panel.playerId ? <Crafter key={panel.playerId} id={panel.playerId} /> : null; break
       default:
-        if (panel.id.startsWith('vendor:')) body = <Market key={panel.id} request={{ market: 'browse', guild: panel.id.slice(7), ...panel.request }} onView={() => {}} vendor />
+        if (vendorRequest) body = <Market key={panel.id} request={vendorRequest} onView={() => {}} vendor />
     }
   }
 
