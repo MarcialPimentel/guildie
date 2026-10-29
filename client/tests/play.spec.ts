@@ -1,7 +1,8 @@
 // Plays through the whole game in a real browser, against a real API (replaces the Godot client_smoke.gd).
 // Each run registers a fresh player, picks the Alchemist guild, and touches every screen.
 import { expect, test, type Page } from '@playwright/test'
-import content from '../../content/professions.json'
+// The guilds this build has (Node's test runner needs the JSON import attribute).
+import content from '../../content/professions.json' with { type: 'json' }
 
 const id = (s: string) => `[data-testid="${s}"]`
 
