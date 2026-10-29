@@ -42,6 +42,9 @@ function guide_step_done(PDO $pdo, int $playerId, array $step, array $row): bool
         $stmt->execute([$playerId, $what]);
         return (bool) $stmt->fetchColumn();
     }
+    if ($kind === 'skill') {
+        return (int) (progression_row($pdo, $playerId)['skill'] ?? 1) >= (int) $what;
+    }
     if ($kind === 'learned') {
         $stmt = $pdo->prepare("SELECT 1 FROM player_recipes WHERE player_id = ? AND source = 'trainer' LIMIT 1");
         $stmt->execute([$playerId]);

@@ -25,6 +25,11 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await expect(page.locator(id('view-toggle'))).toHaveText('Classic view')
   await expect(page.locator(id('world-label-station'))).toContainText('The Mine')
   await expect(page.locator(id('world-label-orders'))).toContainText('Customers')
+  // The new-player guide (0.14.0): its card floats over the world, an arrow bobs over the station, and the dock's
+  // Station button pulses.
+  await expect(page.locator(id('guide'))).toHaveAttribute('data-step', 'collect')
+  await expect.poll(() => page.evaluate(() => window.__guildieWorld!.guide())).toBe('station')
+  await expect(page.locator('body')).toHaveAttribute('data-guide', 'collect')
 
   // 0.10.0: the customers at your door are the named order customers (blobs with their own look), and
   // someone who chose a look when joining isn't invited to choose again.

@@ -399,6 +399,11 @@ body[data-guide="craft"] [data-testid="dock-workbench"],
 body[data-guide="craft"] [data-testid="tab-workshop"],
 body[data-guide="craft"] [data-testid^="craft-"],
 body[data-guide="craft"] [data-testid="collect-crafts"],
+body[data-guide="train"] [data-testid="dock-workbench"],
+body[data-guide="train"] [data-testid="tab-workshop"],
+body[data-guide="train"] [data-testid^="craft-"],
+body[data-guide="train"] [data-testid="collect-crafts"],
+body[data-guide="train"] [data-testid="dock-home"],
 body[data-guide="learn"] [data-testid="dock-workbench"],
 body[data-guide="learn"] [data-testid="tab-workshop"],
 body[data-guide="learn"] [data-testid="trainer-open"],
@@ -419,3 +424,6 @@ body[data-guide="claim"] [data-testid="guide-claim"] {
   body[data-guide] [data-testid] { animation: none !important; }
 }
 .guide .muted { color: #4A6B6F; }
+/* the floating card never blocks the world under it: only its buttons take clicks */
+.guide.floating { pointer-events: none; }
+.guide.floating button { pointer-events: auto; }

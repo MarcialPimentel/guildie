@@ -297,8 +297,8 @@ for st in guide.get("steps", []):
         err(f"{where}: needs a title and a hint")
     if not (isinstance(st.get("reward"), int) and st["reward"] >= 0):
         err(f"{where}: reward must be a whole number >= 0")
-    if st.get("check") not in GUIDE_CHECKS:
-        err(f"{where}: check must be one of {sorted(GUIDE_CHECKS)} (the server knows how to check those)")
+    if st.get("check") not in GUIDE_CHECKS and not re.fullmatch(r"skill:\d{1,3}", str(st.get("check"))):
+        err(f"{where}: check must be skill:N or one of {sorted(GUIDE_CHECKS)} (the server knows how to check those)")
     if st.get("target") not in GUIDE_TARGETS:
         err(f"{where}: target must be a quay place or null")
 if len(guide.get("steps", [])) > 250:
