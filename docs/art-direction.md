@@ -254,5 +254,7 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 
 **Smooth people (0.10.1, Marz's playtest: "add polygons to make the character models smoother"):** people are **smooth-shaded** with 1.5× the curve segments, and the body (the main silhouette) is extra round. About 1,750 triangles per person on average (2,100 at most; 0.10.0: about 590), so a full quarter is about 67,000 triangles for people, with the same draw calls. The town, props in the world and icons stay faceted low-poly; the people read as soft toys against it.
 
+**Pointing at things (0.10.2, Marz's playtest: thin places like the trapper's lodge and the Duke's notice board were hard to hover, and their names seemed to jump):** every clickable place has an invisible hover box around its whole shape, and every person an invisible column, so the gaps between posts and beams count. Hover lets go only after 200 ms over nothing, so it doesn't flicker. A hovered label lights up (a lemon ring) instead of growing, so it never shifts under the mouse or onto a neighbor. `?debug=hits` draws the hover boxes as wireframes.
+
 **Smooth walking (0.10.1):** townsfolk, customers and buyers ease in and out of a walk (half a second to get going, a gentle slow-down to arrive); townsfolk stroll at least 7 m at a time and stand for 2–6 s between walks; other players glide between the room's position updates without stopping; walking people always get the full frame rate.
 

@@ -275,11 +275,12 @@ body.in-world { overflow: hidden; }
   font: 800 13px/1.2 var(--body); color: #F8FCFB; background: rgba(16, 50, 58, 0.86);
   border: 2px solid transparent; border-radius: 999px; padding: 5px 12px; min-height: 0;
   box-shadow: 0 3px 10px rgba(16, 50, 58, 0.25); font-variant-numeric: tabular-nums;
-  transition: scale 0.12s, background 0.12s;
+  transition: box-shadow 0.12s, background 0.12s;
 }
 .world-label[data-tone="ready"] { background: #F2C53D; color: #10323A; }
 .world-label[data-tone="alert"] { background: #E07A5F; color: #10323A; }
-.world-label:hover, .world-label.hover { scale: 1.08; border-color: #F8FCFB; filter: none; }
+/* Hover lights a label up without growing it, so it never shifts under the mouse or onto its neighbors. */
+.world-label:hover, .world-label.hover { border-color: #F8FCFB; filter: none; box-shadow: 0 0 0 3px rgba(242, 197, 61, 0.9), 0 3px 10px rgba(16, 50, 58, 0.3); }
 .world-label:focus-visible { outline: 3px solid #F8FCFB; outline-offset: 2px; }
 .world-tools { position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; z-index: 2; max-width: min(500px, 60%); }
 .world-tools button { background: rgba(248, 252, 251, 0.92); }

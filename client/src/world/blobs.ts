@@ -246,6 +246,9 @@ const ringGeo = new THREE.RingGeometry(0.62, 0.78, 26)
 ringGeo.rotateX(-Math.PI / 2)
 const flagMat = new THREE.MeshStandardMaterial({ color: '#FFFFFF', side: THREE.DoubleSide, flatShading: true })
 
+const hitGeo = new THREE.CylinderGeometry(0.8, 0.8, 1, 10)
+hitGeo.translate(0, 0.5, 0)
+const hitMat = new THREE.MeshBasicMaterial({ visible: false })
 const HAND_REST: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(-0.6, 0.62, 0.08), new THREE.Vector3(0.6, 0.62, 0.08)]
 const L = new THREE.Vector3(), R = new THREE.Vector3(), V = new THREE.Vector3()
 
@@ -295,6 +298,11 @@ export class Blob {
     }
     this.root.scale.setScalar(BLOB_SCALE)
     this.top = this.topOf()
+    // An invisible column around the whole person (hat and hands too), so people are easy to point at.
+    const hit = new THREE.Mesh(hitGeo, hitMat)
+    hit.scale.y = this.top / BLOB_SCALE + 0.15
+    hit.userData.hitBox = true
+    this.root.add(hit)
   }
 
   private topOf(): number {

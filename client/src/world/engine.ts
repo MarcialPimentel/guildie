@@ -399,7 +399,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   canvas.addEventListener('pointercancel', (e) => { touches.delete(e.pointerId); pinch = null; drag = null })
   canvas.addEventListener('wheel', onWheel, { passive: false })
   canvas.addEventListener('contextmenu', noMenu)
-  canvas.addEventListener('pointerleave', () => setHover(null))
+  canvas.addEventListener('pointerleave', () => { clearTimeout(missTimer); missTimer = 0; lastPointer = null; setHover(null) })
 
   // ------------------------------------------------------------ keyboard: WASD / arrows walk (camera-relative)
   // Each held key remembers when its walking was last applied. A key released before the next frame (a quick
@@ -439,7 +439,34 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   const ray = new THREE.Raycaster()
   const ndc = new THREE.Vector2()
   const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1)
-  for (const [id, objs] of harbor.picks) for (const obj of objs) tagPick(obj, { kind: 'place', id })
+  // Every place gets an invisible hover box around its whole shape (0.10.2), so thin things (the trapper's
+  // lodge, the Duke's notice board, a door) are as easy to point at as a solid building.
+  // ?debug=hits draws them as wireframes, to check their size.
+  const showHits = new URLSearchParams(location.search).get('debug') === 'hits'
+  const hitMat = showHits ? new THREE.MeshBasicMaterial({ color: '#E0306A', wireframe: true }) : new THREE.MeshBasicMaterial({ visible: false })
+  const hitBox = (obj: THREE.Object3D, pad = 0.35) => {
+    obj.updateWorldMatrix(true, true)
+    const box = new THREE.Box3()
+    obj.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (!m.isMesh || o.userData.hitBox || !m.geometry) return
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox()
+      box.union(m.geometry.boundingBox!.clone().applyMatrix4(m.matrixWorld))
+    })
+    if (box.isEmpty()) return
+    box.expandByScalar(pad)
+    const size = box.getSize(new THREE.Vector3())
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), hitMat)
+    box.getCenter(mesh.position)
+    mesh.userData.hitBox = true
+    obj.attach(mesh)   // keeps the world position; moves with the place from now on
+  }
+  for (const [id, objs] of harbor.picks) {
+    for (const obj of objs) {
+      if (id !== 'news') hitBox(obj)   // the galley is big already, and it sails
+      tagPick(obj, { kind: 'place', id })
+    }
+  }
   const pickRoots = (): THREE.Object3D[] => {
     const out: THREE.Object3D[] = []
     if (scene === 'harbor') {
@@ -487,12 +514,18 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     for (const [key, l] of labels) l.el.classList.toggle('hover', !!h && h.kind === 'place' && key === `place:${h.id}`)
     wake()
   }
+  // Hover forgives a mouse that slips off for a moment: it only lets go after 200 ms over nothing.
   let lastHover = 0
+  let missTimer = 0
+  let lastPointer: { clientX: number; clientY: number } | null = null
   const hoverAt = (e: PointerEvent) => {
+    lastPointer = { clientX: e.clientX, clientY: e.clientY }
     const t = performance.now()
     if (t - lastHover < 50) return   // raycast at most 20 times a second
     lastHover = t
-    setHover(pickAt(e))
+    const h = pickAt(e)
+    if (h || !hovered) { clearTimeout(missTimer); missTimer = 0; setHover(h); return }
+    if (!missTimer) missTimer = window.setTimeout(() => { missTimer = 0; setHover(lastPointer ? pickAt(lastPointer) : null) }, 200)
   }
 
   // ------------------------------------------------------------ walking
@@ -926,6 +959,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
         quarter = buildQuarter(next)
         quarterId = next
         scene3.add(quarter.root)
+        for (const [id, objs] of quarter.picks) for (const obj of objs) { hitBox(obj); tagPick(obj, { kind: 'place', id }) }
+        for (const slot of quarter.slots) hitBox(slot.group)
         // the guild trainer, an elder in the guild's colors, stands by the hall door
         trainer?.dispose()
         trainer = new Blob({ character: `trainer:${next}` })
