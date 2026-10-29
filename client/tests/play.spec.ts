@@ -110,6 +110,10 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(page.locator(id('item-detail'))).toContainText('Brass Fittings')
   await expect(page.locator(id('item-detail'))).toContainText('usual')
 
+  // --- buy offers (0.13.0: the Wanted board moved into the Mercato): the form to ask for goods
+  await page.click(id('mode-offers'))
+  await expect(page.locator(id('wanted-form'))).toBeVisible()
+
   // --- city: one list with Gold and Crafts columns (#38), a profile, the trade form, the inbox (#32)
   await page.click(id('tab-city'))
   await expect(page.locator(id('players'))).toBeVisible()
@@ -128,10 +132,8 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await page.click(id('mode-trades'))
   await expect(page.locator(id('trades'))).toContainText('Offers to you')
 
-  // --- the living city as lists (0.9.0): your guild's quarter (your own stall is there), friends, the Duke's order
-  await page.click(id('mode-quarters'))
-  await expect(page.locator(id('quarters'))).toContainText('Alchemists')
-  await expect(page.locator(id('stall-me'))).toContainText(name)
+  // --- the living city as lists (0.9.0; no guild quarters since 0.13.0): friends, the Duke's order
+  await expect(page.locator(id('mode-quarters'))).toHaveCount(0)
   await page.click(id('mode-friends'))
   await expect(page.locator(id('friends'))).toContainText('No friends yet')
   await page.click(id('mode-duke'))
@@ -139,11 +141,11 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(page.locator(id('duke-status'))).toBeVisible()
   await expect(page.locator('[data-testid^="duke-line-"]').first()).toBeVisible()
 
-  // --- the Palazzo as lists (0.11.0): the Wanted board, the Hall of honor, an official with a rumor and a favor
+  // --- the Palazzo as lists (0.11.0): the Hall of honor with the Factotum's portrait (0.13.0), an official with a rumor and a favor
   await page.click(id('mode-palazzo'))
-  await expect(page.locator(id('wanted-form'))).toBeVisible()
   await page.click(id('mode-honors'))
   await expect(page.locator(id('honors-gold'))).toBeVisible()
+  await expect(page.locator(id('factotum')).locator('svg.portrait')).toBeVisible()
   await page.click(id('mode-crier'))
   await expect(page.locator(id('npc-rumor'))).not.toBeEmpty()
   await expect(page.locator(id('npc-favor'))).toBeVisible()
