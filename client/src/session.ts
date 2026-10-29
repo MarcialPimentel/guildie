@@ -4,9 +4,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { callAction, setTokenProvider, type ApiResult } from './api'
 import type {
-  Activity, Directory, DukeBoard, Friends, GameState, ItemCount, MarketItem, MarketRow, MyListing, NewsItem, Offers, OrderBoard,
-  PresencePass, Profile, ProfessionChoice, ProgressGain, SellQuote, Surprise, Trainer,
-  Honors, NpcTalk, PalazzoNpc, WantedBoard,
+  Activity, Directory, DukeBoard, Friends, GameState, GuideClaim, GuideStatus, Honors, ItemCount, MarketItem, MarketRow, MyListing, NewsItem, NpcTalk, Offers, OrderBoard, PalazzoNpc, PresencePass, ProfessionChoice, Profile, ProgressGain, SellQuote, Surprise, Trainer, WantedBoard,
 } from './types'
 
 const TOKEN_KEY = 'guildie.token'
@@ -108,6 +106,23 @@ class Session {
   }
   collectCrafts() {
     return this.stateCall<{ surprises?: Surprise[]; progress?: ProgressGain | null }>('collect_crafts', {}, 'state')
+  }
+  /** The new-player guide (0.14.0): claim the current step's ducats, or skip it when it's optional. */
+  async guideClaim(step: string) {
+    const r = await this.call<GuideClaim>('guide_claim', { step })
+    if (r.ok) await this.refresh()
+    return r
+  }
+  async guideSkip(step: string) {
+    const r = await this.call<GuideClaim>('guide_skip', { step })
+    if (r.ok) await this.refresh()
+    return r
+  }
+  /** Tell the server something it can't see (reaching the Palazzo, a slap), once, for the guide. */
+  async guideMark(what: 'palazzo' | 'slap') {
+    const r = await this.call<GuideStatus>('guide_mark', { what })
+    if (r.ok && this.state?.guide && !this.state.guide.finished) await this.refresh()
+    return r
   }
   /** The guild trainer (#49): every recipe of your guild, what it needs, and what it costs. */
   trainer() {

@@ -169,10 +169,25 @@ export interface GameState {
   max_batch: number
   active_listings: number
   incoming_offers: number
+  /** The new-player guide (0.14.0): finished for everyone who joined before it. */
+  guide?: GuideStatus
   activity: Activity[]
   server_time: number
   build: string
 }
+
+/** The new-player guide (0.14.0, content/guide.json): the current step, or finished. */
+export type GuideStatus =
+  | { finished: true }
+  | {
+      finished: false
+      index: number
+      total: number
+      final_reward: number
+      step: { id: string; title: string; hint: string; reward: number; target: string | null; optional: boolean; ready: boolean }
+    }
+
+export interface GuideClaim { step: string; gold: number; final: number; finished: boolean; guide: GuideStatus }
 
 export interface ProfessionChoice {
   id: string

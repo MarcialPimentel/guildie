@@ -14,6 +14,7 @@ import { useNow, type TabRequest } from './common'
 import { DukeOrder } from './Duke'
 import { Market } from './Market'
 import { Orders } from './Orders'
+import { GuideCard } from './Guide'
 import { HallOfHonor, OfficialView } from './Palazzo'
 import { Crafts, Ledger, Recipes, Station } from './Workshop'
 import { World } from './World'
@@ -116,6 +117,7 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
         onPickPlayer={visit}
         onFail={onFail}
       />
+      <GuideCard floating />
       <nav class="dock" aria-label="Places in the harbor" style={{ right: panel ? `${width}px` : '0', display: panel && covers ? 'none' : undefined }}>
         {dock.map(([id, label]) => (
           <button class={`small ${panel?.id === id ? 'on' : 'secondary'}`} onClick={() => (panel?.id === id ? close() : pick(id))} data-testid={`dock-${id}`}>

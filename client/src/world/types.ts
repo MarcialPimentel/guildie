@@ -135,6 +135,8 @@ export interface WorldEngine {
   sales(list: SaleShow[], more: number): void
   /** The Duke's herald blows the trumpet and announces something (a new or a fulfilled Duke's order). */
   herald(text: string): void
+  /** The new-player guide (0.14.0): a bobbing arrow over this place in the current scene (null hides it). */
+  setGuide(id: PickId | null): void
   /** The Factotum (0.13.0): their merchant becomes the bronze statue; `portrait` is painted over the hall door. */
   setFactotum(f: { profession: string; name: string; look: number; hat: number; rank: number } | null, portrait?: HTMLCanvasElement | null): void
   /** A slap between two players (either may be you). */

@@ -3,7 +3,7 @@
 // honor with the Factotum's portrait, and the three officials (rumors, one favor a day each). Desktop opens these
 // from places in the 3D Palazzo; phones see buy offers in the Mercato tab and the rest in City → Palazzo.
 // The server decides prices, payouts, favors and rumors.
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import items from '../../../content/items.json'
 import { duration } from '../format'
 import { session, useSession } from '../session'
@@ -241,6 +241,8 @@ export function PalazzoList() {
   const [mode, setMode] = useState<Mode>('honors')
   const [npcs] = useLoad(() => session.palazzo(), [], true)
   const name = (id: string) => npcs?.npcs.find((n) => n.id === id)?.name ?? id
+  // Phones reach the Palazzo here: that's the guide's "walk up to the Palazzo" step (0.14.0).
+  useEffect(() => { if (session.state?.guide && !session.state.guide.finished) session.guideMark('palazzo') }, [])
   return (
     <section class="stack" data-testid="palazzo">
       <p class="muted small">The Piazza del Palazzo, where every guild meets: the Hall of honor and the city's officials. Buying and selling is in the Mercato tab.</p>

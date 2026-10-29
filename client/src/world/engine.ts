@@ -86,6 +86,8 @@ declare global {
       townsfolk(): { x: number; z: number; walking: boolean }[]
       /** The officials and vendors standing in the Palazzo (0.11.0; vendors 0.13.0). */
       officials(): string[]
+      /** The place the guide's arrow points at, while it shows (0.14.0). */
+      guide(): PickId | null
       /** The Factotum's statue: whose guild and name, or null when nobody holds the title (0.13.0). */
       statue(): { profession: string; name: string } | null
       /** Your bottega's shown level and whether scaffolding is up (0.11.0). */
@@ -950,6 +952,30 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     }, reduceMotion ? 0 : 700)
   }
 
+  // ------------------------------------------------------------ the guide's arrow (0.14.0)
+  // A big lemon arrow bobbing over the place the new-player guide points at (null hides it).
+  let guideTarget: PickId | null = null
+  const guideArrow = new THREE.Group()
+  {
+    const mat = new THREE.MeshStandardMaterial({ color: '#F2C53D', emissive: '#F2C53D', emissiveIntensity: 0.55, flatShading: true })
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.75, 1.3, 4), mat)
+    head.rotation.x = Math.PI   // points down
+    const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.2, 0.42), mat)
+    shaft.position.y = 1.2
+    guideArrow.add(head, shaft)
+    guideArrow.scale.setScalar(1.7)   // big enough to spot from the home view
+    guideArrow.visible = false
+    scene3.add(guideArrow)
+  }
+  const updateGuideArrow = () => {
+    const on = guideTarget !== null && scenePicks().includes(guideTarget)
+    guideArrow.visible = on
+    if (!on) return
+    const p = placeLabelPoint(guideTarget!)
+    guideArrow.position.set(p.x, p.y + 2.4 + (reduceMotion ? 0 : Math.sin(t * 3) * 0.5), p.z)
+    guideArrow.rotation.y = t * 1.5
+  }
+
   // ------------------------------------------------------------ the Factotum (0.13.0)
   // The city's richest merchant stands on the plinth in the middle of the Palazzo, cast in bronze, and their
   // portrait hangs over the hall door. The server says who (the Hall of honor); the UI paints the portrait.
@@ -1133,6 +1159,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     idle = false
     lastRender = now
     if (ambient) t += step
+    updateGuideArrow()
 
     // your merchant: keys (camera-relative) or a walk target
     // Each key counts for as long as it was held since the last frame, so slow machines walk the same distance.
@@ -1308,6 +1335,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     customers: () => [...customers.values()].map((c) => ({ order: c.order, character: c.character, state: c.state })),
     buyers: () => buyers.map((b) => b.character),
     townsfolk: () => npcs.map((n) => ({ x: n.pos.x, z: n.pos.z, walking: !!n.target })),
+    guide: () => (guideArrow.visible ? guideTarget : null),
     statue: () => (statueBlob && factotum ? { profession: factotum.profession, name: factotum.name } : null),
     officials: () => (scene === PALAZZO ? officials.map((o) => o.opts.character as string) : []),
     bottega: () => ({ ...bottegaShown, builder: !!builder }),
@@ -1388,6 +1416,11 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     orderTurnedDown,
     sales,
     herald: heraldSays,
+    setGuide(id) {
+      guideTarget = id
+      updateGuideArrow()
+      wake()
+    },
     setFactotum(f, portrait) {
       const same = JSON.stringify(f) === JSON.stringify(factotum)
       factotum = f ? { ...f } : null
