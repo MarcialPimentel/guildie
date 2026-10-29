@@ -585,6 +585,24 @@ A **Feedback** button in the game header opens a text box (up to 1,000 character
 
 The first three minutes (GDD 9): choose a profession → collect → craft → **guaranteed first sale** → first order → queue a long craft. Uses the other systems; owns only a per-player tutorial step. M2 basic flow, M4 polish.
 
+**As built (0.14.0): the new-player guide** (`content/guide.json`, `server/app/lib/guide.php`, `client/src/ui/Guide.tsx`), modelled on Hormigas' quest chain:
+
+| # | Step | Checked by the server as | Reward [tune] |
+|---|---|---|---|
+| 1 | Collect from your station | a `gathered` activity | 20 |
+| 2 | Craft something | a `crafted` activity | 25 |
+| 3 | Train your skill to 6 | skill ≥ 6 (the first trainer recipe opens at 6) | 25 |
+| 4 | Learn a recipe from the guild trainer | a recipe learned from the trainer | 30 |
+| 5 | Walk up to the Palazzo | reported by the client (3D arrival, or City → Palazzo on phones) | 25 |
+| 6 | Challenge a merchant (**optional**, can be skipped) | reported by the client from the realtime room | 15 |
+| | **Final purse** when the last step is claimed or skipped | | 150 |
+
+- One step at a time on a card (classic view: above the tabs; 3D: floating top left). **Claim** appears when the server says the step is done; the server pays the ducats in one transaction.
+- **Pointing the way:** the button to press next pulses (`body[data-guide]` + `styles.css`). In 3D a lemon arrow bobs over the place; from the Palazzo it points back down to your bottega.
+- The Palazzo visit and a slap can't be seen by the server, so the client reports them once (`guide_mark`). That's a small, one-time reward, so trusting the report is acceptable.
+- Players from before 0.14.0 have a finished guide (migration 010), so nobody collects it twice.
+- Actions: `guide_claim`, `guide_skip`, `guide_mark`; the guide's status rides along in `get_state`.
+
 ---
 
 ## 9. Milestone matrix
