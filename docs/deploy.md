@@ -260,6 +260,19 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.12.0 (the recipe ladder to 100)
+
+Fully automatic, with no database change (new items and recipes are content). The ping URL shows `"build":"0.12.0 (build …)"`.
+
+What players notice:
+- The guild trainer lists 16 recipes per guild, up to skill 94.
+- Stations start a third raw at skill 40 and a fourth at 65; players already past those skills get them on their next visit.
+- 42 new items in the Mercato, each with its own icon.
+- Orders are bigger at higher ranks.
+- Bottega level 4 needs Gears, Machine Oil and Drive Belts.
+
+---
+
 ## Deploying 0.10.3 (guilds as data)
 
 Fully automatic, with no database change. The ping URL shows `"build":"0.10.3 (build …)"` and `"schema":8`. The realtime rooms restart on the droplet as usual (the deploy does it).

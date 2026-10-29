@@ -225,8 +225,8 @@ Station raws: **Mine:** Copper Ore (1), Iron Ore (15), Coal (40), Silver Ore (65
 | 69 | Saddle | 2 Cured Leather + 2 Hide Cord | Staple (no import, W3) |
 | 76 | Pressure Gasket | 2 Eelskin + **1 Tanning Solution** + **1 Machine Oil** | Export |
 | 82 | Fur-lined Cloak | 2 Fine Fur + 1 Cured Leather | Staple (no import, W3) |
-| 88 | Aviator's Harness | 2 Cured Leather + 1 Drive Belt + **1 Gears** | Prestige |
-| 94 | Diving Suit | 3 Eelskin + 1 Pressure Gasket + **1 Brass Fittings** + **1 Steel Bar** | Prestige (needs both guilds) |
+| 88 | Ornithopter Harness | 2 Cured Leather + 1 Drive Belt + **1 Gears** | Prestige |
+| 94 | Diving Suit | 3 Eelskin + 1 Pressure Gasket + **1 Steel Bar** + **1 Lamp Oil** | Prestige (needs both guilds) |
 
 ### Checking the ladder against the rules
 
@@ -318,7 +318,7 @@ The Herb Garden (Alchemist) and the Trapper's Lodge (Leatherworker) get matching
 
 ## 9. M2 build order
 
-Built in an order that proves the fun first. If step 1 doesn't make the game feel alive, we learn that before building 36+ recipes on top of it. **Step 1 shipped on its own as 0.5.0** so it could be playtested (2026-10-28); **step 2 is 0.8.0** (see "Step 2 as built" below); steps 3 and 4 follow.
+Built in an order that proves the fun first. **Step 3 is 0.12.0** (see "Step 3 as built" below). If step 1 doesn't make the game feel alive, we learn that before building 36+ recipes on top of it. **Step 1 shipped on its own as 0.5.0** so it could be playtested (2026-10-28); **step 2 is 0.8.0** (see "Step 2 as built" below); steps 3 and 4 follow.
 
 | Step | What | Why first |
 |---|---|---|
@@ -336,6 +336,28 @@ Then a simulator pass, slowing the pace (`pace.time_multiplier`, now that gold s
 - **Order XP:** 3× the recipe XP of every item asked (4× for collectors), no fall-off [tune].
 - **The 3rd craft slot stays with the workshop upgrade** (§8, step 4), not with the Journeyman rank.
 - **Known gap until step 3:** with only 12 recipes, the stretch from about skill 20 to 26 has few orange or yellow recipes (Blacksmiths and Leatherworkers have nothing between 6 and 26). Orders and the daily double carry players through it. The simulator (`tools/econ_sim.php`) now reports time-to-rank: at today's fast playtest pace, bots reach Journeyman in 0.5–1.5 days, mostly from order XP. The balance pass (#52) tunes this together with the pace.
+
+### Step 3 as built (0.12.0)
+
+- **The whole ladder** in the tables above: 36 new trainer recipes, so every guild has 16 (4 per rank) from skill 1 to 94. The Expert and Master starters are Gears, Machine Oil and Drive Belt (51), and Steel Bar, Volatile Spirit and Pressure Gasket (76).
+- **Two changes from the plan:**
+  - The **Diving Suit** takes Lamp Oil (the diver's lamp) instead of Brass Fittings: with two Blacksmith parts it needed only one other guild, and rule W2 asks every Master guild for a prestige good that needs two.
+  - **Aviator's Harness** became the **Ornithopter Harness** (Leonardo's flying machine, not airplanes).
+- **Raws 3 and 4:** Coal, Frostcap and Eelskin at skill 40 (6 an hour, holds 8), and Silver Ore, Starbloom and Fine Fur at 65 (3 an hour, holds 5) [tune]. Usual values are 14 and 30.
+- **Prices:** every new good's usual value comes from its inputs: × 1.2 for parts, × 1.25 for exports, × 1.4 for staples and × 1.5 for prestige goods [tune]. That puts Master prestige goods at about 370–910 ducats.
+- **Rare recipes (6 more):** one per guild for Expert and one for Master, each a better pattern of a new good (2 per craft, 1.5× XP):
+  - Blacksmith: Arsenale Gears (54), The Doge's Filigree (84);
+  - Alchemist: Lagoon Oil (54), Blue Spirit of Murano (79);
+  - Leatherworker: Regatta Belts (54), Corsair's Gaskets (79).
+- **NPC demand:** every new good has a buyer (rule W7):
+  - Townsfolk buy household goods;
+  - Sailors buy sea and adventure gear;
+  - Guild Workshops buy parts and machines.
+  Rates aim at about 20 ducats an hour per staple, 25 per prestige good, 8 per export and 4 per part, so NPC spending grows about 1.75×, not 3× [tune in #52].
+- **Orders grow with rank:** order value ranges are 50–140 (Apprentice), 90–240 (Journeyman), 160–420 (Expert) and 280–720 (Master) ducats [tune].
+- **Bottega level 4** (which opens Master) now asks for the Expert parts: Gears, Machine Oil and Drive Belts.
+- **The validator** now enforces W2, W3 and W6 for every rank, since every rank is full. W5's value share (about 35%) stays a warning for the balance pass. Ten recipes are above it, most of all Pressure Gasket (74%, because Machine Oil is pricey).
+- **Not yet:** machine running costs (lamp oil and wages) come with the balance pass (#52), as does an updated simulator. The simulator predates the bottega upgrades, so its time-to-rank numbers would be wrong today.
 
 ---
 
