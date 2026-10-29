@@ -271,6 +271,11 @@ test('the living city: walk, the Palazzo, a second player live, and a slap', asy
   await expect(a.locator(id('panel-vendor:alchemist'))).toBeVisible()
   await expect(a.locator(id('browse-alchemist'))).toBeVisible()
   await expect(a.locator(id('browse-blacksmith'))).toHaveCount(0)
+  // Tapping a good opens its buy screen, and it stays open past the clock's ticks (0.14.1 fix).
+  await a.click(id('browse-item-sunleaf'))
+  await expect(a.locator(id('item-detail'))).toBeVisible()
+  await a.waitForTimeout(2500)
+  await expect(a.locator(id('item-detail'))).toBeVisible()
   await a.click(id('dock-desk'))
   await expect(a.locator(id('panel-desk'))).toBeVisible()
   await a.click(id('mode-mine'))
