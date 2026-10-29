@@ -119,7 +119,7 @@ function Players({ open }: { open: (id: number) => void }) {
 
 /**
  * A crafter's shop window and trade form, for the 3D world's side panel (tap a player or their stall).
- * `extra` adds buttons under the profile (e.g. Wave and Slap when they're in the quarter with you).
+ * `extra` adds buttons under the profile (e.g. Wave and Slap when they're in the Palazzo with you).
  */
 export function Crafter({ id, extra }: { id: number; extra?: preact.ComponentChildren }) {
   const [composing, setComposing] = useState<string | null>(null)

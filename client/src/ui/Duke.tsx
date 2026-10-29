@@ -1,5 +1,5 @@
 // The Duke's order (0.9.0, systems.md 6.5): one city-wide order everyone works on, with a public board of
-// helpers. Shown in the City tab (classic view), at the herald on your quay and at every quarter's fountain.
+// helpers. Shown in the City tab (classic view), and at the Duke's lectern in the Palazzo.
 // The server decides everything: what you may give, what you're paid, when it's fulfilled.
 import { useState } from 'preact/hooks'
 import { duration } from '../format'
