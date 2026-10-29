@@ -34,7 +34,16 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await expect(page.locator(id('look-invite'))).toHaveCount(0)
   await expect.poll(() => page.evaluate(() => window.__guildieWorld!.me())).toMatchObject({ look: 1, hat: 2, rank: 0 })
 
-  // Click the Mercato building itself: a real raycast through the canvas opens its panel.
+  // Pointing at a place lights up its label (0.10.2: an invisible hover box covers the whole shape, so the
+  // gaps in the mine's frame count too), and the label stays where it was.
+  const mine = await page.evaluate(() => window.__guildieWorld?.screenPoint('station') ?? null)
+  const before = await page.locator(id('world-label-station')).boundingBox()
+  await page.mouse.move(mine!.x, mine!.y)
+  await expect(page.locator(id('world-label-station'))).toHaveClass(/hover/)
+  expect(await page.locator(id('world-label-station')).boundingBox()).toEqual(before)
+  await page.mouse.move(5, 5)
+
+    // Click the Mercato building itself: a real raycast through the canvas opens its panel.
   const at = await page.evaluate(() => window.__guildieWorld?.screenPoint('mercato') ?? null)
   expect(at).not.toBeNull()
   await page.mouse.click(at!.x, at!.y)
