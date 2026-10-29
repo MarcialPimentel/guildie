@@ -1,6 +1,7 @@
 // Plays through the whole game in a real browser, against a real API (replaces the Godot client_smoke.gd).
 // Each run registers a fresh player, picks the Alchemist guild, and touches every screen.
 import { expect, test, type Page } from '@playwright/test'
+import content from '../../content/professions.json'
 
 const id = (s: string) => `[data-testid="${s}"]`
 
@@ -163,4 +164,24 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
 
   // The classic view never downloads the 3D harbor (it's a separate file, loaded only by the 3D view).
   expect(engineRequests).toEqual([])
+})
+
+// Guilds are content (0.10.3): every guild in content/professions.json shows on the chooser with its portrait,
+// and every hat it names draws on that portrait. A guild added without its art kit fails here (and in the
+// content validator) instead of crashing the chooser for new players.
+test('every guild in content has a card, a portrait and all its hats', async ({ page }, info) => {
+  const guilds = content.professions
+  await page.goto(info.project.name === 'desktop' ? './?view=classic' : './')
+  await page.fill(id('login-name'), `pw_g${info.project.name.slice(0, 1)}${Date.now() % 1_000_000}`)
+  await page.fill(id('login-password'), 'testpass')
+  await page.click(id('register'))
+  for (const g of guilds) {
+    const card = page.locator(id(`guild-${g.id}`))
+    await expect(card).toBeVisible()
+    for (const [i, hat] of g.guild.hats.entries()) {
+      await page.click(id(`hat-${g.id}-${i}`))
+      await expect.poll(() => card.locator('svg.portrait').getAttribute('aria-label')).toContain(`${hat}, `)
+      await expect(card.locator(`svg.portrait ${id('portrait-hat')}`)).toHaveCount(1)
+    }
+  }
 })
