@@ -67,7 +67,8 @@ tx(function (PDO $pdo) use ($mode, $name, $value, $argv) {
     }
     $pdo->prepare('DELETE FROM player_recipes WHERE player_id = ?')->execute([$id]);
     $pdo->prepare('UPDATE player_professions SET skill = 1, xp = 0, bonus_day = 0, progress_version = 0 WHERE player_id = ?')->execute([$id]);
-    foreach (content_profession($p['profession_id'])['station']['outputs'] as $o) {
+    // Before 0.8.0 every station had two raws, and players gathered both.
+    foreach (array_slice(content_profession($p['profession_id'])['station']['outputs'], 0, 2) as $o) {
         $pdo->prepare('INSERT IGNORE INTO gathering (player_id, item_id, last_at) VALUES (?, ?, ?)')->execute([$id, $o['item_id'], game_now()]);
     }
 });
