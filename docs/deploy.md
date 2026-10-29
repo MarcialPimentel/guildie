@@ -260,6 +260,17 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.13.0 (one square)
+
+Fully automatic, with no database change. The ping URL shows `"build":"0.13.0 (build …)"`. The realtime rooms restart on the droplet as usual; passes now list only the `palazzo` room.
+
+What players notice:
+- On a computer, the quay has only your workshop places, and the Steps go straight to the Palazzo.
+- The Palazzo has the marketplace (a vendor per guild and the selling desk), the Factotum's bronze statue and portrait, and the Hall of honor with players, friends and trades.
+- The guild quarters are gone. On phones, City → Quarters is gone, and buy offers are in the Mercato tab.
+
+---
+
 ## Deploying 0.12.0 (the recipe ladder to 100)
 
 Fully automatic, with no database change (new items and recipes are content). The ping URL shows `"build":"0.12.0 (build …)"`.
