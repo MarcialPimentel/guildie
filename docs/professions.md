@@ -26,6 +26,7 @@ Every recipe and feature in M2 follows it. The decisions are recorded in the GDD
 8. [Workshop upgrades: the rank-up moments](#8-workshop-upgrades-the-rank-up-moments)
 9. [M2 build order](#9-m2-build-order)
 10. [Decided, and on hold](#10-decided-and-on-hold)
+11. [Adding a guild](#11-adding-a-guild-0103)
 
 ---
 
@@ -270,16 +271,16 @@ flowchart LR
 ```
 
 ### The web rules
-Pillar 5 (you need other crafters) pulls against Pillar 3 (it works with 5 players). The rules keep both true: **dependency grows with rank, but it's a cost, never a wall.** Rules W1–W6 are checked by `tools/validate_content.py`, so content that breaks the web fails CI.
+Pillar 5 (you need other crafters) pulls against Pillar 3 (it works with 5 players). The rules keep both true: **dependency grows with rank, but it's a cost, never a wall.** Every rule is checked by `tools/validate_content.py` (0.10.3), so content that breaks the web fails CI. W1, W4 and W7 always fail CI; W2, W3 and W6 describe a whole rank, so they fail CI once that rank has its full 4 trainer recipes and print as warnings before that; W5 fails CI for more imported units than your own, and warns above 35% of the input value [tune]. With a 4th guild, "both others" reads as "every other guild".
 
 | # | Rule | Why |
 |---|---|---|
 | **W1** | **Apprentice recipes import nothing.** | A new player is never blocked |
-| **W2** | **Imports grow with rank:** about half of Journeyman recipes import from one guild, about three quarters of Expert recipes do, and Master prestige goods need **both** other guilds. | Players learn their own craft first |
+| **W2** | **Imports grow with rank:** about half of Journeyman recipes import from one guild, about three quarters of Expert recipes do, and Master prestige goods need **two or more** other guilds. | Players learn their own craft first |
 | **W3** | **Every rank has at least one recipe with no imports.** | Anyone can skill up alone: slower or costlier, never stuck |
 | **W4** | **Supply before demand:** an import must be craftable by its owner at the same rank or lower, and no recipe uses a raw before its station unlocks it. | When you first need Machine Oil, Alchemists can already make it |
 | **W5** | **Imports are a small share:** 1 imported unit next to 2–3 of your own, and at most about 35% of a recipe's input value [tune]. | The importer pays a fair share; the exporter isn't a bottleneck |
-| **W6** | **Every guild's exports are used by both others, and no guild supplies more than half of all import slots.** | Everyone gets customers; nobody holds everyone hostage |
+| **W6** | **Every guild's exports are used by every other guild, and no guild supplies more than half of all import slots.** | Everyone gets customers; nobody holds everyone hostage |
 | **W7** | **Every export has an NPC floor:** Guild Workshops buy a little of every component, and Guild Suppliers sell everything at 1.5 × value. | Works with 5 players; components are never a dead end |
 
 ### Where trade shows up in play
@@ -357,7 +358,21 @@ Then a simulator pass, slowing the pace (`pace.time_multiplier`, now that gold s
   - add its own export line that both older guilds pick up;
   - pass W1–W7;
   - have NPC coverage;
-  - arrive only once there are enough active players (about 3 per guild [tune]).
+  - ~~arrive only once there are enough active players (about 3 per guild)~~ dropped 2026-10-29: it opens when it's ready, because NPC customers and buyers keep a quiet quarter alive and the Suppliers sell every part.
 
-  The front-runner is a **Tinker** (machinery, clockwork), the natural capstone of the age of invention.
+  **Chosen (2026-10-29): the Glassblower** (Murano glass, *Arte dei Vetrai*), not the Tinker: nobody makes glass today (flasks, lamp glass, lenses, mirrors), while a Tinker would take the Blacksmith's Gears and Clockwork. Designed after the ladder (#50); built after workshop upgrades (#51). See §11 for how a guild is added.
 - **Second profession** at skill 80.
+
+---
+
+## 11. Adding a guild (0.10.3)
+
+Guilds are content. Since 0.10.3 nothing in the server, the realtime rooms or the client lists the guilds by hand, so a new guild (the Glassblower is next) is:
+
+1. **`content/professions.json`:** the profession with its `guild` block (kit, hall, piazza, quarter label, Mercato heading, workbench name, two colors, hat names), its trainer, and its station with 4 raws (`unlock_skill` 1, 15, 40, 65) and a `find_label`.
+2. **`content/items.json` and `recipes.json`:** its items and a 16-recipe ladder that passes W1–W7 (the validator says what's missing), plus NPC demand for every new component and finished good in `economy.json`.
+3. **Art, two files named after the kit:**
+   - `client/src/world/kits/<kit>.ts`: the 3D dress, hats, trainer, gathering station and workbench (copy a kit and change it);
+   - `client/src/ui/portraits/<kit>.tsx`: the flat portrait dress and hats for the menus.
+   One hat in each per hat name. Plus an icon per item in `client/src/icons/`.
+4. **Nothing else:** the quarter, its realtime room (the server signs the list of quarters into the presence pass), the Mercato heading, the quarter tabs and the guild chooser all follow the content. CI fails if a kit file, a hat, an icon or NPC demand is missing; the browser test opens every guild's card and hat.

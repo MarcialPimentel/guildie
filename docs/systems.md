@@ -165,7 +165,7 @@ These rules apply to every system.
 |---|---|
 | **Job** | Define everything that exists, as data |
 | **Owns** | `/content/*.json`: `items`, `recipes`, `professions`, `economy`, later `buildings`, `personas`, `events` |
-| **Rules** | One source of truth, read by both server and client. IDs are lowercase snake_case and never renamed once live (players own items by ID). Every file is validated by a test so a typo can't break the live game. |
+| **Rules** | One source of truth, read by both server and client. **Guilds are content too (0.10.3):** `professions.json` holds each guild's names, colors and hats and names its art kit; the client reads it at build time, the server derives the quarters from it, and the realtime rooms get the quarter list in the signed presence pass (professions.md §11). IDs are lowercase snake_case and never renamed once live (players own items by ID). Every file is validated by a test so a typo can't break the live game. |
 | **M1 adds** | Full launch list (GDD 5.5), recipes, three professions, reference values, a content validator |
 
 ### 4.4 Inventory & Wallet
