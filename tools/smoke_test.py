@@ -29,6 +29,10 @@ from concurrent.futures import ThreadPoolExecutor
 args = sys.argv[1:]
 BASE = args[0] if args and not args[0].startswith("--") else "http://127.0.0.1:8080/games/guildie/api/index.php"
 TICK = args[args.index("--tick") + 1] if "--tick" in args else None
+# The content this server runs (checks compare against it, so adding recipes or guilds doesn't break them).
+CONTENT = __import__("pathlib").Path(__file__).resolve().parent.parent / "content"
+GUILDS = json.loads((CONTENT / "professions.json").read_text(encoding="utf-8"))["professions"]
+RECIPES = json.loads((CONTENT / "recipes.json").read_text(encoding="utf-8"))["recipes"]
 SUPPLIERS = "the guild suppliers"   # economy.json personas.suppliers.label (how NPC sellers are named)
 FEEDBACK_KEY = args[args.index("--feedback-key") + 1] if "--feedback-key" in args else None
 PLAYER_TOOL = args[args.index("--player-tool") + 1] if "--player-tool" in args else None
@@ -114,7 +118,7 @@ check("M0 test_add_item removed", s == 404, r)
 
 # ---------------------------------------------------------------- professions
 s, r = call("professions", token=tok_a)
-check("profession list has 3", s == 200 and len(r["data"]["professions"]) == 3, r)
+check("profession list matches content", s == 200 and [p["id"] for p in r["data"]["professions"]] == [g["id"] for g in GUILDS], r)
 s, r = call("collect_station", {}, token=tok_a)
 check("collect before choosing -> no_profession", s == 400 and r["error"]["code"] == "no_profession", r)
 s, r = call("choose_profession", {"profession_id": "wizard"}, token=tok_a)
@@ -125,7 +129,8 @@ state = r["data"]
 station = {o["item_id"]: o for o in state["profession"]["station"]["outputs"]}
 check("station starts partly full", station["sunleaf"]["ready"] > 0, station)
 check("raw 2 is locked for a new player until skill 15 (#30)", "ember_moss" not in station
-      and state["profession"]["station"]["locked"] == [{"item_id": "ember_moss", "name": "Ember Moss", "unlock_skill": 15}], state["profession"]["station"])
+      and state["profession"]["station"]["locked"][0] == {"item_id": "ember_moss", "name": "Ember Moss", "unlock_skill": 15}
+      and all(x["unlock_skill"] > 1 for x in state["profession"]["station"]["locked"]), state["profession"]["station"])
 check("a new alchemist knows only the free starter recipe (#49)", [r["id"] for r in state["profession"]["recipes"]] == ["healing_draught"], state["profession"]["recipes"])
 prog = state["profession"].get("progress", {})
 check("starts at skill 1/100, Apprentice, Journeyman at 26, double XP waiting", prog.get("skill") == 1 and prog.get("max_skill") == 100
@@ -506,7 +511,8 @@ for rid, why in (("copper_lantern", "trainer"), ("iron_sword", "trainer"), ("ars
 
 s, r = call("trainer", token=tok_d)
 tr = {x["id"]: x for x in r["data"]["recipes"]} if s == 200 else {}
-check("trainer lists all 6 blacksmith recipes", s == 200 and len(tr) == 6 and r["data"]["trainer"], r)
+n_bs = len([x for x in RECIPES if x["profession"] == "blacksmith"])
+check(f"trainer lists all {n_bs} blacksmith recipes", s == 200 and len(tr) == n_bs and r["data"]["trainer"], r)
 check("trainer: Brass Fittings known (free starter)", tr.get("brass_fittings", {}).get("status") == "known" and tr["brass_fittings"]["starter"], tr.get("brass_fittings"))
 check("trainer: Copper Lantern at skill 6 for 50 ducats", tr.get("copper_lantern", {}).get("status") == "locked"
       and tr["copper_lantern"]["skill"] == 6 and tr["copper_lantern"]["price"] == 50, tr.get("copper_lantern"))
@@ -569,7 +575,7 @@ if PLAYER_TOOL:
     st = r["data"]["profession"]
     check("legacy player: skill counted from past crafts", st["progress"]["skill"] == 6, st["progress"])
     check("legacy player keeps every guild recipe (not the rare ones)", sorted(x["id"] for x in st["recipes"])
-          == ["brass_fittings", "copper_lantern", "iron_ingot", "iron_sword"], st["recipes"])
+          == sorted(x["id"] for x in RECIPES if x["profession"] == "blacksmith" and not x.get("rare")), st["recipes"])
     check("legacy player keeps both raws", [o["item_id"] for o in st["station"]["outputs"]] == ["copper_ore", "iron_ore"], st["station"])
     check("legacy upgrade in activity", any(a["type"] == "skill_counted" for a in r["data"]["activity"]), r["data"]["activity"][:3])
     s, r = call("start_craft", {"recipe_id": "iron_sword", "quantity": 1}, token=tok_d)
@@ -606,6 +612,7 @@ if pt.get("enabled"):
     claims = json.loads(base64.urlsafe_b64decode(body64 + "=" * (-len(body64) % 4)))
     check("presence pass carries name, guild and a 10-minute expiry", claims["pid"] == id_a and claims["n"] == name
           and claims["p"] == "alchemist" and 0 < claims["exp"] - time.time() <= 600, claims)
+    check("presence pass lists the quarters, one per guild in content (0.10.3)", claims.get("q") == [g["id"] for g in GUILDS], claims)
     check("presence pass has a realtime url", pt["url"].startswith(("ws://", "wss://")), pt)
 else:
     print("SKIP  presence pass signature (no realtime_url/realtime_secret in config.php)")
@@ -658,6 +665,10 @@ check("a friend's stall comes first in every quarter, whatever their guild", s =
       and stalls[0]["friend"], [st.get("name") for st in stalls])
 check("the Tanners' quarter lists tanners after friends", all(st["profession_id"] == "leatherworker" for st in stalls[1:]), stalls)
 check("quarter has a name and at most 12 stalls", r["data"]["name"].startswith("Tanners") and len(stalls) <= 12, r)
+lw = next(g["guild"] for g in GUILDS if g["id"] == "leatherworker")
+check("quarter name comes from content (guild.quarter and guild.piazza)", r["data"]["name"] == f"{lw['quarter']} quarter · {lw['piazza']}", r["data"]["name"])
+s, r = call("quarter", {"quarter": "wizards"}, token=tok_a)
+check("an unknown quarter is refused", s == 400, r)
 s, r = call("quarter", {"quarter": "alchemist"}, token=tok_a)
 mine = [st for st in r["data"]["stalls"] if st["me"]] if r.get("ok") else []
 check("you have a stall in your own guild's quarter, with an echo of what you did lately", mine and mine[0]["echo"]
