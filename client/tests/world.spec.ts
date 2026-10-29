@@ -349,9 +349,8 @@ test('the Palazzo: two guilds meet live, the officials, the Wanted board and you
   await goQuarter(b, 'palazzo')
   // Both are in the same room (A's camera may be zoomed in on the Wanted board, so check the room, not the screen).
   await expect(peerLabel(b, nameA)).toBeVisible({ timeout: 20_000 })
-  const idB = await b.evaluate(() => window.__guildieWorld!.me())
+  await expect.poll(() => b.evaluate(() => window.__guildieWorld!.me().scene)).toBe('palazzo')   // after the arrival fade
   await expect.poll(() => a.evaluate(() => window.__guildieWorld!.peers().length), { timeout: 20_000 }).toBe(1)
-  expect(idB.scene).toBe('palazzo')
   await b.click(id('dock-wanted'))
   await expect(b.locator('[data-testid^="wanted-post-"]', { hasText: nameA })).toContainText('Leather Grip')
 
