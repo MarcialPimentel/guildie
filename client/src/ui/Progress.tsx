@@ -11,9 +11,13 @@ export function SkillLine({ state }: { state: GameState }) {
   return (
     <div class="header-skill">
       <span class="grow" data-testid="skill">{prof.name} {p.skill}/{p.max_skill} · {p.rank}</span>
-      <span class="num" data-testid="xp-text" title={p.next_rank ? `${p.next_rank.name} at skill ${p.next_rank.at}` : 'The highest rank'}>
-        {p.xp_needed > 0 ? `${p.xp} / ${p.xp_needed} XP` : 'Mastered'}
-      </span>
+      {p.at_cap
+        ? <span class="num accent" data-testid="xp-text" title={`Your bottega allows skill ${p.cap}. Build ${prof.workshop?.next?.name ?? 'the next upgrade'} to go on.`}>
+            Build {prof.workshop?.next?.name ?? 'the next upgrade'} to go on
+          </span>
+        : <span class="num" data-testid="xp-text" title={p.next_rank ? `${p.next_rank.name} at skill ${p.next_rank.at}` : 'The highest rank'}>
+            {p.xp_needed > 0 ? `${p.xp} / ${p.xp_needed} XP` : 'Mastered'}
+          </span>}
     </div>
   )
 }
@@ -54,6 +58,7 @@ export function gainText(g: ProgressGain | null | undefined): string {
   if (g.discoveries?.length) parts.push(`first ${g.discoveries.join(', ')}: +1 skill`)
   if (g.unlocked?.length) parts.push(`your station now yields ${g.unlocked.join(', ')}`)
   if (g.taught) parts.push(`learned the rare recipe ${g.taught}!`)
+  if (g.capped && g.xp === 0 && g.skill_to <= g.skill_from) parts.push('no XP: your bottega has reached its limit. Build the next upgrade to go on')
   return parts.join(' · ')
 }
 

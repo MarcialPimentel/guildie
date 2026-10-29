@@ -12,7 +12,7 @@ import type { DukeBoard, GameState, NewsItem, OrderBoard, PresenceMe, QuarterDat
 import { worldEvents } from '../worldEvents'
 import { guild } from '../guilds'
 import { hatNames } from './Look'
-import type { MyLook, Peer, PickId, RoomEmote, Scene, StallInfo, WorldEngine, WorldLabel, WorldState } from '../world/types'
+import { PALAZZO, type MyLook, type Peer, type PickId, type RoomEmote, type Scene, type StallInfo, type WorldEngine, type WorldLabel, type WorldState } from '../world/types'
 import { useGame, useLoad, useNow } from './common'
 import { ColorPicker, HatPicker, Portrait } from './Look'
 
@@ -63,14 +63,18 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
           : `${guild(prof.id).workbench} · idle`,
       tone: ready.length ? 'ready' : 'plain',
     },
-    ledger: { text: `Bottega di ${state.player.name}`, tone: 'plain' },
+    ledger: prof.workshop?.building
+      ? { text: `Bottega di ${state.player.name} · ${prof.workshop.building.ready_at <= now ? `${prof.workshop.building.name} ready!` : `building · ${duration(prof.workshop.building.ready_at - now)}`}`, tone: prof.workshop.building.ready_at <= now ? 'ready' : 'plain' }
+      : prof.progress.at_cap && prof.workshop?.next
+        ? { text: `Bottega di ${state.player.name} · build the ${prof.workshop.next.name}`, tone: 'alert' }
+        : { text: `Bottega di ${state.player.name}`, tone: 'plain' },
     bag: { text: `Storehouse · ${bagItems} item${bagItems === 1 ? '' : 's'}`, tone: 'plain' },
     stall: { text: `Your stall · ${state.active_listings} listed`, tone: 'plain' },
     mercato: { text: 'Mercato', tone: 'plain' },
     city: { text: offers ? `Guild hall · ${offers} offer${offers === 1 ? '' : 's'}` : 'Guild hall', tone: offers ? 'ready' : 'plain' },
     news: { text: event ? event.title : today ? `News · ${today.title}` : 'Harbor news', tone: event ? 'ready' : 'plain' },
     duke: dukeLabel(duke),
-    steps: { text: 'To the quarters', tone: 'plain' },
+    steps: { text: 'Up the Steps · quarters and Palazzo', tone: 'plain' },
   }
   if (customers.length) labels.orders = { text: fillable ? `Customers · ${fillable} ready to fill` : `Customers · ${customers.length} waiting`, tone: fillable ? 'ready' : 'plain' }
 
@@ -84,6 +88,7 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
     customers,
     eventNow: !!event,
     festival: !!today && /regatta/i.test(today.title),
+    bottega: { level: prof.workshop?.level ?? 1, building: !!prof.workshop?.building && !prof.workshop.building.ready },
     labels,
   }
 }
@@ -91,7 +96,7 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
 /** The bottegas around a piazza, for the engine. */
 export function stallInfos(q: QuarterData | null): StallInfo[] {
   return (q?.stalls ?? []).map((s) => ({
-    id: s.id, name: s.name, profession: s.profession_id, look: s.look, hat: s.hat ?? 0, rank: s.rank ?? 0, friend: s.friend, me: s.me,
+    id: s.id, name: s.name, profession: s.profession_id, look: s.look, hat: s.hat ?? 0, rank: s.rank ?? 0, level: s.level ?? 1, friend: s.friend, me: s.me,
     listings: s.listing_count, echo: s.echo ? `${s.echo.text} · ${duration(s.echo.ago)} ago` : null,
   }))
 }
@@ -223,6 +228,10 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
       return
     }
     presence.current?.connect(scene)
+    if (scene === PALAZZO) {
+      setQuarter(null)   // the Palazzo has no stalls: its places are the hall, the Wanted board and the officials
+      return
+    }
     let alive = true
     const load = () => session.quarter(scene).then((r) => { if (alive && r.ok) setQuarter(r.data) })
     load()
@@ -269,7 +278,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     for (const p of roomPlayers.current.values()) engine.current?.peerUpsert(toPeerRef.current(p))
   }, [friends])
   useEffect(() => {
-    if (scene === 'harbor' || status !== 'ready') return
+    if (scene === 'harbor' || scene === PALAZZO || status !== 'ready') return
     session.quarter(scene).then((r) => { if (r.ok) setQuarter(r.data) })
   }, [s.friendsVersion])
   useEffect(() => {
@@ -278,14 +287,30 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
   useEffect(() => {
     engine.current?.setState(worldState(state, now, board, news?.news ?? [], duke))
   }, [state, now, board, news, duke, status])
+  // The Palazzo's officials: a lemon label while today's favor is still open.
+  const [npcs] = useLoad(() => session.palazzo(), [scene === PALAZZO ? bagKey : ''], true)
   useEffect(() => {
     if (scene === 'harbor') return
+    if (scene === PALAZZO) {
+      const official = (id: 'notary' | 'crier' | 'steward'): WorldLabel => {
+        const n = npcs?.npcs.find((x) => x.id === id)
+        return { text: n ? `${n.name} · ${n.title}${n.favor_done ? '' : ' · a favor'}` : id, tone: n && !n.favor_done ? 'ready' : 'plain' }
+      }
+      engine.current?.setQuarterLabels({
+        duke: dukeLabel(duke),
+        hall: { text: 'The Palazzo · Hall of honor', tone: 'plain' },
+        wanted: { text: 'The Wanted board', tone: 'plain' },
+        notary: official('notary'), crier: official('crier'), steward: official('steward'),
+        home: { text: 'Down to your bottega', tone: 'plain' },
+      })
+      return
+    }
     engine.current?.setQuarterLabels({
       duke: dukeLabel(duke),
       trainer: { text: `${guild(scene).hall} · guild trainer`, tone: 'plain' },
       home: { text: 'Down to your bottega', tone: 'plain' },
     })
-  }, [duke, scene, status])
+  }, [duke, scene, status, npcs])
   useEffect(() => engine.current?.focus(focus, panelWidth), [focus, panelWidth, status])
   useEffect(() => engine.current?.setNight(night), [night, status])
 
@@ -330,15 +355,16 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
   }, [])
 
   const inQuarter = scene !== 'harbor'
+  const placeName = scene === PALAZZO ? 'Piazza del Palazzo' : quarter?.name ?? ''
   const statusText = !inQuarter
     ? ''
     : live.status === 'live'
-      ? `${quarter?.name ?? ''}${live.room.endsWith('-1') ? '' : ` · copy ${live.room.split('-').pop()}`} · ${live.count} other merchant${live.count === 1 ? '' : 's'} here`
+      ? `${placeName}${live.room.endsWith('-1') ? '' : ` · copy ${live.room.split('-').pop()}`} · ${live.count} other merchant${live.count === 1 ? '' : 's'} here`
       : live.status === 'off' || live.status === 'quiet'
-        ? `${quarter?.name ?? ''} · Quiet day: other merchants can't be seen right now`
+        ? `${placeName} · Quiet day: other merchants can't be seen right now`
         : live.status === 'replaced'
           ? 'You opened the game in another tab, so this one left the piazza.'
-          : `${quarter?.name ?? ''} · Arriving…`
+          : `${placeName} · Arriving…`
 
   return (
     <div class="world" ref={box} data-testid="world" data-ready={status === 'ready' ? 'yes' : 'no'} data-scene={scene}>

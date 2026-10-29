@@ -1,6 +1,7 @@
 // City (#31, #32, #38): every crafter in one list (gold and crafts columns, the Factotum title), their profiles
 // and shop windows, and direct trades. Views: players -> profile -> compose; trades (offers to you, yours, recent).
 // 0.9.0 (the living city): the guild quarters and friends as lists, and the Duke's order.
+import { PalazzoList } from './Palazzo'
 import { useEffect, useState } from 'preact/hooks'
 import { duration, gold, seen } from '../format'
 import { Coins, ItemIcon } from './art'
@@ -15,6 +16,7 @@ type View =
   | { name: 'quarters' }
   | { name: 'friends' }
   | { name: 'duke' }
+  | { name: 'palazzo' }
   | { name: 'profile'; id: number }
   | { name: 'compose'; id: number; playerName: string }
   | { name: 'trades' }
@@ -27,7 +29,7 @@ export function City({ onView }: { onView: (v: string) => void }) {
   const [from, setFrom] = useState<'players' | 'quarters' | 'friends'>('players')
   useEffect(() => onView(view.name), [view.name])
   const offers = s.state!.incoming_offers ?? 0
-  type Mode = 'players' | 'quarters' | 'friends' | 'duke' | 'trades'
+  type Mode = 'players' | 'quarters' | 'friends' | 'duke' | 'palazzo' | 'trades'
   const mode: Mode = view.name === 'profile' || view.name === 'compose' ? from : view.name
   const open = (id: number) => {
     if (view.name === 'players' || view.name === 'quarters' || view.name === 'friends') setFrom(view.name)
@@ -38,13 +40,14 @@ export function City({ onView }: { onView: (v: string) => void }) {
     <>
       <Modes<Mode>
         value={mode}
-        options={[['players', 'Players'], ['quarters', 'Quarters'], ['friends', 'Friends'], ['duke', "Duke's order"], ['trades', offers > 0 ? `Trades (${offers})` : 'Trades']]}
+        options={[['players', 'Players'], ['quarters', 'Quarters'], ['friends', 'Friends'], ['duke', "Duke's order"], ['palazzo', 'Palazzo'], ['trades', offers > 0 ? `Trades (${offers})` : 'Trades']]}
         onChange={(m) => setView({ name: m } as View)}
       />
       {view.name === 'players' && <Players open={open} />}
       {view.name === 'quarters' && <QuarterList open={open} />}
       {view.name === 'friends' && <FriendsList open={open} />}
       {view.name === 'duke' && <DukeOrder />}
+      {view.name === 'palazzo' && <PalazzoList />}
       {view.name === 'profile' && (
         <ProfileView
           id={view.id}

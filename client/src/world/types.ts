@@ -10,6 +10,11 @@
  */
 export type PickId = 'station' | 'workbench' | 'orders' | 'ledger' | 'bag' | 'stall' | 'mercato' | 'city' | 'news'
   | 'duke' | 'steps' | 'trainer' | 'home'
+  // the Palazzo (0.11.0): the Hall of honor, the Wanted board and the three officials
+  | 'hall' | 'wanted' | 'notary' | 'crier' | 'steward'
+
+/** The shared square with the city hall (0.11.0): a scene like a quarter, open to every guild. */
+export const PALAZZO = 'palazzo'
 
 /** A guild id from content/professions.json (see src/guilds.ts). Not a fixed list: guilds are content. */
 export type ProfessionId = string
@@ -36,10 +41,12 @@ export interface WorldState {
   eventNow: boolean
   /** The Regatta is on (bunting along the quay). */
   festival: boolean
+  /** Your bottega's level 1-4 (shack .. fine bottega) and whether builders are at work (0.11.0, #51). */
+  bottega: { level: number; building: boolean }
   labels: Partial<Record<PickId, WorldLabel>>
 }
 
-/** Where you are: your quay, or one of the guild quarters (named by their guild). */
+/** Where you are: your quay, one of the guild quarters (named by their guild), or the Palazzo ('palazzo'). */
 export type Scene = 'harbor' | ProfessionId
 
 /** Another merchant in the quarter (from the realtime room). */
@@ -66,6 +73,8 @@ export interface StallInfo {
   look: number
   hat: number
   rank: number
+  /** Their bottega level 1-4 (0.11.0): the stall looks like a shack up to a fine bottega. */
+  level: number
   friend: boolean
   me: boolean
   listings: number

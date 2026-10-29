@@ -4,7 +4,7 @@
 import type { ComponentChildren } from 'preact'
 import { useCallback, useEffect, useState } from 'preact/hooks'
 import { session, useSession } from '../session'
-import type { PickId, Scene } from '../world/types'
+import { PALAZZO, type PickId, type Scene } from '../world/types'
 import { Bag } from './Bag'
 import { City, Crafter } from './City'
 import { useLoad, useNow, type TabRequest } from './common'
@@ -13,6 +13,7 @@ import { QuarterChooser } from './Quarters'
 import { Trainer } from './Trainer'
 import { Market } from './Market'
 import { Orders } from './Orders'
+import { HallOfHonor, OfficialView, Wanted } from './Palazzo'
 import { NewsBoard } from './Ticker'
 import { Crafts, Ledger, Recipes, Station } from './Workshop'
 import { World } from './World'
@@ -29,14 +30,19 @@ export const PANEL_WIDTH = 460
 const DOCK: [PickId, string][] = [
   ['station', 'Station'], ['workbench', 'Workbench'], ['orders', 'Customers'], ['stall', 'Your stall'],
   ['mercato', 'Mercato'], ['bag', 'Storehouse'], ['city', 'Guild hall'], ['news', 'News'], ['ledger', 'Ledger'],
-  ['duke', "Duke's order"], ['steps', 'Quarters'],
+  ['duke', "Duke's order"], ['steps', 'Up the Steps'],
 ]
-const QUARTER_DOCK: [PickId, string][] = [['home', 'Back to your bottega'], ['duke', "Duke's order"], ['trainer', 'Guild hall'], ['steps', 'Other quarters']]
+const QUARTER_DOCK: [PickId, string][] = [['home', 'Back to your bottega'], ['duke', "Duke's order"], ['trainer', 'Guild hall'], ['steps', 'Elsewhere up the Steps']]
+const PALAZZO_DOCK: [PickId, string][] = [
+  ['home', 'Back to your bottega'], ['wanted', 'Wanted board'], ['hall', 'Hall of honor'], ['duke', "Duke's order"],
+  ['notary', 'Notary'], ['crier', 'Crier'], ['steward', 'Steward'], ['steps', 'Elsewhere up the Steps'],
+]
 
 const TITLES: Record<PickId | 'visit', string> = {
   station: '', workbench: 'Workbench', orders: 'Customers at your door', ledger: 'Your bottega', bag: 'Storehouse',
   stall: 'Your stall', mercato: 'The Mercato', city: 'Guild hall', news: 'Harbor news',
-  duke: "The Duke's order", steps: 'The guild quarters', trainer: 'Guild hall', home: '', visit: 'A bottega',
+  duke: "The Duke's order", steps: 'Up the Steps', trainer: 'Guild hall', home: '', visit: 'A bottega',
+  hall: 'The Hall of honor', wanted: 'The Wanted board', notary: 'The notary', crier: 'The town crier', steward: "The Duke's steward",
 }
 
 interface Props {
@@ -71,7 +77,7 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
   const width = Math.min(PANEL_WIDTH, window.innerWidth)
   const covers = width >= window.innerWidth
   const title = panel ? (panel.id === 'station' ? state.profession!.station.name : TITLES[panel.id]) : ''
-  const dock = scene === 'harbor' ? DOCK : QUARTER_DOCK
+  const dock = scene === 'harbor' ? DOCK : scene === PALAZZO ? PALAZZO_DOCK : QUARTER_DOCK
   let body: ComponentChildren = null
   if (panel) {
     switch (panel.id) {
@@ -87,6 +93,11 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
       case 'duke': body = <DukeOrder />; break
       case 'steps': body = <QuarterChooser go={(q) => go(q as Scene)} />; break
       case 'trainer': body = <GuildHall />; break
+      case 'hall': body = <HallOfHonor />; break
+      case 'wanted': body = <Wanted />; break
+      case 'notary':
+      case 'crier':
+      case 'steward': body = <OfficialView key={panel.id} npc={panel.id} />; break
       case 'visit': body = panel.playerId ? <Crafter key={panel.playerId} id={panel.playerId} /> : null; break
     }
   }

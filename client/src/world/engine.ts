@@ -13,10 +13,12 @@ import * as THREE from 'three'
 import { Blob, Glove, Shadows, blobMaterial, knownCharacter, parcelGeometry, type Character, type Emote } from './blobs'
 import { buildHarbor, type Harbor } from './harbor'
 import { buildQuarter, QUARTER_BOUNDS, QUARTER_SPAWN, type Quarter } from './quarter'
-import type { MyLook, Peer, PickId, ProfessionId, RoomEmote, SaleShow, Scene, StallInfo, WorldCallbacks, WorldEngine, WorldLabel, WorldState } from './types'
+import { buildPalazzo } from './palazzo'
+import { PALAZZO, type MyLook, type Peer, type PickId, type ProfessionId, type RoomEmote, type SaleShow, type Scene, type StallInfo, type WorldCallbacks, type WorldEngine, type WorldLabel, type WorldState } from './types'
 
 const HARBOR_PICKS: PickId[] = ['station', 'workbench', 'orders', 'ledger', 'bag', 'stall', 'mercato', 'city', 'news', 'duke', 'steps']
 const QUARTER_PICKS: PickId[] = ['duke', 'trainer', 'home']
+const PALAZZO_PICKS: PickId[] = ['duke', 'hall', 'wanted', 'notary', 'crier', 'steward', 'home']
 
 const DAY = { sky: '#BFE6EA', hemiSky: '#E6F7F7', hemiGround: '#E8D3B0', hemi: 1.3, sun: 2.4, sunCol: '#FFF0D2', sea: '#FFFFFF', win: 0, lamp: 0.25, lampLight: 0, door: 0.25 }
 const NIGHT = { sky: '#0F2B3A', hemiSky: '#3C6585', hemiGround: '#1B2B33', hemi: 0.55, sun: 0.55, sunCol: '#9FB8E8', sea: '#3E6F86', win: 1.6, lamp: 2.4, lampLight: 14, door: 1.2 }
@@ -81,6 +83,10 @@ declare global {
       townsfolk(): { x: number; z: number; walking: boolean }[]
       /** The guild trainer standing at the hall door (in a quarter). */
       trainer(): string | null
+      /** The officials standing in the Palazzo (0.11.0). */
+      officials(): string[]
+      /** Your bottega's shown level and whether scaffolding is up (0.11.0). */
+      bottega(): { level: number; building: boolean; builder: boolean }
       me(): { x: number; z: number; scene: Scene; look: number; hat: number; rank: number }
       stats(): Record<string, number>
     }
@@ -203,6 +209,11 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   const buyers: (Walker & { character: string })[] = []
   /** The guild trainer at the hall door of the quarter you're in. */
   let trainer: Blob | null = null
+  /** The Palazzo's officials (0.11.0). */
+  let officials: Blob[] = []
+  /** A mason at work on your bottega while an upgrade is being built (0.11.0). */
+  let builder: Blob | null = null
+  let bottegaShown = { level: 3, building: false }
 
   function newWalker(blob: Blob, at: THREE.Vector3): Walker {
     blob.root.position.copy(at)
@@ -247,7 +258,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       l.height = l.el.offsetHeight || l.height
     }
   }
-  const allPicks: PickId[] = [...new Set([...HARBOR_PICKS, ...QUARTER_PICKS])]
+  const allPicks: PickId[] = [...new Set([...HARBOR_PICKS, ...QUARTER_PICKS, ...PALAZZO_PICKS])]
+  const scenePicks = (): PickId[] => (scene === 'harbor' ? HARBOR_PICKS : scene === PALAZZO ? PALAZZO_PICKS : QUARTER_PICKS)
   for (const id of allPicks) {
     const l = makeLabel(`place:${id}`, `world-label-${id}`, 'world-label', () => placeLabelPoint(id), () => pickPlace(id), true)
     l.el.addEventListener('pointerenter', () => setHover({ kind: 'place', id }))
@@ -258,7 +270,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   let quarterLabels: Partial<Record<PickId, WorldLabel>> = {}
   const applyPlaceLabels = () => {
     const src = scene === 'harbor' ? harborLabels : quarterLabels
-    const ids = scene === 'harbor' ? HARBOR_PICKS : QUARTER_PICKS
+    const ids = scenePicks()
     for (const id of allPicks) {
       const l = labels.get(`place:${id}`)!
       const data = ids.includes(id) ? src[id] : undefined
@@ -476,6 +488,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     } else if (quarter) {
       for (const objs of quarter.picks.values()) out.push(...objs)
       if (trainer) out.push(trainer.root)
+      for (const o of officials) out.push(o.root)
       quarter.slots.forEach((s, i) => { if (stalls[i]) out.push(s.group) })
       for (const p of peers.values()) out.push(p.blob.root)
       for (const g of ghosts.values()) out.push(g.blob.root)
@@ -537,7 +550,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       return clampWalk(new THREE.Vector3(f.x, 1, f.z + 2.2))
     }
     const f = quarter?.focusPoint(id) ?? new THREE.Vector3()
-    if (id === 'duke') return new THREE.Vector3(0, 1, 4.2)
+    if (id === 'duke' && scene !== PALAZZO) return new THREE.Vector3(0, 1, 4.2)
     return clampWalk(new THREE.Vector3(f.x, 1, f.z + 1.5))
   }
   /** Walk somewhere; fast enough to get there in about a second when it's a place you clicked. */
@@ -765,6 +778,21 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     const goods = Math.min(live.goods.instanceMatrix.count, s.listings)
     if (live.goods.count !== goods) { live.goods.count = goods; shadowsDirty = true }
     syncCustomers(s.customers)
+    if (s.bottega && (s.bottega.level !== bottegaShown.level || s.bottega.building !== bottegaShown.building)) {
+      bottegaShown = { ...s.bottega }
+      harbor.setBottega(s.bottega.level, s.bottega.building)
+      shadowsDirty = true
+      if (s.bottega.building && !builder) {
+        builder = new Blob({ character: 'mason' })
+        builder.root.position.copy(harbor.builderSpot)
+        builder.root.rotation.y = Math.PI * 0.85
+        harbor.root.add(builder.root)
+      } else if (!s.bottega.building && builder) {
+        builder.dispose()
+        builder = null
+      }
+      wake()
+    }
     if (live.bunting.visible !== s.festival) live.bunting.visible = s.festival
     const wantShip = s.eventNow ? 1 : 0
     if (wantShip !== shipGoal) {
@@ -929,7 +957,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     if (quarter) {
       quarter.slots.forEach((slot, i) => {
         const s = stalls[i]
-        quarter!.paintSign(i, s ? s.name : '', !!s?.friend)
+        quarter!.paintSign(i, s ? s.name : '', !!s?.friend, s?.level ?? 2)
         slot.goods.count = s ? Math.min(4, s.listings) : 0
         if (s) tagPick(slot.group, { kind: 'player', id: s.id })
         else slot.group.traverse((o) => { delete o.userData.hit })
@@ -956,18 +984,34 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       scene = next
       if (next !== 'harbor' && quarterId !== next) {
         quarter?.dispose()
-        quarter = buildQuarter(next)
+        quarter = next === PALAZZO ? buildPalazzo() : buildQuarter(next)
         quarterId = next
         scene3.add(quarter.root)
         for (const [id, objs] of quarter.picks) for (const obj of objs) { hitBox(obj); tagPick(obj, { kind: 'place', id }) }
         for (const slot of quarter.slots) hitBox(slot.group)
-        // the guild trainer, an elder in the guild's colors, stands by the hall door
         trainer?.dispose()
-        trainer = new Blob({ character: `trainer:${next}` })
-        trainer.root.position.set(2.7, 1, -13.2)
-        trainer.root.rotation.y = -0.25
-        tagPick(trainer.root, { kind: 'place', id: 'trainer' })
-        quarter.root.add(trainer.root)
+        trainer = null
+        for (const o of officials) o.dispose()
+        officials = []
+        if (next === PALAZZO) {
+          // the Palazzo's officials: each one is a place you click to talk to them
+          for (const n of quarter.npcSpots ?? []) {
+            const b = new Blob({ character: n.character as Character })
+            b.root.position.copy(n.at)
+            b.root.rotation.y = n.facing
+            tagPick(b.root, { kind: 'place', id: n.id })
+            hitBox(b.root)
+            quarter.root.add(b.root)
+            officials.push(b)
+          }
+        } else {
+          // the guild trainer, an elder in the guild's colors, stands by the hall door
+          trainer = new Blob({ character: `trainer:${next}` })
+          trainer.root.position.set(2.7, 1, -13.2)
+          trainer.root.rotation.y = -0.25
+          tagPick(trainer.root, { kind: 'place', id: 'trainer' })
+          quarter.root.add(trainer.root)
+        }
       }
       harbor.root.visible = next === 'harbor'
       if (quarter) quarter.root.visible = next !== 'harbor'
@@ -1109,8 +1153,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     }
     for (const c of customers.values()) stepWalker(c, walkStep, null)
     for (const b of buyers) stepWalker(b, walkStep, null)
-    if (scene === 'harbor') herald.update(step, 0, reduceMotion)
-    else trainer?.update(step, 0, reduceMotion)
+    if (scene === 'harbor') { herald.update(step, 0, reduceMotion); builder?.update(step, 0, reduceMotion) }
+    else { trainer?.update(step, 0, reduceMotion); for (const o of officials) o.update(step, 0, reduceMotion) }
     for (const g of ghosts.values()) g.blob.update(step, 0, reduceMotion)
     shadows.update(everyone())
     gloves.forEach((g) => g.update(step))
@@ -1216,6 +1260,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     for (const b of buyers) yield b.blob
     yield herald
     if (trainer) yield trainer
+    for (const o of officials) yield o
+    if (builder && scene === 'harbor') yield builder
   }
 
   const debugEl = new URLSearchParams(location.search).has('debug') ? document.createElement('div') : null
@@ -1250,6 +1296,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     buyers: () => buyers.map((b) => b.character),
     townsfolk: () => npcs.map((n) => ({ x: n.pos.x, z: n.pos.z, walking: !!n.target })),
     trainer: () => (trainer && scene !== 'harbor' ? trainer.opts.character : null),
+    officials: () => (scene === PALAZZO ? officials.map((o) => o.opts.character as string) : []),
+    bottega: () => ({ ...bottegaShown, builder: !!builder }),
     peers: () => [...peers.keys()],
     peer: (id) => { const w = peers.get(id); return w ? { x: w.pos.x, z: w.pos.z } : null },
     lastSlap: null,

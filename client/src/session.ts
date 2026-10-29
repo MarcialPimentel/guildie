@@ -6,6 +6,7 @@ import { callAction, setTokenProvider, type ApiResult } from './api'
 import type {
   Activity, Directory, DukeBoard, Friends, GameState, ItemCount, MarketItem, MarketRow, MyListing, NewsItem, Offers, OrderBoard,
   PresencePass, Profile, ProfessionChoice, ProgressGain, QuarterData, SellQuote, Surprise, Trainer,
+  Honors, NpcTalk, PalazzoNpc, WantedBoard,
 } from './types'
 
 const TOKEN_KEY = 'guildie.token'
@@ -212,6 +213,38 @@ class Session {
   dukeContribute(itemId: string, quantity: number) {
     return this.stateCall<{ given: { name: string; quantity: number; paid: number; fulfilled: boolean }; board: DukeBoard }>(
       'duke_contribute', { item_id: itemId, quantity }, 'state')
+  }
+
+  // ------------------------------------------------------------ the bottega upgrades and the Palazzo (0.11.0)
+  workshopUpgrade() {
+    return this.stateCall<{ started: { level: number; name: string; seconds: number } }>('workshop_upgrade', {}, 'state')
+  }
+  workshopOpen() {
+    return this.stateCall<{ built: { level: number; name: string; look: string; progress: ProgressGain | null } }>('workshop_open', {}, 'state')
+  }
+  palazzo() {
+    return this.call<{ npcs: PalazzoNpc[] }>('palazzo')
+  }
+  honors() {
+    return this.call<Honors>('honors')
+  }
+  npcTalk(npc: string) {
+    return this.call<NpcTalk>('npc_talk', { npc })
+  }
+  npcFavor(npc: string) {
+    return this.stateCall<{ done: { npc: string; quantity: number; reward: number; progress: ProgressGain }; talk: NpcTalk }>('npc_favor', { npc }, 'state')
+  }
+  wanted() {
+    return this.call<WantedBoard>('wanted')
+  }
+  wantedPost(itemId: string, quantity: number, unitPrice: number) {
+    return this.stateCall<{ posted: { id: number; held: number }; board: WantedBoard }>('wanted_post', { item_id: itemId, quantity, unit_price: unitPrice }, 'state')
+  }
+  wantedFill(postId: number, quantity: number) {
+    return this.stateCall<{ filled: { name: string; quantity: number; earned: number; cut: number; done: boolean }; board: WantedBoard }>('wanted_fill', { post_id: postId, quantity }, 'state')
+  }
+  wantedCancel(postId: number) {
+    return this.stateCall<{ cancelled: { refund: number }; board: WantedBoard }>('wanted_cancel', { post_id: postId }, 'state')
   }
   offerAccept(offerId: number) {
     return this.stateCall('offer_accept', { offer_id: offerId }, 'state')

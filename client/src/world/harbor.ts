@@ -48,6 +48,10 @@ export interface Harbor {
   time: { value: number }
   /** Galley path from open sea (0) to the pier (1). */
   shipCurve: THREE.QuadraticBezierCurve3
+  /** Show your bottega at its level (1 shack .. 4 fine bottega) and scaffolding while builders work (0.11.0, #51). */
+  setBottega(level: number, building: boolean): void
+  /** Where the mason works while an upgrade is being built. */
+  builderSpot: THREE.Vector3
 }
 
 const STATION_X = -12.5
@@ -153,47 +157,147 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     highlight.set(id, [...(highlight.get(id) ?? []), own])
   }
 
-  // your bottega (the ledger: recent activity, build, log out)
-  const bottega = place('ledger')
-  box(bottega, 7.6, 5.4, 4.2, '#F2B98B', -3, 1, -3.6)
-  hipRoof(bottega, 8.2, 4.8, 1.8, C.roof, -3, 6.4, -3.6)
-  box(bottega, 7.9, 0.25, 4.5, C.white, -3, 6.4, -3.6)
-  box(bottega, 2.3, 2.9, 0.1, doorMat, -3, 1, -1.47, false)
-  {
-    const arch = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.1, 12, 1, false, 0, Math.PI), doorMat)
-    arch.rotation.set(Math.PI / 2, 0, -Math.PI / 2)
-    arch.position.set(-3, 3.9, -1.47)
-    bottega.add(arch)
+  // your bottega (the ledger: recent activity, build, log out). Since 0.11.0 (#51) it grows with your upgrades:
+  // a rundown shack, a repaired workshop, the two-storey bottega, then a fine bottega with a roof loggia. All four
+  // are built once; only the one for your level is shown. Scaffolding goes up while builders are at work.
+  const signMat = new THREE.MeshStandardMaterial({ map: signTexture(`Bottega di ${playerName}`) })
+  const sign = (g: THREE.Group, w: number, y: number, z: number) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / 4), signMat)
+    m.position.set(-3, y, z)
+    g.add(m)
   }
-  for (const wx of [-5.7, -0.3]) box(bottega, 1.1, 1.5, 0.1, windowMat, wx, 1.6, -1.47, false)
-  for (const wx of [-4.8, -1.2]) {
-    box(bottega, 1, 1.3, 0.1, windowMat, wx, 4.4, -1.47, false)
-    box(bottega, 0.4, 1.3, 0.08, C.teal, wx - 0.75, 4.4, -1.42, false)
-    box(bottega, 0.4, 1.3, 0.08, C.teal, wx + 0.75, 4.4, -1.42, false)
+  const lemonTree = (g: THREE.Group, x: number, z: number) => {
+    cyl(g, 0.55, 0.4, 0.8, C.roof, x, 1, z, 10)
+    cyl(g, 0.08, 0.1, 1.2, C.woodDark, x, 1.8, z, 5)
+    solid(g, new THREE.IcosahedronGeometry(0.9, 0), C.leaf, x, 3.3, z)
+    for (let i = 0; i < 7; i++) {
+      const a = i * 0.9
+      solid(g, new THREE.IcosahedronGeometry(0.13, 0), C.lemon, x + Math.cos(a) * 0.8, 3.1 + (i % 3) * 0.25, z + Math.sin(a) * 0.8, false)
+    }
   }
-  box(bottega, 4.6, 0.15, 0.9, C.white, -3, 4.1, -1.05)
-  for (let i = 0; i < 7; i++) box(bottega, 0.07, 0.6, 0.07, C.iron, -5.1 + i * 0.7, 4.25, -0.65, false)
-  box(bottega, 4.6, 0.07, 0.07, C.iron, -3, 4.85, -0.65, false)
-  for (let i = 0; i < 4; i++) solid(bottega, new THREE.SphereGeometry(0.22, 6, 4), '#D7457A', -4.6 + i * 1.1, 4.4, -0.85, false)
+
+  // level 1: a rundown shack of weathered planks with a patched lean-to roof and a boarded window
+  const shack = place('ledger')
+  box(shack, 6.4, 3.4, 3.8, '#A9875A', -3, 1, -3.8)
+  for (let i = 0; i < 10; i++) box(shack, 0.07, 3.3, 0.05, i % 3 ? '#8F6A35' : '#7A5A30', -6.0 + i * 0.66, 1, -1.88, false)
   {
-    const aw = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.4), new THREE.MeshStandardMaterial({ map: stripes('#1F8A87', '#F6F2E8', 10), side: THREE.DoubleSide }))
+    const roof = box(shack, 7.2, 0.3, 4.8, '#7A5A30', -3, 4.2, -3.6)
+    roof.rotation.x = 0.16
+    box(shack, 1.6, 0.32, 1.2, '#B5833E', -4.6, 4.45, -3.0)   // a patch
+    box(shack, 1.1, 0.32, 0.9, '#9A7240', -1.6, 4.5, -4.2)    // another patch
+  }
+  box(shack, 1.8, 2.6, 0.08, '#4A2E1E', -3, 1, -1.86, false)
+  box(shack, 1.2, 1.0, 0.08, '#2B4750', -5.0, 2.0, -1.86, false)
+  box(shack, 1.4, 0.18, 0.1, '#B5833E', -5.0, 2.3, -1.8, false)    // boards across the window
+  box(shack, 1.4, 0.18, 0.1, '#B5833E', -5.0, 2.65, -1.8, false)
+  cyl(shack, 0.45, 0.4, 1.0, '#8F6A35', -0.9, 1, -1.3, 8)          // a barrel
+  cyl(shack, 0.47, 0.47, 0.06, C.iron, -0.9, 1.6, -1.3, 8)
+  sign(shack, 3.0, 3.85, -1.82)
+
+  // level 2: a repaired workshop, one floor of fresh plaster under a tiled roof, with a little awning
+  const repaired = place('ledger')
+  box(repaired, 7.0, 3.8, 4.0, '#F2B98B', -3, 1, -3.7)
+  hipRoof(repaired, 7.6, 4.6, 1.5, C.roof, -3, 4.8, -3.7)
+  box(repaired, 7.3, 0.2, 4.3, C.white, -3, 4.8, -3.7)
+  box(repaired, 2.1, 2.7, 0.1, doorMat, -3, 1, -1.67, false)
+  for (const wx of [-5.4, -0.6]) {
+    box(repaired, 1.1, 1.3, 0.1, windowMat, wx, 1.9, -1.67, false)
+    box(repaired, 0.36, 1.3, 0.08, C.teal, wx - 0.72, 1.9, -1.62, false)
+    box(repaired, 0.36, 1.3, 0.08, C.teal, wx + 0.72, 1.9, -1.62, false)
+  }
+  {
+    const aw = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.1), new THREE.MeshStandardMaterial({ map: stripes('#1F8A87', '#F6F2E8', 8), side: THREE.DoubleSide }))
     aw.rotation.x = -Math.PI / 2 + 0.55
-    aw.position.set(-3, 3.75, -0.95)
+    aw.position.set(-3, 3.5, -1.2)
     aw.castShadow = true
-    bottega.add(aw)
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.1), new THREE.MeshStandardMaterial({ map: signTexture(`Bottega di ${playerName}`) }))
-    sign.position.set(-3, 5.7, -1.44)
-    bottega.add(sign)
+    repaired.add(aw)
   }
-  box(bottega, 0.35, 0.5, 0.35, lampMat, -1.3, 3.2, -1.3, false)
-  cyl(bottega, 0.55, 0.4, 0.8, C.roof, -6.4, 1, -0.6, 10)          // lemon tree in a pot
-  cyl(bottega, 0.08, 0.1, 1.2, C.woodDark, -6.4, 1.8, -0.6, 5)
-  solid(bottega, new THREE.IcosahedronGeometry(0.9, 0), C.leaf, -6.4, 3.3, -0.6)
-  for (let i = 0; i < 7; i++) {
-    const a = i * 0.9
-    solid(bottega, new THREE.IcosahedronGeometry(0.13, 0), C.lemon, -6.4 + Math.cos(a) * 0.8, 3.1 + (i % 3) * 0.25, -0.6 + Math.sin(a) * 0.8, false)
+  sign(repaired, 3.8, 4.15, -1.64)
+  box(repaired, 0.35, 0.5, 0.35, lampMat, -1.3, 3.0, -1.4, false)
+
+  // level 3: the two-storey bottega (the 0.7.0 building), and level 4: the same with a roof loggia and banners
+  const twoStorey = (bottega: THREE.Group) => {
+    box(bottega, 7.6, 5.4, 4.2, '#F2B98B', -3, 1, -3.6)
+    hipRoof(bottega, 8.2, 4.8, 1.8, C.roof, -3, 6.4, -3.6)
+    box(bottega, 7.9, 0.25, 4.5, C.white, -3, 6.4, -3.6)
+    box(bottega, 2.3, 2.9, 0.1, doorMat, -3, 1, -1.47, false)
+    {
+      const arch = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.1, 12, 1, false, 0, Math.PI), doorMat)
+      arch.rotation.set(Math.PI / 2, 0, -Math.PI / 2)
+      arch.position.set(-3, 3.9, -1.47)
+      bottega.add(arch)
+    }
+    for (const wx of [-5.7, -0.3]) box(bottega, 1.1, 1.5, 0.1, windowMat, wx, 1.6, -1.47, false)
+    for (const wx of [-4.8, -1.2]) {
+      box(bottega, 1, 1.3, 0.1, windowMat, wx, 4.4, -1.47, false)
+      box(bottega, 0.4, 1.3, 0.08, C.teal, wx - 0.75, 4.4, -1.42, false)
+      box(bottega, 0.4, 1.3, 0.08, C.teal, wx + 0.75, 4.4, -1.42, false)
+    }
+    box(bottega, 4.6, 0.15, 0.9, C.white, -3, 4.1, -1.05)
+    for (let i = 0; i < 7; i++) box(bottega, 0.07, 0.6, 0.07, C.iron, -5.1 + i * 0.7, 4.25, -0.65, false)
+    box(bottega, 4.6, 0.07, 0.07, C.iron, -3, 4.85, -0.65, false)
+    for (let i = 0; i < 4; i++) solid(bottega, new THREE.SphereGeometry(0.22, 6, 4), '#D7457A', -4.6 + i * 1.1, 4.4, -0.85, false)
+    {
+      const aw = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.4), new THREE.MeshStandardMaterial({ map: stripes('#1F8A87', '#F6F2E8', 10), side: THREE.DoubleSide }))
+      aw.rotation.x = -Math.PI / 2 + 0.55
+      aw.position.set(-3, 3.75, -0.95)
+      aw.castShadow = true
+      bottega.add(aw)
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.1), new THREE.MeshStandardMaterial({ map: signTexture(`Bottega di ${playerName}`) }))
+      sign.position.set(-3, 5.7, -1.44)
+      bottega.add(sign)
+    }
+    box(bottega, 0.35, 0.5, 0.35, lampMat, -1.3, 3.2, -1.3, false)
+    cyl(bottega, 0.55, 0.4, 0.8, C.roof, -6.4, 1, -0.6, 10)          // lemon tree in a pot
+    cyl(bottega, 0.08, 0.1, 1.2, C.woodDark, -6.4, 1.8, -0.6, 5)
+    solid(bottega, new THREE.IcosahedronGeometry(0.9, 0), C.leaf, -6.4, 3.3, -0.6)
+    for (let i = 0; i < 7; i++) {
+      const a = i * 0.9
+      solid(bottega, new THREE.IcosahedronGeometry(0.13, 0), C.lemon, -6.4 + Math.cos(a) * 0.8, 3.1 + (i % 3) * 0.25, -0.6 + Math.sin(a) * 0.8, false)
+    }
   }
-  finish('ledger', bottega)
+  const storeys = place('ledger')
+  twoStorey(storeys)
+  const fine = place('ledger')
+  twoStorey(fine)
+  {
+    // the altana: a roof loggia with columns and a lemon-gold balustrade, the mark of a master's house
+    box(fine, 4.2, 0.2, 3.2, C.white, -3, 6.65, -3.6)
+    for (const [cx, cz] of [[-4.9, -2.2], [-1.1, -2.2], [-4.9, -5.0], [-1.1, -5.0]]) cyl(fine, 0.14, 0.16, 2.0, C.white, cx, 6.85, cz, 6)
+    hipRoof(fine, 4.8, 3.8, 1.0, C.roofDark, -3, 8.85, -3.6)
+    box(fine, 4.2, 0.12, 0.12, C.lemon, -3, 7.5, -2.2, false)
+    for (let i = 0; i < 6; i++) box(fine, 0.06, 0.6, 0.06, C.lemon, -4.6 + i * 0.64, 6.85, -2.2, false)
+    for (const dx of [-6.6, 0.6]) {
+      cyl(fine, 0.04, 0.04, 3.2, C.iron, dx, 6.6, -1.6, 4)
+      box(fine, 0.9, 1.3, 0.04, C.teal, dx + 0.47, 8.3, -1.6, false)    // banners in the city's colors
+      box(fine, 0.9, 0.18, 0.05, C.lemon, dx + 0.47, 9.55, -1.6, false)
+    }
+    box(fine, 4.6, 0.12, 0.12, C.lemon, -3, 5.55, -1.42, false)         // a gilded frame round the sign
+    lemonTree(fine, 0.4, -0.6)
+  }
+
+  // scaffolding while an upgrade is being built (poles, planks and a hoist)
+  const scaffold = new THREE.Group()
+  root.add(scaffold)
+  for (const sx of [-7.2, -3, 1.2]) for (const sz of [-1.0, -6.4]) cyl(scaffold, 0.07, 0.07, 7.2, '#B5833E', sx, 1, sz, 5)
+  for (const y of [3.2, 5.6]) {
+    box(scaffold, 8.8, 0.12, 0.9, '#C9A877', -3, y, -1.2)
+    box(scaffold, 8.8, 0.06, 0.06, '#8F6A35', -3, y + 0.9, -0.8, false)
+  }
+  box(scaffold, 0.12, 0.12, 2.2, '#8F6A35', 1.2, 8.1, -0.2)
+  cyl(scaffold, 0.02, 0.02, 2.4, '#5A3A28', 1.2, 5.7, 0.8, 4)
+  box(scaffold, 0.5, 0.4, 0.5, '#B5833E', 1.2, 5.3, 0.8)
+  scaffold.visible = false
+  bake(scaffold, vc)
+
+  const tiers = [shack, repaired, storeys, fine]
+  for (const t of tiers) finish('ledger', t)
+  const setBottega = (level: number, building: boolean) => {
+    const lv = Math.max(1, Math.min(tiers.length, Math.round(level)))
+    tiers.forEach((t, i) => { t.visible = i === lv - 1 })
+    scaffold.visible = building
+  }
+  setBottega(3, false)   // until the state arrives: the 0.7.0 look
   const doorLight = new THREE.PointLight('#FFB45A', 0, 9, 2)
   doorLight.position.set(-1.3, 3.2, -0.8)
   root.add(doorLight)
@@ -476,7 +580,7 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   }
 
   return {
-    root, picks, highlight,
+    root, picks, highlight, setBottega, builderSpot: new THREE.Vector3(1.6, 1, -0.4),
     focusPoint: (id) => (id === 'news' ? galley.position.clone().setY(2) : (focus[id] ?? new THREE.Vector3()).clone()),
     labelPoint: (id) => (id === 'news' ? galley.position.clone().setY(8.4) : labels[id] ?? new THREE.Vector3(0, -100, 0)),
     live: {

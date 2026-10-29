@@ -139,6 +139,15 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(page.locator(id('duke-status'))).toBeVisible()
   await expect(page.locator('[data-testid^="duke-line-"]').first()).toBeVisible()
 
+  // --- the Palazzo as lists (0.11.0): the Wanted board, the Hall of honor, an official with a rumor and a favor
+  await page.click(id('mode-palazzo'))
+  await expect(page.locator(id('wanted-form'))).toBeVisible()
+  await page.click(id('mode-honors'))
+  await expect(page.locator(id('honors-gold'))).toBeVisible()
+  await page.click(id('mode-crier'))
+  await expect(page.locator(id('npc-rumor'))).not.toBeEmpty()
+  await expect(page.locator(id('npc-favor'))).toBeVisible()
+
   // --- feedback (#29)
   await page.click(id('feedback-open'))
   await page.fill(id('feedback-text'), `Browser test feedback (${info.project.name})`)
