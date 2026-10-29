@@ -440,6 +440,10 @@ check("orders name their customer's id (for the 3D customer's look)", all(o["cus
 check("Apprentice: no bundle orders", all(o["kind"] in ("standard", "collector") for o in orders), [o["kind"] for o in orders])
 check("standard orders pay more than market value", all(o["reward_gold"] > 0 for o in orders), orders)
 check("orders pay XP (#30)", all(o["reward_xp"] > 0 for o in orders), [o.get("reward_xp") for o in orders])
+# 0.12.0: an Apprentice's rare-material reward is never a raw unlocked above their skill (raws 3 and 4 are 40 and 65).
+second_raws = {g["station"]["outputs"][1]["item_id"] for g in GUILDS}
+check("Apprentice order rewards: only second raws as rare materials", all(i["item_id"] in second_raws for o in orders for i in o.get("reward_items", [])),
+      [o.get("reward_items") for o in orders])
 check("Apprentice orders only ask for goods you know or can learn now", all(i["item_id"] == "healing_draught" for o in orders for i in o["items"]),
       [[i["item_id"] for i in o["items"]] for o in orders])
 rare_offers = [o["reward_recipe"]["id"] for o in orders if o.get("reward_recipe")]
@@ -505,6 +509,9 @@ check("new blacksmith knows only Brass Fittings", [x["id"] for x in st["professi
 check("new blacksmith's mine yields copper only; iron ore at skill 15",
       [o["item_id"] for o in st["profession"]["station"]["outputs"]] == ["copper_ore"]
       and st["profession"]["station"]["locked"][0]["unlock_skill"] == 15, st["profession"]["station"])
+bs_locked = [(o["item_id"], o["unlock_skill"]) for g in GUILDS if g["id"] == "blacksmith" for o in g["station"]["outputs"] if o.get("unlock_skill", 1) > 1]
+check("the mine's later raws stay locked until their skill (0.12.0: coal at 40, silver at 65)",
+      [(x["item_id"], x["unlock_skill"]) for x in st["profession"]["station"]["locked"]] == bs_locked, st["profession"]["station"]["locked"])
 for rid, why in (("copper_lantern", "trainer"), ("iron_sword", "trainer"), ("arsenale_fittings", "rare")):
     s, r = call("start_craft", {"recipe_id": rid, "quantity": 1}, token=tok_d)
     check(f"can't craft unknown {rid}", s == 400 and r["error"]["code"] == "recipe_not_known" and why in r["error"]["message"], r)
