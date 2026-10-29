@@ -10,10 +10,10 @@
 // The engine decides nothing about the game: it draws what the UI hands it (world/types.ts) and reports
 // clicks and your merchant's position. Other players' positions come from the realtime room via the UI.
 import * as THREE from 'three'
-import { Blob, Glove, type Dress } from './blobs'
+import { Blob, Glove, Shadows, blobMaterial, knownCharacter, parcelGeometry, type Character, type Emote } from './blobs'
 import { buildHarbor, type Harbor } from './harbor'
 import { buildQuarter, QUARTER_BOUNDS, QUARTER_SPAWN, type Quarter } from './quarter'
-import type { Peer, PickId, ProfessionId, Scene, StallInfo, WorldCallbacks, WorldEngine, WorldLabel, WorldState } from './types'
+import type { MyLook, Peer, PickId, ProfessionId, RoomEmote, SaleShow, Scene, StallInfo, WorldCallbacks, WorldEngine, WorldLabel, WorldState } from './types'
 
 const HARBOR_PICKS: PickId[] = ['station', 'workbench', 'orders', 'ledger', 'bag', 'stall', 'mercato', 'city', 'news', 'duke', 'steps']
 const QUARTER_PICKS: PickId[] = ['duke', 'trainer', 'home']
@@ -22,7 +22,10 @@ const DAY = { sky: '#BFE6EA', hemiSky: '#E6F7F7', hemiGround: '#E8D3B0', hemi: 1
 const NIGHT = { sky: '#0F2B3A', hemiSky: '#3C6585', hemiGround: '#1B2B33', hemi: 0.55, sun: 0.55, sunCol: '#9FB8E8', sea: '#3E6F86', win: 1.6, lamp: 2.4, lampLight: 14, door: 1.2 }
 
 const HARBOR_WALK = { minX: -30, maxX: 30, minZ: -1.0, maxZ: 3.6 }
-const HARBOR_SPAWN = new THREE.Vector3(-3, 1, 0.4)
+// beside the customers' spots, not in front of them
+const HARBOR_SPAWN = new THREE.Vector3(0.6, 1, 1.9)
+/** The stall's counter on your quay, where buyers walk up (harbor.ts). */
+const STALL_FRONT = new THREE.Vector3(-9.3, 1, 3.1)
 const WALK_SPEED = 5
 const SEND_EVERY_MS = 200
 
@@ -37,6 +40,8 @@ interface Walker {
   heading: number
   /** How fast it moved last frame (for the walk animation). */
   moved: number
+  /** Called once when it reaches its target. */
+  onArrive?: () => void
 }
 
 interface PeerState extends Walker { peer: Peer; label: Label }
@@ -47,8 +52,9 @@ interface Label {
   visible: boolean
   width: number
   point: () => THREE.Vector3
-  /** Place labels avoid each other; people's labels just float. */
+  /** Place labels avoid each other; so do people's names and bubbles (among themselves). */
   place: boolean
+  height: number
 }
 
 declare global {
@@ -59,10 +65,17 @@ declare global {
       screenPoint(id: PickId): { x: number; y: number } | null
       screenPointPlayer(id: number): { x: number; y: number } | null
       screenPointStall(slot: number): { x: number; y: number } | null
-      me(): { x: number; z: number; scene: Scene }
       peers(): number[]
       peer(id: number): { x: number; z: number } | null
       lastSlap: { from: number; to: number } | null
+      lastEmote: { id: number; e: string } | null
+      /** Customers at your door: order id, who they are and what they're doing. */
+      customers(): { order: number; character: string; state: string }[]
+      /** Buyers walking to or from your stall. */
+      buyers(): string[]
+      /** The guild trainer standing at the hall door (in a quarter). */
+      trainer(): string | null
+      me(): { x: number; z: number; scene: Scene; look: number; hat: number; rank: number }
       stats(): Record<string, number>
     }
   }
@@ -158,22 +171,32 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
 
   // ------------------------------------------------------------ people: you, other players, townsfolk, echoes
   let myId = 0
-  let myLook = 0
+  let myLook: MyLook = { look: 0, hat: 0, rank: 0, slaps: true }
   let mySlaps = true
-  let me: Walker = newWalker(new Blob({ dress: profession, look: 0, me: true }), HARBOR_SPAWN)
+  let me: Walker = newWalker(new Blob({ character: profession, look: 0, me: true }), HARBOR_SPAWN)
   scene3.add(me.blob.root)
+  const shadows = new Shadows()
+  scene3.add(shadows.mesh)
   const peers = new Map<number, PeerState>()
   const npcs: Npc[] = []
   const ghosts = new Map<number, { blob: Blob; label: Label; playerId: number }>()
   let stalls: StallInfo[] = []
   const gloves = [new Glove(), new Glove()]
   gloves.forEach((g) => g.attach(scene3))
-  const herald = new Blob({ dress: 'herald', look: 3 })
+  const herald = new Blob({ character: 'herald' })
   herald.root.position.set(16.0, 1, 1.1)
   herald.root.rotation.y = 0.3
   harbor.root.add(herald.root)
   tagPick(herald.root, { kind: 'place', id: 'duke' })
   let lastSlap: { from: number; to: number } | null = null
+  let lastEmote: { id: number; e: string } | null = null
+  /** Customers at your door, by order id (0.10.0): they walk in, speak, take the goods and leave. */
+  interface Customer extends Walker { order: number; slot: number; character: string; name: string; state: 'arriving' | 'waiting' | 'served' | 'leaving' }
+  const customers = new Map<number, Customer>()
+  /** Buyers walking to your stall for real sales. */
+  const buyers: (Walker & { character: string })[] = []
+  /** The guild trainer at the hall door of the quarter you're in. */
+  let trainer: Blob | null = null
 
   function newWalker(blob: Blob, at: THREE.Vector3): Walker {
     blob.root.position.copy(at)
@@ -202,7 +225,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     if (onClick) el.addEventListener('click', onClick)
     else el.tabIndex = -1
     labelLayer.appendChild(el)
-    const l: Label = { el, visible: false, width: 120, point, place }
+    const l: Label = { el, visible: false, width: 120, point, place, height: 24 }
     labels.set(key, l)
     return l
   }
@@ -215,6 +238,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       l.el.textContent = text
       l.el.hidden = false
       l.width = l.el.offsetWidth || l.width
+      l.height = l.el.offsetHeight || l.height
     }
   }
   const allPicks: PickId[] = [...new Set([...HARBOR_PICKS, ...QUARTER_PICKS])]
@@ -248,49 +272,60 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   }
   // Place labels sit above their place; when two would overlap, the higher one on screen moves up out of the way.
   const placed: { x0: number; x1: number; y0: number; y1: number }[] = []
+  // People's names and bubbles do the same among themselves (0.10.0), so a crowd at the Steps stays readable.
   const placeLabels = () => {
-    const shown: { l: Label; x: number; y: number }[] = []
+    const places: { l: Label; x: number; y: number }[] = []
+    const people: { l: Label; x: number; y: number }[] = []
     for (const l of labels.values()) {
       if (!l.visible) { l.el.hidden = true; continue }
       const s = project(l.point())
       const ok = s.ok && s.x < width - view.offset - 12   // nothing under the side panel
       l.el.hidden = !ok
       if (!ok) continue
-      if (l.place) shown.push({ l, x: s.x, y: s.y })
-      else l.el.style.transform = `translate(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px) translate(-50%, -100%)`
+      ;(l.place ? places : people).push({ l, x: s.x, y: s.y })
     }
-    shown.sort((a, b) => b.y - a.y)
-    placed.length = 0
-    for (const it of shown) {
-      const half = it.l.width / 2 + 3
-      let y = it.y
-      for (let tries = 0; tries < 6; tries++) {
-        const hit = placed.find((r) => it.x - half < r.x1 && it.x + half > r.x0 && y - 28 < r.y1 && y > r.y0)
-        if (!hit) break
-        y = hit.y0 - 2
+    for (const shown of [places, people]) {
+      shown.sort((a, b) => b.y - a.y)
+      placed.length = 0
+      for (const it of shown) {
+        const half = it.l.width / 2 + 3
+        const h = it.l.place ? 28 : it.l.height + 2
+        let y = it.y
+        for (let tries = 0; tries < 6; tries++) {
+          const hit = placed.find((r) => it.x - half < r.x1 && it.x + half > r.x0 && y - h < r.y1 && y > r.y0)
+          if (!hit) break
+          y = hit.y0 - 2
+        }
+        placed.push({ x0: it.x - half, x1: it.x + half, y0: y - h, y1: y })
+        it.l.el.style.transform = `translate(${it.x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`
       }
-      placed.push({ x0: it.x - half, x1: it.x + half, y0: y - 28, y1: y })
-      it.l.el.style.transform = `translate(${it.x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`
     }
   }
 
-  // Speech bubbles ("Challenge!", "Ciao!") over a player for a moment.
-  const bubbles = new Map<number, { label: Label; until: number }>()
-  const say = (id: number, text: string) => {
-    const w = id === myId ? me : peers.get(id)
-    if (!w) return
-    const key = `say:${id}`
-    let b = bubbles.get(id)
+  // Speech bubbles ("Challenge!", "Ciao!", a customer's order) over someone for a moment. At most three at
+  // a time: a new one replaces the oldest.
+  const bubbles = new Map<string, { label: Label; until: number }>()
+  const sayOver = (key: string, w: { pos: THREE.Vector3; blob: Blob }, text: string, ms = 1700, cls = '') => {
+    let b = bubbles.get(key)
     if (!b) {
-      const label = makeLabel(key, 'world-bubble', 'world-bubble', () => w.pos.clone().setY(w.pos.y + w.blob.top + 0.9), null, false)
-      b = { label, until: 0 }
-      bubbles.set(id, b)
+      while (bubbles.size >= 3) {
+        const [oldest] = [...bubbles.entries()].sort((a, c) => a[1].until - c[1].until)
+        dropLabel(`say:${oldest[0]}`)
+        bubbles.delete(oldest[0])
+      }
+      b = { label: makeLabel(`say:${key}`, 'world-bubble', 'world-bubble', () => new THREE.Vector3(), null, false), until: 0 }
+      bubbles.set(key, b)
     }
     b.label.point = () => w.pos.clone().setY(w.pos.y + w.blob.top + 0.9)
-    setText(b.label, text)
+    b.label.el.className = `world-bubble${cls ? ' ' + cls : ''}`
+    setText(b.label, text.length > 64 ? text.slice(0, 61).trimEnd() + '…' : text)
     b.label.visible = true
-    b.until = performance.now() + 1700
-    wake(1800)
+    b.until = performance.now() + (reduceMotion ? Math.max(ms, 2500) : ms)
+    wake(ms + 100)
+  }
+  const say = (id: number, text: string) => {
+    const w = id === myId ? me : peers.get(id)
+    if (w) sayOver(`p${id}`, w, text)
   }
 
   // ------------------------------------------------------------ mouse: drag to turn, right/shift-drag to pan, wheel to zoom,
@@ -404,8 +439,10 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     if (scene === 'harbor') {
       for (const objs of harbor.picks.values()) out.push(...objs.filter((o) => o.visible))
       out.push(herald.root)
+      for (const c of customers.values()) out.push(c.blob.root)
     } else if (quarter) {
       for (const objs of quarter.picks.values()) out.push(...objs)
+      if (trainer) out.push(trainer.root)
       quarter.slots.forEach((s, i) => { if (stalls[i]) out.push(s.group) })
       for (const p of peers.values()) out.push(p.blob.root)
       for (const g of ghosts.values()) out.push(g.blob.root)
@@ -506,7 +543,13 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       const to = new THREE.Vector3().subVectors(w.target, w.pos).setY(0)
       const d = to.length()
       const step = w.speed * dt
-      if (d <= step) { w.pos.copy(w.target); w.target = null }
+      if (d <= step) {
+        w.pos.copy(w.target)
+        w.target = null
+        const f = w.onArrive
+        w.onArrive = undefined
+        f?.()
+      }
       else w.pos.addScaledVector(to.divideScalar(d), step)
     }
     const moved = before.distanceTo(w.pos)
@@ -520,7 +563,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   }
 
   // ------------------------------------------------------------ townsfolk (fill quiet places) and echoes
-  const NPC_DRESSES: Dress[] = ['porter', 'priest', 'fishwife', 'porter', 'fishwife', 'priest']
+  const NPC_DRESSES: Character[] = ['porter', 'priest', 'fishwife', 'sailor', 'porter', 'fishwife']
   const npcArea = () => (scene === 'harbor' ? { minX: -28, maxX: 28, minZ: 0.4, maxZ: 3.3 } : QUARTER_BOUNDS)
   const randomSpot = (a: Npc['area']) => {
     const v = new THREE.Vector3(a.minX + Math.random() * (a.maxX - a.minX), 1, a.minZ + Math.random() * (a.maxZ - a.minZ))
@@ -531,7 +574,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     while (npcs.length > n) npcs.pop()!.blob.dispose()
     while (npcs.length < n) {
       const area = npcArea()
-      const w = newWalker(new Blob({ dress: NPC_DRESSES[npcs.length % NPC_DRESSES.length], look: (npcs.length * 2 + 1) % 6 }), randomSpot(area)) as Npc
+      const w = newWalker(new Blob({ character: NPC_DRESSES[npcs.length % NPC_DRESSES.length] }), randomSpot(area)) as Npc
       w.speed = 1.3 + Math.random() * 0.5
       w.pause = Math.random() * 3
       w.area = area
@@ -554,7 +597,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     for (const [slot, pid] of want) {
       if (ghosts.has(slot) || !quarter) continue
       const s = stalls[slot]
-      const blob = new Blob({ dress: s.profession, look: s.look, ghost: true })
+      const blob = new Blob({ character: s.profession, look: s.look, hat: s.hat, rank: s.rank, ghost: true })
       blob.root.position.copy(quarter.slots[slot].front)
       blob.root.rotation.y = quarter.slots[slot].facing
       tagPick(blob.root, { kind: 'player', id: pid })
@@ -575,13 +618,15 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   const peerUpsert = (p: Peer) => {
     const have = peers.get(p.id)
     if (have) {
+      const o = have.blob.opts
+      if (o.look !== p.look || o.hat !== p.hat || o.rank !== p.rank) have.blob.setLook(p.look, p.hat, p.rank)
       have.peer = p
       have.blob.setSlapsOff(!p.slaps)
       setText(have.label, peerLabelText(p))
       return
     }
     if (nextScene === 'harbor') return
-    const blob = new Blob({ dress: p.profession, look: p.look })
+    const blob = new Blob({ character: p.profession, look: p.look, hat: p.hat, rank: p.rank })
     const w = newWalker(blob, clampWalk(new THREE.Vector3(p.x, 1, p.z))) as PeerState
     w.heading = p.h
     blob.root.rotation.y = p.h
@@ -667,26 +712,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     if (live.crates.count !== crates) { live.crates.count = crates; shadowsDirty = true }
     const goods = Math.min(live.goods.instanceMatrix.count, s.listings)
     if (live.goods.count !== goods) { live.goods.count = goods; shadowsDirty = true }
-    live.customers.forEach((c, i) => {
-      const want = s.customers[i]
-      if (want) {
-        c.hat.color.set(want.kind === 'collector' ? '#F2C53D' : want.kind === 'bundle' ? '#2A4C9A' : '#B83A3A')
-        c.marker.visible = want.ready
-        if (!c.group.visible) {
-          // a new customer walks in from the left of the quay
-          c.group.visible = true
-          const from = c.home.clone().setX(c.home.x - 14)
-          c.group.rotation.y = Math.PI / 2
-          tween(2.2, (k) => {
-            c.group.position.lerpVectors(from, c.home, ease(k))
-            c.group.position.y = c.home.y + Math.abs(Math.sin(k * 18)) * 0.08
-          }, () => { c.group.rotation.y = Math.PI; c.group.position.copy(c.home); shadowsDirty = true })
-        }
-      } else if (c.group.visible) {
-        c.group.visible = false
-        shadowsDirty = true
-      }
-    })
+    syncCustomers(s.customers)
     if (live.bunting.visible !== s.festival) live.bunting.visible = s.festival
     const wantShip = s.eventNow ? 1 : 0
     if (wantShip !== shipGoal) {
@@ -700,6 +726,147 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       else delete harborLabels[id]
     }
     applyPlaceLabels()
+  }
+
+  // ------------------------------------------------------------ customers, buyers and the herald (0.10.0)
+  // They only act out what the server already decided: an order on the board, an order filled, a sale.
+  const LEAVE_X = -27
+  const facing = (from: THREE.Vector3, to: THREE.Vector3) => Math.atan2(to.x - from.x, to.z - from.z)
+  const addWalker = <T extends Walker>(w: T): T => { harbor.root.add(w.blob.root); return w }
+  const customerLeaves = (c: Customer) => {
+    c.state = 'leaving'
+    c.target = new THREE.Vector3(LEAVE_X, 1, c.pos.z + 1.6)
+    c.speed = 3.2
+    c.onArrive = () => {
+      c.blob.dispose()
+      customers.delete(c.order)
+      const key = `c${c.order}`
+      if (bubbles.has(key)) { dropLabel(`say:${key}`); bubbles.delete(key) }
+    }
+    wake()
+  }
+  let customersSeen = false
+  const syncCustomers = (list: WorldState['customers']) => {
+    // On the first look (page load) the customers are already waiting; only new arrivals walk in and speak.
+    // (An empty list may just mean the board hasn't loaded yet.)
+    const first = !customersSeen
+    if (list.length) customersSeen = true
+    const want = new Map(list.map((c, slot) => [c.order, { ...c, slot }]))
+    // Orders that are gone (expired, turned down or filled elsewhere): their customer walks off.
+    for (const c of customers.values()) if (!want.has(c.order) && (c.state === 'arriving' || c.state === 'waiting')) customerLeaves(c)
+    const readySlots = new Set<number>()
+    for (const [order, w] of want) {
+      let c = customers.get(order)
+      const spot = live.customers[w.slot]?.home
+      if (!spot) continue
+      if (!c) {
+        // a new customer walks in from the left of the quay, then says what they want
+        const character = knownCharacter(w.customer) ? w.customer : 'townsfolk'
+        const blob = new Blob({ character })
+        tagPick(blob.root, { kind: 'place', id: 'orders' })
+        c = addWalker({ ...newWalker(blob, new THREE.Vector3(spot.x - 16, 1, spot.z + 1.4)), order, slot: w.slot, character, name: w.name, state: 'arriving' as Customer['state'] })
+        c.speed = 3.2
+        customers.set(order, c)
+        const cc = c
+        const line = w.line
+        const arrive = (speak: boolean) => {
+          cc.state = 'waiting'
+          cc.heading = Math.PI
+          if (speak && scene === 'harbor') sayOver(`c${order}`, cc, `${cc.name}: ${line}`, 4200, 'line')
+        }
+        if (first) {
+          c.pos.copy(spot)
+          blob.root.position.copy(spot)
+          blob.root.rotation.y = Math.PI
+          arrive(false)
+        } else {
+          c.target = spot.clone()
+          c.onArrive = () => arrive(true)
+        }
+      } else if (c.state === 'waiting' && c.slot !== w.slot) {
+        c.slot = w.slot
+        c.target = spot.clone()
+        const cc = c
+        c.onArrive = () => { cc.heading = Math.PI }
+      }
+      if (w.ready && c.state !== 'leaving' && c.state !== 'served') readySlots.add(c.slot)
+    }
+    live.customers.forEach((slot, i) => { slot.marker.visible = readySlots.has(i) })
+    wake()
+  }
+  let parcel: THREE.Mesh | null = null
+  const orderFilled = (order: number, text: string) => {
+    const c = customers.get(order)
+    if (!c || c.state === 'leaving' || c.state === 'served') return
+    c.state = 'served'
+    live.customers[c.slot].marker.visible = false
+    let done = false
+    const handOver = () => {
+      if (done) return
+      done = true
+      me.heading = facing(me.pos, c.pos)
+      c.heading = facing(c.pos, me.pos)
+      me.blob.play('handover')
+      if (!parcel) { parcel = new THREE.Mesh(parcelGeometry('sack'), blobMaterial); parcel.scale.setScalar(1.4); scene3.add(parcel) }
+      const p = parcel
+      p.visible = true
+      const from = me.pos.clone().setY(me.pos.y + 1.6), to = c.pos.clone().setY(c.pos.y + 1.6)
+      tween(0.6, (k) => {
+        p.position.lerpVectors(from, to, k)
+        p.position.y += Math.sin(k * Math.PI) * 1.4
+        p.rotation.z = k * 4
+      }, () => {
+        p.visible = false
+        c.blob.play('cheer')
+        sayOver(`c${order}`, c, text, 2400, 'coin')
+        setTimeout(() => customerLeaves(c), reduceMotion ? 1600 : 1300)
+      })
+    }
+    // your merchant steps over first (unless you're steering with the keys); a fallback hands over anyway
+    const stand = c.pos.clone().add(new THREE.Vector3(1.7, 0, 0.8))
+    if (scene === 'harbor' && !keys.size) {
+      walkToPoint(stand, WALK_SPEED)
+      me.onArrive = handOver
+    }
+    setTimeout(handOver, scene === 'harbor' ? 2500 : 0)
+  }
+  const orderTurnedDown = (order: number) => {
+    const c = customers.get(order)
+    if (!c || c.state === 'leaving' || c.state === 'served') return
+    c.state = 'served'
+    c.blob.play('shrug')
+    setTimeout(() => customerLeaves(c), reduceMotion ? 300 : 1100)
+  }
+  let buyerSeq = 0
+  const sales = (list: SaleShow[], more: number) => {
+    if (scene !== 'harbor') return
+    list.slice(0, 3).forEach((sale, i) => setTimeout(() => {
+      const character: Character = knownCharacter(sale.buyer) ? sale.buyer : sale.buyer === 'player' ? 'courier' : 'townsfolk'
+      const b = addWalker({ ...newWalker(new Blob({ character }), new THREE.Vector3(LEAVE_X - 4, 1, STALL_FRONT.z + 0.6)), character })
+      b.speed = 3
+      buyers.push(b)
+      const key = `b${++buyerSeq}`
+      b.target = STALL_FRONT.clone().add(new THREE.Vector3((i - 1) * 1.3, 0, 0))
+      b.onArrive = () => {
+        b.heading = Math.PI
+        b.blob.play('nod')
+        sayOver(key, b, `${sale.text}${i === 0 && more > 0 ? ` · +${more} more sale${more === 1 ? '' : 's'}` : ''}`, 2600, 'coin')
+        setTimeout(() => {
+          b.target = new THREE.Vector3(LEAVE_X - 4, 1, STALL_FRONT.z + 1.2)
+          b.onArrive = () => { b.blob.dispose(); buyers.splice(buyers.indexOf(b), 1) }
+          wake()
+        }, reduceMotion ? 2500 : 1700)
+      }
+      wake()
+    }, i * 1400))
+  }
+  const heraldSays = (text: string) => {
+    if (scene !== 'harbor') return
+    herald.play('trumpet')
+    sayOver('herald', { pos: herald.root.position, blob: herald }, text, 3400, 'shout')
+    setTimeout(() => {
+      for (const n of npcs) { n.target = null; n.pause = 3; n.heading = facing(n.pos, herald.root.position); n.blob.play('cheer') }
+    }, reduceMotion ? 0 : 700)
   }
 
   // ------------------------------------------------------------ scenes
@@ -717,20 +884,17 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     }
     crowdChanged()
   }
-  /** Your merchant's body color and slap flag (a new body if the look changed). */
-  const applyMe = (mine: { look: number; slaps: boolean }) => {
-    if (mine.look !== myLook) {
-      const at = me.pos.clone()
-      me.blob.dispose()
-      me = newWalker(new Blob({ dress: profession, look: mine.look, me: true }), at)
-      scene3.add(me.blob.root)
-      myLook = mine.look
-    }
+  /** Your merchant's look, rank sash and slap flag. */
+  const applyMe = (mine: MyLook) => {
+    if (mine.look !== myLook.look || mine.hat !== myLook.hat || mine.rank !== myLook.rank) me.blob.setLook(mine.look, mine.hat, mine.rank)
+    myLook = { ...mine }
     mySlaps = mine.slaps
     me.blob.setSlapsOff(!mySlaps)
     wake()
   }
-  const setScene = (next: Scene, mine: { look: number; slaps: boolean }) => {
+  /** Where you step off the Steps into a quarter: one of eight spots, so arrivals don't pile up. */
+  const ARRIVALS = Array.from({ length: 8 }, (_, i) => QUARTER_SPAWN.clone().add(new THREE.Vector3(-4.2 + (i % 4) * 2.8, 0, -1.8 + Math.floor(i / 4) * 1.5)))
+  const setScene = (next: Scene, mine: MyLook) => {
     const swap = () => {
       for (const slot of [...ghosts.keys()]) { ghosts.get(slot)!.blob.dispose(); dropLabel(`ghost:${slot}`); ghosts.delete(slot) }
       setTownsfolk(0)
@@ -741,13 +905,20 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
         quarter = buildQuarter(next)
         quarterId = next
         scene3.add(quarter.root)
+        // the guild trainer, an elder in the guild's colors, stands by the hall door
+        trainer?.dispose()
+        trainer = new Blob({ character: `trainer:${next}` })
+        trainer.root.position.set(2.7, 1, -13.2)
+        trainer.root.rotation.y = -0.25
+        tagPick(trainer.root, { kind: 'place', id: 'trainer' })
+        quarter.root.add(trainer.root)
       }
       harbor.root.visible = next === 'harbor'
       if (quarter) quarter.root.visible = next !== 'harbor'
       quarterLabels = {}
       // you arrive at your bottega door or the top of the Steps
       applyMe(mine)
-      me.pos.copy(next === 'harbor' ? (HARBOR_SPAWN) : QUARTER_SPAWN)
+      me.pos.copy(next === 'harbor' ? HARBOR_SPAWN : ARRIVALS[Math.floor(Math.random() * ARRIVALS.length)])
       me.target = null
       me.blob.root.position.copy(me.pos)
       me.heading = Math.PI
@@ -834,6 +1005,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     // Full frame rate while something moves (camera, people, tweens, hover); 30 fps for the ambient sea
     // otherwise; with reduced motion, nothing ambient at all.
     const peopleMoving = keys.size > 0 || tapped.length > 0 || !!me.target || [...peers.values()].some((p) => p.target)
+      || [...customers.values()].some((c) => c.target) || buyers.length > 0 || me.blob.busy || herald.busy
+      || [...peers.values()].some((p) => p.blob.busy) || [...customers.values()].some((c) => c.blob.busy)
     if (peopleMoving) wake(300)
     const moving = tweens.length > 0 || now < awakeUntil || Math.abs(nightGoal - night) > 0.001
     const ambient = !reduceMotion
@@ -877,8 +1050,12 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       }
       stepWalker(n, walkStep, null)
     }
+    for (const c of customers.values()) stepWalker(c, walkStep, null)
+    for (const b of buyers) stepWalker(b, walkStep, null)
     if (scene === 'harbor') herald.update(step, 0, reduceMotion)
+    else trainer?.update(step, 0, reduceMotion)
     for (const g of ghosts.values()) g.blob.update(step, 0, reduceMotion)
+    shadows.update(everyone())
     gloves.forEach((g) => g.update(step))
     for (const [id, b] of bubbles) if (now > b.until) { dropLabel(`say:${id}`); bubbles.delete(id) }
 
@@ -974,6 +1151,16 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     }
   }
 
+  function* everyone(): Generator<Blob> {
+    yield me.blob
+    for (const p of peers.values()) yield p.blob
+    for (const n of npcs) yield n.blob
+    for (const c of customers.values()) yield c.blob
+    for (const b of buyers) yield b.blob
+    yield herald
+    if (trainer) yield trainer
+  }
+
   const debugEl = new URLSearchParams(location.search).has('debug') ? document.createElement('div') : null
   if (debugEl) {
     debugEl.className = 'world-debug'
@@ -1000,13 +1187,18 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       return screenOf(w ? w.pos.clone().setY(w.pos.y + 0.8) : null)
     },
     screenPointStall: (slot) => (quarter?.slots[slot] ? screenOf(quarter.slots[slot].front.clone().add(new THREE.Vector3(0, 3, 0)).lerp(quarter.slots[slot].labelPoint, 0.3)) : null),
-    me: () => ({ x: me.pos.x, z: me.pos.z, scene }),
+    me: () => ({ x: me.pos.x, z: me.pos.z, scene, look: myLook.look, hat: myLook.hat, rank: myLook.rank }),
+    lastEmote: null,
+    customers: () => [...customers.values()].map((c) => ({ order: c.order, character: c.character, state: c.state })),
+    buyers: () => buyers.map((b) => b.character),
+    trainer: () => (trainer && scene !== 'harbor' ? trainer.opts.character : null),
     peers: () => [...peers.keys()],
     peer: (id) => { const w = peers.get(id); return w ? { x: w.pos.x, z: w.pos.z } : null },
     lastSlap: null,
     stats: () => ({ fps, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, dpr, peers: peers.size, townsfolk: npcs.length, echoes: ghosts.size }),
   }
   Object.defineProperty(window.__guildieWorld, 'lastSlap', { get: () => lastSlap })
+  Object.defineProperty(window.__guildieWorld, 'lastEmote', { get: () => lastEmote })
 
   return {
     setState,
@@ -1056,11 +1248,24 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     peerRemove,
     peersClear,
     wave(id) {
+      this.emote(id, 'wave')
+    },
+    emote(id, e: RoomEmote) {
       const w = id === myId ? me : peers.get(id)
       if (!w) return
-      w.blob.wave()
-      say(id, 'Ciao!')
+      lastEmote = { id, e }
+      w.blob.play(e as Emote)
+      const line = { wave: 'Ciao!', cheer: 'Evviva!', bow: '', shrug: '' }[e]
+      if (line) say(id, line)
+      wake(1500)
     },
+    setMyLook(mine) {
+      applyMe(mine)
+    },
+    orderFilled,
+    orderTurnedDown,
+    sales,
+    herald: heraldSays,
     slap,
     setSlaps(id, on) {
       if (id === myId) { mySlaps = on; me.blob.setSlapsOff(!on) }

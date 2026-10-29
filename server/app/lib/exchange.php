@@ -124,7 +124,7 @@ function exchange_execute(PDO $pdo, array $listing, int $quantity, ?int $buyerPl
     if ($sellerId !== null) {
         activity_log($pdo, $sellerId, 'sold', [
             'item_id' => $itemId, 'quantity' => $quantity, 'buyer' => party_label($names, $buyerPlayerId, $buyerPersona),
-            'buyer_is_player' => $buyerPlayerId !== null, 'earned' => $total - $cut - $depositTaken, 'cut' => $cut,
+            'buyer_is_player' => $buyerPlayerId !== null, 'buyer_persona' => $buyerPersona, 'earned' => $total - $cut - $depositTaken, 'cut' => $cut,
             'deposit' => $depositTaken,
         ]);
     }

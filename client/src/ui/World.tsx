@@ -1,14 +1,19 @@
 // The 3D world (desktop). Loads the 3D engine on demand, turns the server's state into what the harbor
 // shows (world/types.ts WorldState), and reports clicks on places and players. The engine never decides
 // anything. In a guild quarter (0.9.0) it also joins the realtime room (presence.ts) and passes other
-// merchants' positions, waves and slaps to the engine; that's cosmetic only.
+// merchants' positions, emotes and slaps to the engine; that's cosmetic only. Since 0.10.0 it also passes on
+// what the server already decided for the people at your quay to act out: customers arriving and being
+// served, buyers for your sales, and the herald announcing the Duke's orders.
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { duration } from '../format'
 import { Presence, type PresenceStatus, type RoomEvent, type RoomPlayer } from '../presence'
 import { session, useSession } from '../session'
-import type { DukeBoard, GameState, NewsItem, OrderBoard, QuarterData } from '../types'
-import type { Peer, PickId, ProfessionId, Scene, StallInfo, WorldEngine, WorldLabel, WorldState } from '../world/types'
+import type { DukeBoard, GameState, NewsItem, OrderBoard, PresenceMe, QuarterData } from '../types'
+import { worldEvents } from '../worldEvents'
+import { HAT_NAMES } from '../world/looks'
+import type { MyLook, Peer, PickId, ProfessionId, RoomEmote, Scene, StallInfo, WorldEngine, WorldLabel, WorldState } from '../world/types'
 import { useGame, useLoad, useNow } from './common'
+import { ColorPicker, HatPicker, Portrait } from './Look'
 
 const WORKBENCH: Record<ProfessionId, string> = { blacksmith: 'Forge', alchemist: 'Alembic', leatherworker: 'Tanning bench' }
 const HALL: Record<ProfessionId, string> = { blacksmith: 'Arte dei Fabbri', alchemist: 'Arte degli Speziali', leatherworker: 'Arte dei Conciatori' }
@@ -38,7 +43,7 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
   const customers = (board?.orders ?? [])
     .filter((o) => o.arriving_in <= 0)
     .slice(0, 3)
-    .map((o) => ({ kind: o.kind, ready: o.items.every((i) => i.have >= i.quantity) }))
+    .map((o) => ({ order: o.id, customer: o.customer_id, name: o.customer, line: o.line, kind: o.kind, ready: o.items.every((i) => i.have >= i.quantity) }))
   const event = news.find((n) => n.kind === 'event' && n.status === 'now')
   const today = news.find((n) => n.status === 'today')
   const full = outputs.some((o) => o.estimate >= o.cap)
@@ -87,7 +92,7 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
 /** The bottegas around a piazza, for the engine. */
 export function stallInfos(q: QuarterData | null): StallInfo[] {
   return (q?.stalls ?? []).map((s) => ({
-    id: s.id, name: s.name, profession: s.profession_id as ProfessionId, look: s.look, friend: s.friend, me: s.me,
+    id: s.id, name: s.name, profession: s.profession_id as ProfessionId, look: s.look, hat: s.hat ?? 0, rank: s.rank ?? 0, friend: s.friend, me: s.me,
     listings: s.listing_count, echo: s.echo ? `${s.echo.text} · ${duration(s.echo.ago)} ago` : null,
   }))
 }
@@ -116,7 +121,8 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
   const [night, setNight] = useState(() => matchMedia('(prefers-color-scheme: dark)').matches)
   const [live, setLive] = useState<{ status: PresenceStatus; room: string; count: number }>({ status: 'idle', room: '', count: 0 })
   const [slaps, setSlaps] = useState(true)
-  const [look, setLook] = useState<number | null>(null)
+  const [me, setMe] = useState<PresenceMe | null>(null)
+  const [lookOpen, setLookOpen] = useState(false)
   const [quarter, setQuarter] = useState<QuarterData | null>(null)
   const friendIds = useRef(new Set<number>())
   const peerIds = useRef(new Set<number>())
@@ -130,14 +136,17 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
   const roomPlayers = useRef(new Map<number, RoomPlayer>())
   const toPeerRef = useRef<(p: RoomPlayer) => Peer>(null as unknown as (p: RoomPlayer) => Peer)
 
-  // Who I am in the city (look, slaps on/off): from the presence pass, which works even with presence off.
+  // Who I am in the city (look, hat, rank, slaps on/off): from the presence pass, which works even with
+  // presence off. Fetched again when your rank changes, so the sash follows.
+  const rankId = state.profession?.progress?.rank_id ?? ''
   useEffect(() => {
     session.presenceToken().then((r) => {
       if (!r.ok) return
-      setLook(r.data.me.look)
+      setMe(r.data.me)
       setSlaps(r.data.me.slaps)
     })
-  }, [])
+  }, [rankId])
+  const myLook = (m: PresenceMe, sl = slaps): MyLook => ({ look: m.look, hat: m.hat ?? 0, rank: m.rank ?? 0, slaps: sl })
 
   useEffect(() => {
     let alive = true
@@ -157,7 +166,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
         if (alive) onFail()
       })
     toPeerRef.current = (p: RoomPlayer): Peer => ({
-      id: p.id, name: p.n, profession: p.p as ProfessionId, look: p.l, slaps: p.s === 1, x: p.x, z: p.z, h: p.h, friend: friendIds.current.has(p.id),
+      id: p.id, name: p.n, profession: p.p as ProfessionId, look: p.l, hat: p.ht ?? 0, rank: p.r ?? 0, slaps: p.s === 1, x: p.x, z: p.z, h: p.h, friend: friendIds.current.has(p.id),
     })
     const onEvent = (m: RoomEvent) => {
       const e = engine.current
@@ -184,6 +193,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
           break
         }
         case 'wave': e.wave(m.id); break
+        case 'emote': e.emote(m.id, m.e); break
         case 'slap': e.slap(m.from, m.to); break
         case 'pref': e.setSlaps(m.id, m.s === 1); break
         case 'nope': game.say(m.why, true); break
@@ -201,9 +211,10 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
   }, [])
 
   // Scenes: the harbor, or a guild quarter (join its room, load its stalls).
+  const ready = status === 'ready' && me !== null
   useEffect(() => {
-    if (status !== 'ready' || look === null) return
-    engine.current!.setScene(scene, { look, slaps })
+    if (!ready) return
+    engine.current!.setScene(scene, myLook(me!))
     peerIds.current.clear()
     roomPlayers.current.clear()
     setLive((l) => ({ ...l, count: 0 }))
@@ -218,7 +229,40 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     load()
     const timer = setInterval(load, 30_000)
     return () => { alive = false; clearInterval(timer) }
-  }, [scene, status, look])
+  }, [scene, ready])
+  // A new rank (sash) or look mid-scene.
+  useEffect(() => {
+    if (ready) engine.current!.setMyLook(myLook(me!))
+  }, [me])
+
+  // The order board's customers act out fills and turn-downs the server just made.
+  useEffect(() => worldEvents.on((ev) => {
+    if (ev.t === 'orderFilled') engine.current?.orderFilled(ev.order, ev.text)
+    else engine.current?.orderTurnedDown(ev.order)
+  }), [])
+
+  // New sales in your log: buyers of the right kind walk up to your stall (at most 3; the rest are summed up).
+  const lastSale = useRef<number | null>(null)
+  useEffect(() => {
+    const sold = state.activity.filter((a) => a.type === 'sold' && a.sale)
+    const newest = sold.reduce((n, a) => Math.max(n, a.id), 0)
+    if (lastSale.current === null || status !== 'ready') { lastSale.current = Math.max(lastSale.current ?? 0, newest); return }
+    const fresh = sold.filter((a) => a.id > lastSale.current!).sort((a, b) => a.id - b.id)
+    lastSale.current = Math.max(lastSale.current, newest)
+    if (!fresh.length) return
+    engine.current?.sales(fresh.slice(0, 3).map((a) => ({ buyer: a.sale!.buyer, text: `+${a.sale!.earned} ducats` })), Math.max(0, fresh.length - 3))
+  }, [state, status])
+
+  // The herald announces a new Duke's order, or one fulfilled, while you're here.
+  const lastDuke = useRef<{ id: number; status: string } | null>(null)
+  useEffect(() => {
+    if (!duke || status !== 'ready') return
+    const prev = lastDuke.current
+    lastDuke.current = { id: duke.id, status: duke.status }
+    if (!prev) return
+    if (prev.id !== duke.id) engine.current?.herald(`Hear ye! The Duke orders: ${duke.title}!`)
+    else if (prev.status !== 'fulfilled' && duke.status === 'fulfilled') engine.current?.herald("The Duke's order is fulfilled! Grazie, Portovela!")
+  }, [duke, status])
 
   // Friends: stars on their names and stalls, as soon as you add one.
   useEffect(() => {
@@ -246,11 +290,13 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
   useEffect(() => engine.current?.focus(focus, panelWidth), [focus, panelWidth, status])
   useEffect(() => engine.current?.setNight(night), [night, status])
 
-  // E waves, F slaps the nearest merchant within reach.
-  const wave = () => {
-    if (presence.current?.live) presence.current.send({ t: 'wave' })
-    else engine.current?.wave(myId)
+  // E waves, 1-3 bow, cheer and shrug, F slaps the nearest merchant within reach. In a live quarter the room
+  // relays them (and echoes them back); elsewhere only you see them.
+  const emote = (e: RoomEmote) => {
+    if (presence.current?.live) presence.current.send(e === 'wave' ? { t: 'wave' } : { t: 'emote', e })
+    else engine.current?.emote(myId, e)
   }
+  const wave = () => emote('wave')
   const slap = () => {
     const e = engine.current
     if (!e || scene === 'harbor') return
@@ -267,14 +313,17 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     engine.current?.setSlaps(myId, r.data.slaps)
     game.say(r.data.slaps ? 'Slaps on: you can challenge and be challenged.' : 'Slaps off: nobody can slap you, and a white flag flies on your hat.')
   }
-  const actions = useRef({ wave, slap })
-  actions.current = { wave, slap }
+  const actions = useRef({ emote, slap })
+  actions.current = { emote, slap }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return
       if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.closest?.('.side-panel, dialog'))) return
-      if (e.code === 'KeyE') actions.current.wave()
+      if (e.code === 'KeyE') actions.current.emote('wave')
+      if (e.code === 'Digit1') actions.current.emote('bow')
+      if (e.code === 'Digit2') actions.current.emote('cheer')
+      if (e.code === 'Digit3') actions.current.emote('shrug')
       if (e.code === 'KeyF') actions.current.slap()
     }
     window.addEventListener('keydown', onKey)
@@ -296,14 +345,66 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     <div class="world" ref={box} data-testid="world" data-ready={status === 'ready' ? 'yes' : 'no'} data-scene={scene}>
       {status === 'loading' && <p class="world-loading">Sailing into the harbor…</p>}
       <div class="world-tools" style={{ right: `${panelWidth + 12}px` }}>
+        <button class="secondary small" onClick={() => setLookOpen((o) => !o)} data-testid="world-look" title="Choose your merchant's look">Your look</button>
         <button class="secondary small" onClick={wave} data-testid="world-wave" title="Wave (E)">Wave</button>
+        <button class="secondary small" onClick={() => emote('bow')} data-testid="world-bow" title="Bow (1)">Bow</button>
+        <button class="secondary small" onClick={() => emote('cheer')} data-testid="world-cheer" title="Cheer (2)">Cheer</button>
+        <button class="secondary small" onClick={() => emote('shrug')} data-testid="world-shrug" title="Shrug (3)">Shrug</button>
         {inQuarter && <button class="secondary small" onClick={slap} data-testid="world-slap" title="Slap the nearest merchant (F)">Slap</button>}
         {inQuarter && <button class="secondary small" onClick={toggleSlaps} data-testid="world-slaps">{slaps ? 'Slaps: on' : 'Slaps: off'}</button>}
         <button class="secondary small" onClick={() => setNight((n) => !n)} data-testid="world-night">{night ? 'Day' : 'Night'}</button>
         <button class="secondary small" onClick={() => engine.current?.resetView()} data-testid="world-reset">Reset view</button>
       </div>
-      <p class="world-hint tiny">WASD or click the ground to walk · drag to turn · scroll to zoom · click a place{inQuarter ? ' · E wave · F slap' : ''}</p>
+      <p class="world-hint tiny">WASD or click to walk · drag to turn · scroll to zoom · E wave · 1 bow · 2 cheer · 3 shrug{inQuarter ? ' · F slap' : ''}</p>
+      {me && status === 'ready' && (lookOpen || !me.look_chosen) && (
+        <LookSheet guild={state.profession!.id as ProfessionId} me={me} invite={!lookOpen}
+          onDone={(m) => {
+            setLookOpen(false)
+            if (!m) return
+            const changed = m.look !== me.look || m.hat !== me.hat
+            setMe(m)
+            if (changed) presence.current?.reconnect()   // a fresh pass, so others see the new look
+          }} />
+      )}
       {inQuarter && <p class="world-status small" data-testid="world-presence" data-status={live.status}>{statusText}</p>}
     </div>
+  )
+}
+
+/**
+ * Choose your merchant's look (0.10.0). Accounts from before 0.10.0 see it once as an invitation; "Keep this
+ * one" saves the look they already have, so the invitation doesn't come back.
+ */
+function LookSheet({ guild, me, invite, onDone }: { guild: ProfessionId; me: PresenceMe; invite: boolean; onDone: (m: PresenceMe | null) => void }) {
+  const game = useGame()
+  const [color, setColor] = useState(me.look)
+  const [hat, setHat] = useState(me.hat ?? 0)
+  const [busy, setBusy] = useState(false)
+  const save = async (c: number, h: number) => {
+    setBusy(true)
+    const r = await session.cityLook(c, h)
+    setBusy(false)
+    if (!r.ok) return game.say(r.error.message, true)
+    onDone({ ...me, look: r.data.color, hat: r.data.hat, rank: r.data.rank, look_chosen: true })
+    game.say(`Your merchant now wears the ${HAT_NAMES[guild][r.data.hat].toLowerCase()}.`)
+  }
+  return (
+    <section class="world-look" data-testid={invite ? 'look-invite' : 'look-sheet'} aria-label="Your look">
+      <div class="look-preview">
+        <Portrait guild={guild} color={color} hat={hat} rank={me.rank ?? 0} size={72} />
+        <div>
+          <h2>{invite ? 'New: choose your look' : 'Your look'}</h2>
+          <p class="small">{invite ? 'Every merchant in Portovela can now pick a body color and a hat. Others see it in the quarters.' : 'Others see it in the quarters. Your sash shows your rank.'}</p>
+        </div>
+      </div>
+      <ColorPicker color={color} onChange={setColor} />
+      <HatPicker guild={guild} hat={hat} onChange={setHat} />
+      <div class="btnrow">
+        <button class="small" disabled={busy} onClick={() => save(color, hat)} data-testid="look-save">Save my look</button>
+        {invite
+          ? <button class="secondary small" disabled={busy} onClick={() => save(me.look, me.hat ?? 0)} data-testid="look-keep">Keep this one</button>
+          : <button class="secondary small" disabled={busy} onClick={() => onDone(null)} data-testid="look-cancel">Cancel</button>}
+      </div>
+    </section>
   )
 }

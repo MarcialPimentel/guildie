@@ -95,8 +95,9 @@ class Session {
   professions() {
     return this.call<{ professions: ProfessionChoice[] }>('professions')
   }
-  chooseProfession(professionId: string) {
-    return this.stateCall<GameState>('choose_profession', { profession_id: professionId })
+  /** Join a guild, with the look picked on the same screen (0.10.0). */
+  chooseProfession(professionId: string, look?: { color: number; hat: number }) {
+    return this.stateCall<GameState>('choose_profession', { profession_id: professionId, ...(look ? { look_color: look.color, look_hat: look.hat } : {}) })
   }
   collectStation() {
     return this.stateCall<{ surprises?: Surprise[] }>('collect_station', {}, 'state')
@@ -180,6 +181,10 @@ class Session {
   }
   cityPrefs(slaps: boolean) {
     return this.call<{ slaps: boolean }>('city_prefs', { slaps })
+  }
+  /** Choose your merchant's body color and hat (0.10.0). */
+  cityLook(color: number, hat: number) {
+    return this.call<{ color: number; hat: number; chosen: boolean; rank: number }>('city_look', { color, hat })
   }
   quarter(quarter: string) {
     return this.call<QuarterData>('quarter', { quarter })

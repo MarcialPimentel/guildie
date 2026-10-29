@@ -25,12 +25,22 @@ function activity_list(int $playerId, int $limit = 30, int $since = 0): array
     $rows = [];
     foreach ($stmt->fetchAll() as $row) {
         $payload = json_decode($row['payload'], true) ?: [];
-        $rows[] = [
+        $out = [
             'id'         => (int) $row['id'],
             'type'       => $row['type'],
             'text'       => activity_text($row['type'], $payload),
             'created_at' => (int) $row['created_at'],
         ];
+        if ($row['type'] === 'sold') {
+            // Who bought, for the buyer who walks up to your stall in the 3D harbor (0.10.0). Read-only.
+            $out['sale'] = [
+                'buyer'    => !empty($payload['buyer_is_player']) ? 'player' : (string) ($payload['buyer_persona'] ?? ''),
+                'item_id'  => (string) ($payload['item_id'] ?? ''),
+                'quantity' => (int) ($payload['quantity'] ?? 0),
+                'earned'   => (int) ($payload['earned'] ?? 0),
+            ];
+        }
+        $rows[] = $out;
     }
     return $rows;
 }

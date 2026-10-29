@@ -281,7 +281,7 @@ body.in-world { overflow: hidden; }
 .world-label[data-tone="alert"] { background: #E07A5F; color: #10323A; }
 .world-label:hover, .world-label.hover { scale: 1.08; border-color: #F8FCFB; filter: none; }
 .world-label:focus-visible { outline: 3px solid #F8FCFB; outline-offset: 2px; }
-.world-tools { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 2; }
+.world-tools { position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; z-index: 2; max-width: min(500px, 60%); }
 .world-tools button { background: rgba(248, 252, 251, 0.92); }
 .world-hint { position: absolute; left: 14px; top: 14px; margin: 0; color: #10323A; background: rgba(248, 252, 251, 0.78); padding: 4px 10px; border-radius: 999px; }
 .world-debug { position: absolute; left: 14px; top: 44px; font: 12px ui-monospace, monospace; color: #10323A; background: rgba(248, 252, 251, 0.85); padding: 4px 8px; border-radius: 6px; }
@@ -349,3 +349,32 @@ body.in-world .header-skill { height: 20px; margin-top: 0; padding-bottom: 0; al
 .bar { height: 10px; border-radius: 999px; background: var(--panel-light); overflow: hidden; border: 1px solid var(--line); }
 .bar > span { display: block; height: 100%; background: var(--lemon); }
 .helper-me { font-weight: 800; }
+
+/* ---------------------------------------------------------------- the people of Portovela (0.10.0) */
+.world-bubble.line { white-space: normal; max-width: 260px; font: 700 13px/1.3 var(--body); text-align: center; }
+.world-bubble.coin { background: #F2C53D; border-color: #10323A; font: 800 14px/1.2 var(--body); }
+.world-bubble.shout { font-size: 16px; white-space: normal; max-width: 300px; text-align: center; }
+.world-emotes { display: flex; gap: 4px; }
+.world-look {
+  position: absolute; z-index: 3; left: 14px; top: 52px; width: min(340px, calc(100% - 28px));
+  background: rgba(248, 252, 251, 0.97); color: #10323A; border-radius: 16px; padding: 14px;
+  box-shadow: 0 10px 30px rgba(16, 50, 58, 0.25); display: grid; gap: 10px;
+}
+.world-look h2 { font-size: 20px; margin: 0; color: #10323A; }
+.world-look p { margin: 0; }
+.world-look .look-preview { display: flex; gap: 12px; align-items: center; }
+.world-look .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 50%; border: 3px solid rgba(16, 50, 58, 0.18); cursor: pointer; }
+.swatch[aria-checked="true"] { border-color: #10323A; box-shadow: 0 0 0 3px #F8FCFB inset; }
+.hat-picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.hat-picks .chip {
+  font: 700 13px var(--body); min-height: 34px; padding: 5px 12px; border-radius: 999px; cursor: pointer;
+  color: var(--ink); background: var(--panel-light); border: 1.5px solid var(--line);
+}
+.world-look .hat-picks .chip { color: #10323A; background: #EAF5F3; border-color: rgba(16, 50, 58, 0.14); }
+.hat-picks .chip.on { background: var(--btn); color: var(--on-btn); border-color: var(--btn); }
+.world-look .hat-picks .chip.on { background: #177A76; color: #FFFFFF; }
+.look-row { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+.guild-head { display: flex; gap: 12px; align-items: center; }
+.portrait { flex: none; overflow: visible; }

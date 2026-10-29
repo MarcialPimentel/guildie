@@ -112,6 +112,8 @@ export interface Activity {
   type: string
   text: string
   created_at: number
+  /** On 'sold' entries (0.10.0): who bought (an economy.json persona id, or 'player') and what you earned. */
+  sale?: { buyer: string; item_id: string; quantity: number; earned: number }
 }
 
 export interface GameState {
@@ -181,6 +183,8 @@ export interface Order {
   slot: number
   kind: 'standard' | 'bundle' | 'collector'
   customer: string
+  /** content/orders.json id: picks the customer's look in the 3D harbor (0.10.0). */
+  customer_id: string
   line: string
   arriving_in: number
   seconds_left: number
@@ -340,7 +344,11 @@ export interface PresenceMe {
   id: number
   name: string
   profession: string
+  /** Body color 0-5, hat 0-2, rank 0-3 (0.10.0). look_chosen is false for accounts that never chose. */
   look: number
+  hat: number
+  rank: number
+  look_chosen: boolean
   slaps: boolean
 }
 
@@ -358,6 +366,8 @@ export interface StallCard {
   profession_id: string
   profession: string
   look: number
+  hat: number
+  rank: number
   me: boolean
   friend: boolean
   seen_ago: number | null

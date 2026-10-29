@@ -472,6 +472,15 @@ Other players become people you see. Full design: [living-city.md](living-city.m
 - **Presence is cosmetic and optional:** positions, waves and slaps go through a small realtime service (a Node container on the DigitalOcean droplet that already hosts Hormigas); everything with value stays on the PHP server. With no service configured, the quarters still show stalls, townsfolk and echoes.
 - **Phones:** the City tab lists the quarters, friends and the Duke's order.
 
+### 8.5 The people of Portovela (0.10.0)
+
+Everyone in the city is drawn from one character kit (art-direction.md §9): your merchant, other players, townsfolk, echoes, the nine named order customers (each with their own look), the market buyers, the Duke's herald, a guild trainer at each hall door, and (with #51) hired hands.
+
+- **Your look:** pick a body color and one of three hats for your guild when you join, and change it any time in the 3D city ("Your look"). Accounts from before 0.10.0 keep their old look and are invited once to choose. Free and cosmetic (migration 008).
+- **Rank sashes (#30):** none for Apprentice, then sea-glass, majolica blue, and lemon gold with a medallion for Master. The rank comes from your skill, via the signed presence pass.
+- **Emotes:** wave, bow, cheer and shrug (E, 1, 2, 3), relayed by the realtime room like waves.
+- **People act out what the server decided:** customers walk up and say their order line, take the goods when you fill it (and shrug when you turn it down); buyers of the right kind walk to your stall for new sales (at most 3 at once); the herald trumpets new and fulfilled Duke's orders. Nothing a character does changes ducats, items or results.
+
 ---
 
 ## 9. Onboarding (First-Time User Experience)
@@ -725,6 +734,10 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-28 | **People become wobbly blob merchants** in guild dress and hats, with an oversized slap glove (art-direction.md §9) | Reads from far away, funny without faces, cheap to animate (spring wobble, no skeleton or physics engine) |
 | 2026-10-28 | **The Duke's order:** one city-wide order with lines for all three guilds, 72 h, pays 1.25 × usual value per unit at once plus 0.15 × on completion, at most 40% of a line per player until its last quarter of time, public board of helpers | "Together, first": a shared goal everyone can see. The whole reward (1.40 ×) stays under the suppliers' 1.5 × (the 0.5.1 supplier rule) |
 | 2026-10-28 | Living city on phones: the City tab gets the Duke's order, Friends and Quarters as lists; no live walkers on phones yet | Every feature must work in the classic view (Decision of 2026-10-28) |
+| 2026-10-29 | **The people of Portovela (0.10.0):** one code-built character kit for everyone; the nine order customers get their own looks; customers speak and take the goods; buyers walk to your stall for real sales; bow, cheer and shrug; idle moves; the trainer at the hall door and the herald's trumpet | Marz approved the character proposal (all eight decisions). Characters only act out what the server already decided |
+| 2026-10-29 | **Rank sashes** (#30): none, sea-glass, majolica, gold with a medallion; rank comes from skill in the signed presence pass | Your rank is visible to other players without a new table |
+| 2026-10-29 | **Choose your look:** six body colors and three hats per guild, free, picked when joining a guild and changeable in the 3D city; saved on the server (migration 008). Accounts from before 0.10.0 keep their look and get a one-time invitation | Marz: "players should select their character design upon new account creation". Unlocking hats by rank or events stays a later gameplay decision |
+| 2026-10-29 | Characters stay **built in code** (merged vertex-colored shapes, spring wobble, no skeletons, no .glb files) | At this camera distance shapes and colors carry the read; keeps downloads small and the art fully in the repo |
 
 ---
 

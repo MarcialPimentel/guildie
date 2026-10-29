@@ -4,6 +4,7 @@ import { useMemo } from 'preact/hooks'
 import { duration } from '../format'
 import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
+import { worldEvents } from '../worldEvents'
 import type { Order, ProgressGain } from '../types'
 import { ActionButton, useGame, useLoad, useNow } from './common'
 import { celebrate, gainText } from './Progress'
@@ -86,6 +87,7 @@ function OrderCard({ order, elapsed, skipIn, after, say }: {
             if (ok && r.ok) {
               const d = r.data as { filled?: { customer: string; reward_text: string; progress?: ProgressGain } }
               if (d.filled) {
+                worldEvents.emit({ t: 'orderFilled', order: order.id, text: `+${d.filled.reward_text}` })
                 const gain = gainText(d.filled.progress)
                 say(`${d.filled.customer} paid ${d.filled.reward_text}.${gain ? ` ${gain}` : ''}`)
                 celebrate(d.filled.progress)
@@ -97,7 +99,7 @@ function OrderCard({ order, elapsed, skipIn, after, say }: {
         >
           {ready ? 'Fill order' : 'Missing items'}
         </ActionButton>
-        <ActionButton class="secondary small" disabled={skipIn > 0} action={() => session.orderSkip(order.id)} success="Order turned down. A new customer is here." after={() => after()} testid="order-skip">
+        <ActionButton class="secondary small" disabled={skipIn > 0} action={() => session.orderSkip(order.id)} success="Order turned down. A new customer is here." after={(ok) => { if (ok) worldEvents.emit({ t: 'orderTurnedDown', order: order.id }); after() }} testid="order-skip">
           Turn down
         </ActionButton>
       </div>

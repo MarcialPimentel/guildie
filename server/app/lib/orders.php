@@ -267,6 +267,7 @@ function orders_board(int $playerId): array
             'slot'         => (int) $row['slot'],
             'kind'         => $row['kind'],
             'customer'     => $customer['name'],
+            'customer_id'  => $row['customer_id'],   // picks the customer's look in the 3D harbor
             'line'         => str_replace('{items}', order_items_text($items), $customer['line']),
             'arriving_in'  => $arriving ? (int) $row['created_at'] - $now : 0,
             'seconds_left' => max(0, (int) $row['expires_at'] - $now),

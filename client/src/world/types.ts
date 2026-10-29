@@ -29,8 +29,8 @@ export interface WorldState {
   /** Different items in the bag (crates outside the storehouse). */
   bagKinds: number
   listings: number
-  /** Up to three customers at the door. */
-  customers: { kind: string; ready: boolean }[]
+  /** Up to three customers at the door: the order id, who they are (content/orders.json id) and their line. */
+  customers: { order: number; customer: string; name: string; line: string; kind: string; ready: boolean }[]
   /** A world event is running (a galley docks in the harbor). */
   eventNow: boolean
   /** The Regatta is on (bunting along the quay). */
@@ -47,6 +47,9 @@ export interface Peer {
   name: string
   profession: ProfessionId
   look: number
+  /** Hat 0-2 and rank 0-3 (0.10.0; from the signed presence pass). */
+  hat: number
+  rank: number
   slaps: boolean
   x: number
   z: number
@@ -60,12 +63,23 @@ export interface StallInfo {
   name: string
   profession: ProfessionId
   look: number
+  hat: number
+  rank: number
   friend: boolean
   me: boolean
   listings: number
   /** What they did lately, if they're not here now: shown as an echo at their stall. */
   echo: string | null
 }
+
+/** How your own merchant looks (from the presence pass) and whether your slaps are on. */
+export interface MyLook { look: number; hat: number; rank: number; slaps: boolean }
+
+/** Emotes anyone can play in a quarter (the realtime room relays them; 0.10.0). */
+export type RoomEmote = 'wave' | 'bow' | 'cheer' | 'shrug'
+
+/** A sale the server already made, for a buyer who walks up to your stall: persona id, or 'player'. */
+export interface SaleShow { buyer: string; text: string }
 
 export interface WorldCallbacks {
   onPick(id: PickId): void
@@ -85,7 +99,9 @@ export interface WorldEngine {
 
   // ---- the living city (0.9.0)
   /** Go to a scene (fades, moves your merchant to its arrival point). */
-  setScene(scene: Scene, me: { look: number; slaps: boolean }): void
+  setScene(scene: Scene, me: MyLook): void
+  /** Your look changed (the "Your look" sheet); also works mid-scene. */
+  setMyLook(me: MyLook): void
   /** The bottegas around the current quarter's piazza. */
   setStalls(stalls: StallInfo[]): void
   /** Labels for the quarter's places (the fountain's Duke's order progress, the guild hall). */
@@ -98,6 +114,16 @@ export interface WorldEngine {
   peersClear(): void
   /** A wave (your own when id is yours). */
   wave(id: number): void
+  /** A bow, cheer or shrug (or a wave). */
+  emote(id: number, e: RoomEmote): void
+  /** The server filled this order: your merchant hands the goods over, the customer pays (text) and leaves. */
+  orderFilled(order: number, text: string): void
+  /** You turned this order down: the customer shrugs and leaves. */
+  orderTurnedDown(order: number): void
+  /** Sales the server made since you last looked: up to 3 buyers walk to your stall; `more` are summed up. */
+  sales(list: SaleShow[], more: number): void
+  /** The Duke's herald blows the trumpet and announces something (a new or a fulfilled Duke's order). */
+  herald(text: string): void
   /** A slap between two players (either may be you). */
   slap(from: number, to: number): void
   setSlaps(id: number, on: boolean): void
