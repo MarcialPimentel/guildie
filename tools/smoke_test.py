@@ -656,7 +656,7 @@ if pt.get("enabled"):
     claims = json.loads(base64.urlsafe_b64decode(body64 + "=" * (-len(body64) % 4)))
     check("presence pass carries name, guild and a 10-minute expiry", claims["pid"] == id_a and claims["n"] == name
           and claims["p"] == "alchemist" and 0 < claims["exp"] - time.time() <= 600, claims)
-    check("presence pass lists the rooms: one quarter per guild in content (0.10.3), then the Palazzo (0.11.0)", claims.get("q") == [g["id"] for g in GUILDS] + ["palazzo"], claims)
+    check("presence pass lists one room: the Palazzo (0.13.0: no guild quarters)", claims.get("q") == ["palazzo"], claims)
     check("presence pass has a realtime url", pt["url"].startswith(("ws://", "wss://")), pt)
 else:
     print("SKIP  presence pass signature (no realtime_url/realtime_secret in config.php)")
@@ -703,22 +703,11 @@ s, r = call("friend_add", {"player_id": 999999999}, token=tok_a)
 check("can't friend an unknown player", s == 404, r)
 s, r = call("player_profile", {"player_id": id_b}, token=tok_a)
 check("profile says they're a friend", s == 200 and r["data"]["friend"] is True and r["data"]["profession_id"] == "blacksmith", r)
-s, r = call("quarter", {"quarter": "leatherworker"}, token=tok_a)
-stalls = r["data"]["stalls"] if r.get("ok") else []
-check("a friend's stall comes first in every quarter, whatever their guild", s == 200 and stalls and stalls[0]["id"] == id_b
-      and stalls[0]["friend"], [st.get("name") for st in stalls])
-check("the Tanners' quarter lists tanners after friends", all(st["profession_id"] == "leatherworker" for st in stalls[1:]), stalls)
-check("quarter has a name and at most 12 stalls", r["data"]["name"].startswith("Tanners") and len(stalls) <= 12, r)
-lw = next(g["guild"] for g in GUILDS if g["id"] == "leatherworker")
-check("quarter name comes from content (guild.quarter and guild.piazza)", r["data"]["name"] == f"{lw['quarter']} quarter · {lw['piazza']}", r["data"]["name"])
-s, r = call("quarter", {"quarter": "wizards"}, token=tok_a)
-check("an unknown quarter is refused", s == 400, r)
+s, r = call("friends", token=tok_a)
+fr = r["data"]["friends"] if r.get("ok") else []
+check("the friends list shows a friend's stall card, with an echo of what they did lately", s == 200 and fr and fr[0]["id"] == id_b, fr)
 s, r = call("quarter", {"quarter": "alchemist"}, token=tok_a)
-mine = [st for st in r["data"]["stalls"] if st["me"]] if r.get("ok") else []
-check("you have a stall in your own guild's quarter, with an echo of what you did lately", mine and mine[0]["echo"]
-      and mine[0]["echo"]["ago"] <= 1800 and mine[0]["echo"]["text"], mine)
-s, r = call("quarter", {"quarter": "wizards"}, token=tok_a)
-check("unknown quarter rejected", s == 400, r)
+check("the guild quarters are gone (0.13.0)", s in (400, 404), r)
 s, r = call("friend_remove", {"player_id": id_b}, token=tok_a)
 check("remove a friend", s == 200 and r["data"]["friends"] == [], r)
 
@@ -948,6 +937,9 @@ s, r = call("honors", token=tok_w)
 boards = {b["id"]: b for b in r["data"]["boards"]} if s == 200 else {}
 check("the Hall of honor: Il Factotum and four boards", s == 200 and r["data"]["factotum"] and set(boards) == {"gold", "skill", "duke", "bottegas"}
       and r["data"]["title"].startswith("Il Factotum"), r)
+f = r["data"]["factotum"] or {}
+check("the Factotum comes with their merchant's look, for the statue and the portrait (0.13.0)", f.get("look") and f["look"]["profession_id"]
+      and isinstance(f["look"]["color"], int) and isinstance(f["look"]["hat"], int) and isinstance(f["look"]["rank"], int), f)
 check("the finest bottegas list the Bellows forge", any(row["name"] == name_d and "Bellows" in row["value"] for row in boards.get("bottegas", {}).get("rows", [])) or not PLAYER_TOOL, boards.get("bottegas"))
 
 # the three officials: rumors from real data, one favor a day each

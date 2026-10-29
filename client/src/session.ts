@@ -5,7 +5,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { callAction, setTokenProvider, type ApiResult } from './api'
 import type {
   Activity, Directory, DukeBoard, Friends, GameState, ItemCount, MarketItem, MarketRow, MyListing, NewsItem, Offers, OrderBoard,
-  PresencePass, Profile, ProfessionChoice, ProgressGain, QuarterData, SellQuote, Surprise, Trainer,
+  PresencePass, Profile, ProfessionChoice, ProgressGain, SellQuote, Surprise, Trainer,
   Honors, NpcTalk, PalazzoNpc, WantedBoard,
 } from './types'
 
@@ -186,9 +186,6 @@ class Session {
   /** Choose your merchant's body color and hat (0.10.0). */
   cityLook(color: number, hat: number) {
     return this.call<{ color: number; hat: number; chosen: boolean; rank: number }>('city_look', { color, hat })
-  }
-  quarter(quarter: string) {
-    return this.call<QuarterData>('quarter', { quarter })
   }
   friends() {
     return this.call<Friends>('friends')

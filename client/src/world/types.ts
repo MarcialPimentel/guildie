@@ -8,10 +8,10 @@
  * A guild quarter (0.9.0): the fountain ('duke'), the guild hall door ('trainer': reserved for the M2 guild
  * trainer, #49) and the Steps back down ('home').
  */
-export type PickId = 'station' | 'workbench' | 'orders' | 'ledger' | 'bag' | 'stall' | 'mercato' | 'city' | 'news'
-  | 'duke' | 'steps' | 'trainer' | 'home'
-  // the Palazzo (0.11.0): the Hall of honor, the Wanted board and the three officials
-  | 'hall' | 'wanted' | 'notary' | 'crier' | 'steward'
+export type PickId = 'station' | 'workbench' | 'orders' | 'ledger' | 'bag' | 'steps' | 'home' | 'duke'
+  // the Palazzo (0.11.0; 0.13.0): the Hall of honor, the Factotum's statue, the three officials, and the
+  // marketplace: one vendor per guild (`vendor:<guild id>`) and the selling desk
+  | 'hall' | 'statue' | 'notary' | 'crier' | 'steward' | 'desk' | `vendor:${string}`
 
 /** The shared square with the city hall (0.11.0): a scene like a quarter, open to every guild. */
 export const PALAZZO = 'palazzo'
@@ -47,7 +47,8 @@ export interface WorldState {
 }
 
 /** Where you are: your quay, one of the guild quarters (named by their guild), or the Palazzo ('palazzo'). */
-export type Scene = 'harbor' | ProfessionId
+/** The harbor (your quay) or the Palazzo, the one square up the Steps since 0.13.0. */
+export type Scene = 'harbor' | typeof PALAZZO
 
 /** Another merchant in the quarter (from the realtime room). */
 export interface Peer {
@@ -134,6 +135,8 @@ export interface WorldEngine {
   sales(list: SaleShow[], more: number): void
   /** The Duke's herald blows the trumpet and announces something (a new or a fulfilled Duke's order). */
   herald(text: string): void
+  /** The Factotum (0.13.0): their merchant becomes the bronze statue; `portrait` is painted over the hall door. */
+  setFactotum(f: { profession: string; name: string; look: number; hat: number; rank: number } | null, portrait?: HTMLCanvasElement | null): void
   /** A slap between two players (either may be you). */
   slap(from: number, to: number): void
   setSlaps(id: number, on: boolean): void

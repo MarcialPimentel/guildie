@@ -415,14 +415,6 @@ export interface StallCard {
   echo: { text: string; ago: number } | null
 }
 
-export interface QuarterData {
-  quarter: string
-  name: string
-  guild: string
-  crafters: number
-  stalls: StallCard[]
-}
-
 export interface Friends {
   friends: StallCard[]
 }
@@ -490,9 +482,14 @@ export interface WantedBoard {
 
 export interface HonorRow { id: number; name: string; profession: string; value: string; me: boolean }
 
+/** The Factotum's merchant (0.13.0): the statue in the Palazzo and the portrait over the hall door. */
+export interface FactotumRow extends HonorRow {
+  look: { profession_id: string; color: number; hat: number; rank: number } | null
+}
+
 export interface Honors {
   title: string
-  factotum: HonorRow | null
+  factotum: FactotumRow | null
   boards: { id: string; title: string; rows: HonorRow[] }[]
 }
 

@@ -1,18 +1,20 @@
 // The 3D world (desktop). Loads the 3D engine on demand, turns the server's state into what the harbor
 // shows (world/types.ts WorldState), and reports clicks on places and players. The engine never decides
-// anything. In a guild quarter (0.9.0) it also joins the realtime room (presence.ts) and passes other
-// merchants' positions, emotes and slaps to the engine; that's cosmetic only. Since 0.10.0 it also passes on
+// anything. In the Palazzo (the one square since 0.13.0) it also joins the realtime room (presence.ts) and
+// passes other merchants' positions, emotes and slaps to the engine; that's cosmetic only. It also tells the
+// engine who the Factotum is, and paints their portrait for the Palazzo's façade. Since 0.10.0 it also passes on
 // what the server already decided for the people at your quay to act out: customers arriving and being
 // served, buyers for your sales, and the herald announcing the Duke's orders.
+import { render } from 'preact'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { duration } from '../format'
 import { Presence, type PresenceStatus, type RoomEvent, type RoomPlayer } from '../presence'
 import { session, useSession } from '../session'
-import type { DukeBoard, GameState, NewsItem, OrderBoard, PresenceMe, QuarterData } from '../types'
+import type { DukeBoard, FactotumRow, GameState, NewsItem, OrderBoard, PresenceMe } from '../types'
 import { worldEvents } from '../worldEvents'
-import { guild } from '../guilds'
+import { GUILDS, guild } from '../guilds'
 import { hatNames } from './Look'
-import { PALAZZO, type MyLook, type Peer, type PickId, type RoomEmote, type Scene, type StallInfo, type WorldEngine, type WorldLabel, type WorldState } from '../world/types'
+import { PALAZZO, type MyLook, type Peer, type PickId, type RoomEmote, type Scene, type WorldEngine, type WorldLabel, type WorldState } from '../world/types'
 import { useGame, useLoad, useNow } from './common'
 import { ColorPicker, HatPicker, Portrait } from './Look'
 
@@ -30,7 +32,7 @@ const dukeLabel = (d: DukeBoard | null): WorldLabel => (!d
     : { text: `The Duke's order · ${dukePct(d)}% · ${duration(d.seconds_left)}`, tone: d.lines.some((l) => l.can_give > 0 && l.have > 0) ? 'ready' : 'plain' })
 
 /** What the harbor shows, from the latest state. Station fill is estimated between refreshes, like the classic screen. */
-export function worldState(state: GameState, now: number, board: OrderBoard | null, news: NewsItem[], duke: DukeBoard | null = null): WorldState {
+export function worldState(state: GameState, now: number, board: OrderBoard | null, news: NewsItem[]): WorldState {
   const prof = state.profession!
   const since = Math.max(0, now - state.server_time)
   const outputs = prof.station.outputs.map((o) => ({
@@ -48,7 +50,6 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
   const full = outputs.some((o) => o.estimate >= o.cap)
   const bagItems = state.inventory.reduce((n, i) => n + i.quantity, 0)
   const fillable = customers.filter((c) => c.ready).length
-  const offers = state.incoming_offers ?? 0
 
   const labels: Partial<Record<PickId, WorldLabel>> = {
     station: {
@@ -69,12 +70,7 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
         ? { text: `Bottega di ${state.player.name} · build the ${prof.workshop.next.name}`, tone: 'alert' }
         : { text: `Bottega di ${state.player.name}`, tone: 'plain' },
     bag: { text: `Storehouse · ${bagItems} item${bagItems === 1 ? '' : 's'}`, tone: 'plain' },
-    stall: { text: `Your stall · ${state.active_listings} listed`, tone: 'plain' },
-    mercato: { text: 'Mercato', tone: 'plain' },
-    city: { text: offers ? `Guild hall · ${offers} offer${offers === 1 ? '' : 's'}` : 'Guild hall', tone: offers ? 'ready' : 'plain' },
-    news: { text: event ? event.title : today ? `News · ${today.title}` : 'Harbor news', tone: event ? 'ready' : 'plain' },
-    duke: dukeLabel(duke),
-    steps: { text: 'Up the Steps · quarters and Palazzo', tone: 'plain' },
+    steps: { text: 'Up to the Palazzo · market, friends, the Duke', tone: 'plain' },
   }
   if (customers.length) labels.orders = { text: fillable ? `Customers · ${fillable} ready to fill` : `Customers · ${customers.length} waiting`, tone: fillable ? 'ready' : 'plain' }
 
@@ -93,13 +89,6 @@ export function worldState(state: GameState, now: number, board: OrderBoard | nu
   }
 }
 
-/** The bottegas around a piazza, for the engine. */
-export function stallInfos(q: QuarterData | null): StallInfo[] {
-  return (q?.stalls ?? []).map((s) => ({
-    id: s.id, name: s.name, profession: s.profession_id, look: s.look, hat: s.hat ?? 0, rank: s.rank ?? 0, level: s.level ?? 1, friend: s.friend, me: s.me,
-    listings: s.listing_count, echo: s.echo ? `${s.echo.text} · ${duration(s.echo.ago)} ago` : null,
-  }))
-}
 
 interface WorldProps {
   scene: Scene
@@ -127,7 +116,6 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
   const [slaps, setSlaps] = useState(true)
   const [me, setMe] = useState<PresenceMe | null>(null)
   const [lookOpen, setLookOpen] = useState(false)
-  const [quarter, setQuarter] = useState<QuarterData | null>(null)
   const friendIds = useRef(new Set<number>())
   const peerIds = useRef(new Set<number>())
 
@@ -214,7 +202,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     }
   }, [])
 
-  // Scenes: the harbor, or a guild quarter (join its room, load its stalls).
+  // Scenes: the harbor, or the Palazzo (join its live room).
   const ready = status === 'ready' && me !== null
   useEffect(() => {
     if (!ready) return
@@ -222,22 +210,18 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     peerIds.current.clear()
     roomPlayers.current.clear()
     setLive((l) => ({ ...l, count: 0 }))
-    if (scene === 'harbor') {
-      presence.current?.disconnect()
-      setQuarter(null)
-      return
-    }
-    presence.current?.connect(scene)
-    if (scene === PALAZZO) {
-      setQuarter(null)   // the Palazzo has no stalls: its places are the hall, the Wanted board and the officials
-      return
-    }
-    let alive = true
-    const load = () => session.quarter(scene).then((r) => { if (alive && r.ok) setQuarter(r.data) })
-    load()
-    const timer = setInterval(load, 30_000)
-    return () => { alive = false; clearInterval(timer) }
+    if (scene === 'harbor') presence.current?.disconnect()
+    else presence.current?.connect(PALAZZO)
   }, [scene, ready])
+  // The Factotum's statue and portrait in the Palazzo (0.13.0), from the Hall of honor.
+  const [honors] = useLoad(() => session.honors(), [scene === PALAZZO ? game.refreshTick : -1], true)
+  const factotum = honors?.factotum ?? null
+  useEffect(() => {
+    if (!ready || scene !== PALAZZO) return
+    const f = factotum?.look ? { profession: factotum.look.profession_id, name: factotum.name, look: factotum.look.color, hat: factotum.look.hat, rank: factotum.look.rank } : null
+    engine.current?.setFactotum(f)
+    if (factotum?.look) portraitCanvas(factotum).then((c) => engine.current?.setFactotum(f, c)).catch(() => {})
+  }, [JSON.stringify(factotum), scene, ready])
   // A new rank (sash) or look mid-scene.
   useEffect(() => {
     if (ready) engine.current!.setMyLook(myLook(me!))
@@ -278,39 +262,28 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     for (const p of roomPlayers.current.values()) engine.current?.peerUpsert(toPeerRef.current(p))
   }, [friends])
   useEffect(() => {
-    if (scene === 'harbor' || scene === PALAZZO || status !== 'ready') return
-    session.quarter(scene).then((r) => { if (r.ok) setQuarter(r.data) })
-  }, [s.friendsVersion])
-  useEffect(() => {
-    if (status === 'ready' && quarter && quarter.quarter === scene) engine.current?.setStalls(stallInfos(quarter))
-  }, [quarter, status])
-  useEffect(() => {
-    engine.current?.setState(worldState(state, now, board, news?.news ?? [], duke))
-  }, [state, now, board, news, duke, status])
+    engine.current?.setState(worldState(state, now, board, news?.news ?? []))
+  }, [state, now, board, news, status])
   // The Palazzo's officials: a lemon label while today's favor is still open.
   const [npcs] = useLoad(() => session.palazzo(), [scene === PALAZZO ? bagKey : ''], true)
   useEffect(() => {
     if (scene === 'harbor') return
-    if (scene === PALAZZO) {
+    {
       const official = (id: 'notary' | 'crier' | 'steward'): WorldLabel => {
         const n = npcs?.npcs.find((x) => x.id === id)
         return { text: n ? `${n.name} · ${n.title}${n.favor_done ? '' : ' · a favor'}` : id, tone: n && !n.favor_done ? 'ready' : 'plain' }
       }
       engine.current?.setQuarterLabels({
         duke: dukeLabel(duke),
-        hall: { text: 'The Palazzo · Hall of honor', tone: 'plain' },
-        wanted: { text: 'The Wanted board', tone: 'plain' },
+        hall: { text: 'The Palazzo · Hall of honor, merchants, friends', tone: (state.incoming_offers ?? 0) > 0 ? 'ready' : 'plain' },
+        statue: { text: factotum ? `Il Factotum · ${factotum.name}` : 'Il Factotum', tone: 'plain' },
+        desk: { text: 'Selling desk · sell, listings, buy offers', tone: 'plain' },
+        ...Object.fromEntries(GUILDS.map((g) => [`vendor:${g.id}`, { text: g.goods, tone: 'plain' } as WorldLabel])),
         notary: official('notary'), crier: official('crier'), steward: official('steward'),
         home: { text: 'Down to your bottega', tone: 'plain' },
       })
-      return
     }
-    engine.current?.setQuarterLabels({
-      duke: dukeLabel(duke),
-      trainer: { text: `${guild(scene).hall} · guild trainer`, tone: 'plain' },
-      home: { text: 'Down to your bottega', tone: 'plain' },
-    })
-  }, [duke, scene, status, npcs])
+  }, [duke, scene, status, npcs, factotum?.name, state.incoming_offers])
   useEffect(() => engine.current?.focus(focus, panelWidth), [focus, panelWidth, status])
   useEffect(() => engine.current?.setNight(night), [night, status])
 
@@ -355,7 +328,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
   }, [])
 
   const inQuarter = scene !== 'harbor'
-  const placeName = scene === PALAZZO ? 'Piazza del Palazzo' : quarter?.name ?? ''
+  const placeName = 'Piazza del Palazzo'
   const statusText = !inQuarter
     ? ''
     : live.status === 'live'
@@ -419,7 +392,7 @@ function LookSheet({ guild, me, invite, onDone }: { guild: string; me: PresenceM
         <Portrait guild={guild} color={color} hat={hat} rank={me.rank ?? 0} size={72} />
         <div>
           <h2>{invite ? 'New: choose your look' : 'Your look'}</h2>
-          <p class="small">{invite ? 'Every merchant in Portovela can now pick a body color and a hat. Others see it in the quarters.' : 'Others see it in the quarters. Your sash shows your rank.'}</p>
+          <p class="small">{invite ? 'Every merchant in Portovela can now pick a body color and a hat. Others see it in the Palazzo.' : 'Others see it in the Palazzo. Your sash shows your rank.'}</p>
         </div>
       </div>
       <ColorPicker color={color} onChange={setColor} />
@@ -432,4 +405,31 @@ function LookSheet({ guild, me, invite, onDone }: { guild: string; me: PresenceM
       </div>
     </section>
   )
+}
+
+/** Paint the Factotum's portrait (the same flat portrait as the menus) onto a canvas for the Palazzo's façade. */
+function portraitCanvas(f: FactotumRow): Promise<HTMLCanvasElement> {
+  const holder = document.createElement('div')
+  render(<Portrait guild={f.look!.profession_id} color={f.look!.color} hat={f.look!.hat} rank={f.look!.rank} size={240} />, holder)
+  const svg = holder.querySelector('svg')
+  if (!svg) return Promise.reject(new Error('no portrait'))
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+  const url = URL.createObjectURL(new Blob([svg.outerHTML], { type: 'image/svg+xml' }))
+  render(null, holder)
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const c = document.createElement('canvas')
+      c.width = 240
+      c.height = 300
+      const g = c.getContext('2d')!
+      g.fillStyle = '#2A4C9A'   // a majolica-blue ground, like a painted panel
+      g.fillRect(0, 0, 240, 300)
+      g.drawImage(img, 0, 300 - (240 * 172) / 120 - 6, 240, (240 * 172) / 120)
+      URL.revokeObjectURL(url)
+      resolve(c)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('portrait failed')) }
+    img.src = url
+  })
 }

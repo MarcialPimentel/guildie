@@ -70,7 +70,7 @@ flowchart LR
 | | **Calendar & Events** | Weekly rhythm and world events | ✅ 0.5.0 (Guild Week, events, news board); polish M4 |
 | | **Leaderboards** | Public rankings | City directory ✅ 0.3.0; full boards M3 |
 | | **Guilds** | Social layer | Later |
-| | **Presence** | Seeing other merchants live in the guild quarters (cosmetic) | 0.9.0 |
+| | **Presence** | Seeing other merchants live in the Palazzo (cosmetic; guild quarters until 0.13.0) | 0.9.0 |
 | | **Friends** | Players you follow; their stalls everywhere | 0.9.0 |
 | Cross-cutting | **Economy Balance** | Faucets, sinks, and monitoring | ✅ M1 (simulator), ongoing |
 | | **Onboarding** | The first three minutes | M2 (basic), M4 (polish) |
@@ -101,7 +101,7 @@ Everything a player can *do*, and which system owns it. If a new feature adds a 
 | **Learn** a recipe | Professions | 5 min | M2 |
 | **Upgrade** a building | Workshop | 5 min | M2 |
 | **Walk** your merchant (WASD, arrows, click) | Presence | 30 s | 0.9.0 |
-| **Visit** a quarter, a stall, a player | Presence, Leaderboards | 5 min | 0.9.0 |
+| **Visit** the Palazzo, a player | Presence, Leaderboards | 5 min | 0.9.0 (one square since 0.13.0) |
 | **Wave / slap** another merchant | Presence | any | 0.9.0 |
 | **Add / remove** a friend | Friends | 30 s | 0.9.0 |
 | **Contribute** to the Duke's order | The Duke's Order | 30 s | 0.9.0 |
@@ -165,7 +165,7 @@ These rules apply to every system.
 |---|---|
 | **Job** | Define everything that exists, as data |
 | **Owns** | `/content/*.json`: `items`, `recipes`, `professions`, `economy`, later `buildings`, `personas`, `events` |
-| **Rules** | One source of truth, read by both server and client. **Guilds are content too (0.10.3):** `professions.json` holds each guild's names, colors and hats and names its art kit; the client reads it at build time, the server derives the quarters from it, and the realtime rooms get the quarter list in the signed presence pass (professions.md §11). IDs are lowercase snake_case and never renamed once live (players own items by ID). Every file is validated by a test so a typo can't break the live game. |
+| **Rules** | One source of truth, read by both server and client. **Guilds are content too (0.10.3):** `professions.json` holds each guild's names, colors and hats and names its art kit; the client reads it at build time, the server derives guild lists from it (the quarters it drove were removed in 0.13.0), and the realtime rooms get their room list in the signed presence pass (professions.md §11). IDs are lowercase snake_case and never renamed once live (players own items by ID). Every file is validated by a test so a typo can't break the live game. |
 | **M1 adds** | Full launch list (GDD 5.5), recipes, three professions, reference values, a content validator |
 
 ### 4.4 Inventory & Wallet
@@ -534,7 +534,7 @@ Social layer: guild orders needing several professions, a shared guild hall, gui
 - **Never touches value.** Gold, items, trades, orders and friends stay on the PHP server; the room only relays positions, emotes (wave, bow, cheer, shrug; one per second) and slaps.
 - **Looks (0.10.0):** a body color 0–5 and a hat 0–2, checked by the server; players who never chose keep the 0.9.0 look (a color from their player number, the first hat). The rank sash comes from skill. Looks travel only in the signed pass, so nobody can show someone else's.
 - **Only logged-in players join:** the room checks the pass's HMAC-SHA256 signature (secret shared with `config.php` → `realtime_secret`) and expiry, and takes identity from the pass, never from the client.
-- **Rooms:** one per quarter copy (`smiths-1`, `smiths-2`, …), at most `30` players [tune]; a full room sends the join to the next copy.
+- **Rooms:** since 0.13.0 only the Palazzo (`palazzo-1`, `palazzo-2`, …), at most `30` players per copy [tune]; a full room sends the join to the next copy. (0.9.0–0.12.0 also had one per guild quarter.)
 - **Fair play:** positions clamped to the piazza; at most 10 messages a second per client (more are dropped); a slap needs both players' slaps on, distance ≤ 2.5 m and 1.5 s since the slapper's last slap.
 - **Optional:** with no `realtime_url` configured, or the service unreachable, quarters still show stalls, townsfolk and **echoes** (crafters of that guild who acted in the last 30 minutes, from `activity`).
 - Players aren't solid, and clicking a place opens it from anywhere, so nobody can block a door.
@@ -560,7 +560,7 @@ The 3D harbor also acts out results the other systems already decided (0.10.0, c
 
 ### 7.7 The Palazzo and the Hall of honor *(0.11.0)*
 
-The shared square up the Steps where all three guilds meet ([palazzo.md](palazzo.md)): a realtime room like a quarter (`palazzo` is in every presence pass's room list), with the Hall of honor (Il Factotum, the richest, the most skilled, the Duke's best helpers, the finest bottegas; derived views, `honors`), the Wanted board (6.6), the Duke's lectern (6.5) and the officials (6.7). Phones get the same as lists under City → Palazzo.
+The one shared square up the Steps where every guild meets ([palazzo.md](palazzo.md)); since 0.13.0 the only realtime room (`palazzo` is the presence pass's room list). It holds the Hall of honor (Il Factotum, the richest, the most skilled, the Duke's best helpers, the finest bottegas; derived views, `honors`, which also return the Factotum's look for the bronze statue and the portrait), the **marketplace** (a vendor per guild and the selling desk: the Exchange, 6.1, and buy offers, 6.6), the Duke's lectern (6.5) and the officials (6.7). Phones get the market in the Mercato tab and the rest under City → Palazzo.
 
 ## 8. Cross-cutting systems
 

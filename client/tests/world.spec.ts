@@ -47,12 +47,15 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   expect(await page.locator(id('world-label-station')).boundingBox()).toEqual(before)
   await page.mouse.move(5, 5)
 
-    // Click the Mercato building itself: a real raycast through the canvas opens its panel.
-  const at = await page.evaluate(() => window.__guildieWorld?.screenPoint('mercato') ?? null)
+  // Click the storehouse itself: a real raycast through the canvas opens its panel.
+  const at = await page.evaluate(() => window.__guildieWorld?.screenPoint('bag') ?? null)
   expect(at).not.toBeNull()
   await page.mouse.click(at!.x, at!.y)
-  await expect(page.locator(id('panel-mercato'))).toBeVisible()
-  await expect(page.locator(id('browse-blacksmith'))).toBeVisible()
+  await expect(page.locator(id('panel-bag'))).toBeVisible()
+  // 0.13.0: the quay keeps only your own work; the market, the guild hall, the news and the Duke moved up to the Palazzo.
+  // (the Duke's label exists for the Palazzo's lectern, hidden while you're on the quay)
+  for (const gone of ['mercato', 'stall', 'city', 'news', 'duke']) await expect(page.locator(id(`world-label-${gone}`))).toBeHidden()
+  await expect(page.locator(id('dock-steps'))).toHaveText('Up to the Palazzo')
 
   // The station: collect from the mine.
   await page.click(id('dock-station'))
@@ -85,14 +88,8 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await page.locator(id('order-skip')).first().click()
   await message(page, /turned down/)
   await expect.poll(async () => (await page.evaluate(() => window.__guildieWorld!.customers())).filter((c) => waiting.includes(c.order) && c.state === 'waiting').length).toBe(2)
-  await page.click(id('dock-stall'))
-  await expect(page.locator(id('my-listings'))).toBeVisible()
   await page.click(id('dock-bag'))
   await expect(page.locator(id('bag-brass_fittings'))).toBeVisible()
-  await page.click(id('dock-city'))
-  await expect(page.locator(id('player-me'))).toContainText(name)
-  await page.click(id('dock-news'))
-  await expect(page.locator(id('panel-news'))).toBeVisible()
   await page.click(id('dock-ledger'))
   await expect(page.locator(id('footer'))).toContainText(/Client .+ · Server/)
   await page.keyboard.press('Escape')
@@ -129,7 +126,7 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await expect(page.locator(`${id('world')}[data-ready="yes"]`)).toBeVisible({ timeout: 60_000 })
 })
 
-// The living city (0.9.0): walk your merchant, open a place, go up to a guild quarter, see a second player
+// The living city (0.9.0; the Palazzo since 0.13.0): walk your merchant, open a place, go up to the Palazzo, see a second player
 // live (two browsers through the realtime room), follow their moves, slap, respect a slap opt-out, and visit
 // their bottega. Needs the realtime server running locally (realtime/src/server.mjs) and realtime_url in config.php.
 async function joinAs(page: Page, name: string, guild: string, look = { color: 0, hat: 0 }) {
@@ -143,11 +140,10 @@ async function joinAs(page: Page, name: string, guild: string, look = { color: 0
   await expect(page.locator(`${id('world')}[data-ready="yes"]`)).toBeVisible({ timeout: 60_000 })
 }
 
-async function goQuarter(page: Page, quarter: string) {
+/** Up the Steps: since 0.13.0 they lead straight to the Palazzo, the one shared square. */
+async function goPalazzo(page: Page) {
   await page.click(id('dock-steps'))
-  await expect(page.locator(id('quarter-chooser'))).toBeVisible()
-  await page.click(id(`go-${quarter}`))
-  await expect(page.locator(`${id('world')}[data-scene="${quarter}"]`)).toBeVisible()
+  await expect(page.locator(`${id('world')}[data-scene="palazzo"]`)).toBeVisible()
   await expect(page.locator(id('world-presence'))).not.toHaveAttribute('data-status', /idle|connecting/, { timeout: 20_000 })
 }
 
@@ -182,8 +178,8 @@ async function hold(page: Page, key: string, ms: number) {
   await page.keyboard.up(key)
 }
 
-test('the living city: walk, a quarter, a second player live, and a slap', async ({ browser }, info) => {
-  test.skip(info.project.name !== 'desktop', 'The 3D city is the desktop view; phones get the quarters as lists (play.spec.ts).')
+test('the living city: walk, the Palazzo, a second player live, and a slap', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'desktop', 'The 3D city is the desktop view; phones get the City tab as lists (play.spec.ts).')
   const stamp = Date.now() % 1_000_000
   const nameA = `lca${stamp}`, nameB = `lcb${stamp}`
   const opts = { baseURL: info.project.use.baseURL, viewport: { width: 1280, height: 860 } }
@@ -199,25 +195,24 @@ test('the living city: walk, a quarter, a second player live, and a slap', async
   await hold(a, 'd', 900)
   await expect.poll(async () => (await me(a)).x).toBeGreaterThan(start.x + 1)
 
-  // Open a place: the Duke's herald on the quay opens the Duke's order (and your merchant walks there).
-  await a.click(id('world-label-duke'))
-  await expect(a.locator(id('panel-duke'))).toBeVisible()
-  await expect(a.locator(id('duke'))).toBeVisible()
+  // Open a place: the customers at your door (and your merchant walks there).
+  await a.click(id('world-label-orders'))
+  await expect(a.locator(id('panel-orders'))).toBeVisible()
   await a.keyboard.press('Escape')
 
-  // Up the Steps to the Smiths' quarter.
-  await goQuarter(a, 'blacksmith')
+  // Up the Steps to the Palazzo.
+  await goPalazzo(a)
   const presence = await a.locator(id('world-presence')).getAttribute('data-status')
   test.skip(presence === 'off', 'Presence is off: set realtime_url and realtime_secret in config.php and run the realtime test server.')
   await expect(a.locator(id('world-presence'))).toHaveAttribute('data-status', 'live')
-  await expect.poll(async () => (await me(a)).scene).toBe('blacksmith')   // after the fade
+  await expect.poll(async () => (await me(a)).scene).toBe('palazzo')   // after the fade
 
-  // The Smiths' trainer stands at the guild hall door (0.10.0).
-  expect(await a.evaluate(() => window.__guildieWorld!.trainer())).toBe('trainer:blacksmith')
+  // The marketplace's vendors stand at their stalls: the three officials and one vendor per guild plus the desk clerk (0.13.0).
+  await expect.poll(() => a.evaluate(() => window.__guildieWorld!.officials().length)).toBe(7)
 
   // A second player (another browser) arrives: each sees the other, live.
   await joinAs(b, nameB, 'alchemist', { color: 4, hat: 1 })
-  await goQuarter(b, 'blacksmith')
+  await goPalazzo(b)
   await expect(b.locator(id('world-presence'))).toHaveAttribute('data-status', 'live')
   await expect(peerLabel(a, nameB)).toBeVisible()
   await expect(peerLabel(b, nameA)).toBeVisible()
@@ -264,10 +259,19 @@ test('the living city: walk, a quarter, a second player live, and a slap', async
   await expect(a.locator(id('compose'))).toBeVisible()
   await a.click(id('panel-close'))
 
-  // The quarter's guild hall door: the guild trainer (0.8.0).
-  await a.click(id('dock-trainer'))
-  await expect(a.locator(id('panel-trainer'))).toBeVisible()
-  await expect(a.locator(id('trainer'))).toBeVisible()
+  // The marketplace (0.13.0): a guild's vendor shows only that guild's goods; the desk sells.
+  await a.click(id('dock-vendor:alchemist'))
+  await expect(a.locator(id('panel-vendor:alchemist'))).toBeVisible()
+  await expect(a.locator(id('browse-alchemist'))).toBeVisible()
+  await expect(a.locator(id('browse-blacksmith'))).toHaveCount(0)
+  await a.click(id('dock-desk'))
+  await expect(a.locator(id('panel-desk'))).toBeVisible()
+  await a.click(id('mode-mine'))
+  await expect(a.locator(id('my-listings'))).toBeVisible()
+  // The Palazzo's door: the Hall of honor and the city's merchants (the guild hall's lists until 0.13.0).
+  await a.click(id('dock-hall'))
+  await expect(a.locator(id('honors'))).toBeVisible()
+  await expect(a.locator(id('player-me'))).toContainText(nameA)
   await a.click(id('panel-close'))
 
   // B leaves: A no longer sees them. Then A goes home down the Steps.
@@ -275,7 +279,7 @@ test('the living city: walk, a quarter, a second player live, and a slap', async
   await expect(a.locator(`[data-testid="world-peer-${idB}"]`)).toHaveCount(0)
   await a.click(id('dock-home'))
   await expect(a.locator(`${id('world')}[data-scene="harbor"]`)).toBeVisible()
-  await expect(a.locator(id('world-label-mercato'))).toBeVisible()
+  await expect(a.locator(id('world-label-workbench'))).toBeVisible()
 
   await ctxA.close()
   await ctxB.close()
@@ -304,8 +308,8 @@ test('an older account is invited once to choose a look', async ({ page }, info)
   await expect(page.locator(id('look-invite'))).toHaveCount(0)
 })
 
-test('the Palazzo: two guilds meet live, the officials, the Wanted board and your bottega', async ({ browser }, info) => {
-  test.skip(info.project.name !== 'desktop', 'The 3D Palazzo is the desktop view; phones see it in City → Palazzo (play.spec.ts).')
+test('the Palazzo: two guilds meet live, the officials, the market, buy offers, the Factotum and your bottega', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'desktop', 'The 3D Palazzo is the desktop view; phones see it in City → Palazzo and the Mercato tab (play.spec.ts).')
   const stamp = Date.now() % 1_000_000
   const nameA = `pza${stamp}`, nameB = `pzb${stamp}`
   const opts = { baseURL: info.project.use.baseURL, viewport: { width: 1280, height: 860 } }
@@ -324,10 +328,15 @@ test('the Palazzo: two guilds meet live, the officials, the Wanted board and you
   await expect(a.locator(id('bottega-build'))).toBeDisabled()
   await a.keyboard.press('Escape')
 
-  // Up the Steps to the Palazzo: the hall, the Wanted board and three officials.
-  await goQuarter(a, 'palazzo')
-  await expect.poll(() => a.evaluate(() => window.__guildieWorld!.officials())).toEqual(['notary', 'crier', 'steward'])
-  await expect(a.locator(id('world-label-wanted'))).toBeVisible()
+  // Up the Steps to the Palazzo: the hall, the marketplace ring, the Factotum's statue and three officials.
+  await goPalazzo(a)
+  await expect.poll(() => a.evaluate(() => window.__guildieWorld!.officials()))
+    .toEqual(['notary', 'crier', 'steward', 'blacksmith', 'alchemist', 'leatherworker', 'traders'])   // each vendor in their guild's dress; a trader keeps the desk
+  await expect(a.locator(id('world-label-desk'))).toBeVisible()
+  await expect(a.locator(id('world-label-vendor:blacksmith'))).toBeVisible()
+  // The richest merchant stands on the plinth in bronze (0.13.0): there is always one, since every crafter starts with ducats.
+  await expect.poll(() => a.evaluate(() => window.__guildieWorld!.statue()), { timeout: 20_000 }).not.toBeNull()
+  await expect(a.locator(id('world-label-statue'))).toContainText('Il Factotum')
   await expect(a.locator(id('world-label-notary'))).toContainText('Ser Benedetto')
   await a.click(id('world-label-notary'))
   await expect(a.locator(id('panel-notary'))).toBeVisible()
@@ -336,8 +345,11 @@ test('the Palazzo: two guilds meet live, the officials, the Wanted board and you
   await a.click(id('dock-hall'))
   await expect(a.locator(id('honors-skill'))).toBeVisible()
 
-  // Post a request on the Wanted board: the ducats are held.
-  await a.click(id('dock-wanted'))
+  await expect(a.locator(id('factotum')).locator('svg.portrait')).toBeVisible()
+
+  // A buy offer at the selling desk (the Wanted board until 0.13.0): the ducats are held.
+  await a.click(id('dock-desk'))
+  await a.click(id('mode-offers'))
   await a.selectOption(id('wanted-item'), 'leather_grip')
   await a.click(id('wanted-post'))
   await message(a, 'Posted')
@@ -346,12 +358,13 @@ test('the Palazzo: two guilds meet live, the officials, the Wanted board and you
 
   // A tanner arrives: the Palazzo is open to every guild, so they meet live, and the tanner sees the notice.
   await joinAs(b, nameB, 'leatherworker')
-  await goQuarter(b, 'palazzo')
-  // Both are in the same room (A's camera may be zoomed in on the Wanted board, so check the room, not the screen).
+  await goPalazzo(b)
+  // Both are in the same room (A's camera may be zoomed in on the desk, so check the room, not the screen).
   await expect(peerLabel(b, nameA)).toBeVisible({ timeout: 20_000 })
   await expect.poll(() => b.evaluate(() => window.__guildieWorld!.me().scene)).toBe('palazzo')   // after the arrival fade
   await expect.poll(() => a.evaluate(() => window.__guildieWorld!.peers().length), { timeout: 20_000 }).toBe(1)
-  await b.click(id('dock-wanted'))
+  await b.click(id('dock-desk'))
+  await b.click(id('mode-offers'))
   await expect(b.locator('[data-testid^="wanted-post-"]', { hasText: nameA })).toContainText('Leather Grip')
 
   // Back down the Steps.

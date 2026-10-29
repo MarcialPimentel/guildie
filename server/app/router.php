@@ -48,7 +48,6 @@ function guildie_actions(): array
         'presence_token'    => [['GET', 'POST'], true,  'action_presence_token'],
         'city_prefs'        => [['POST'],        true,  'action_city_prefs'],
         'city_look'         => [['POST'],        true,  'action_city_look'],
-        'quarter'           => [['GET', 'POST'], true,  'action_quarter'],
         'friends'           => [['GET'],         true,  'action_friends'],
         'friend_add'        => [['POST'],        true,  'action_friend_add'],
         'friend_remove'     => [['POST'],        true,  'action_friend_remove'],
@@ -308,11 +307,6 @@ function action_city_look(array $body, ?int $playerId): array
     return city_set_look($playerId, body_int($body, 'color', 0, 0, CITY_LOOKS - 1), body_int($body, 'hat', 0, 0, city_hat_count(null) - 1));
 }
 
-function action_quarter(array $body, ?int $playerId): array
-{
-    $quarter = isset($body['quarter']) ? body_string($body, 'quarter') : (string) ($_GET['quarter'] ?? '');
-    return city_quarter($playerId, $quarter);
-}
 
 function action_friends(array $body, ?int $playerId): array
 {

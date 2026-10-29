@@ -28,6 +28,15 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
 10. **Little surprises:** collecting can turn up a rich vein, a bumper crop or a prize pelt, and crafts sometimes come out with a bonus item.
 11. **While you were away:** come back after a while and the game shows what happened, with one tap to collect everything.
 
+## New in 0.13.0: one square
+
+- **Your quay is just your workshop now:** station, workbench, customers, your bottega and the storehouse. The guild trainer is in the workbench's Recipes list.
+- **Up the Steps is the Palazzo, the one square where everyone meets.** The guild quarters are gone.
+- **The marketplace** is in the middle of the Palazzo: a vendor for each guild's goods, and the **selling desk** for selling, your listings and **buy offers** (what the Wanted board was). On a computer you walk up here to trade. On a phone it's still the Mercato tab.
+- **Il Factotum**, the richest merchant, stands on the plinth in bronze, and their portrait hangs over the Palazzo's door.
+- **Players, friends and trades** are behind the Palazzo's door (with the Hall of honor).
+- **Questions for this playtest:** Does the quay feel calmer? Does walking up to trade feel worth it, or like a chore? Do you notice and want to become the Factotum?
+
 ## New in 0.12.0: the long road to 100
 
 - **Every guild now has 16 recipes, all the way to skill 100.** Open the guild trainer (the guild hall door in 3D, or the Recipes list in the Bottega tab) to see what you can learn next, what each recipe needs and which other guild's goods it uses.

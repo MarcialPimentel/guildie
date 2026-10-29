@@ -1,5 +1,7 @@
 # Guildie — The Living City (0.9.0)
 
+> **Since 0.13.0 the guild quarters are gone:** the Palazzo is the one shared square, and the quay keeps only your own work ([palazzo.md](palazzo.md) "0.13.0: one square"). The sections below describe 0.9.0 as built.
+
 **Status:** Design built on Marz's decisions of 2026-10-28 (live presence, a merchant you steer, guild quarters, friends, gentlemanly slaps, the Duke's order). Released as **0.9.0**, after M2 step 2 (0.8.0). Desktop first; phones keep the classic view and get a list version of the quarters.
 
 **In one sentence:** your bottega stays your quick 30-second home, and a short walk up the steps takes you to your guild's quarter, a piazza where you see other crafters move in real time, visit their stalls, trade at their door, wave, slap a glove across a rival's cheek, and pitch in on the Duke's order.

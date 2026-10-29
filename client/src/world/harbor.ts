@@ -150,6 +150,12 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     picks.set(id, [...(picks.get(id) ?? []), g])
     return g
   }
+  /** Scenery: built like a place but not clickable (the quay keeps only your own work since 0.13.0). */
+  const scenery = () => {
+    const g = new THREE.Group()
+    root.add(g)
+    return g
+  }
   /** Bake a place into its own vertex-colored material, so hovering can tint just that place. */
   const finish = (id: PickId, g: THREE.Group) => {
     const own = vertexColorMaterial()
@@ -328,8 +334,9 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   const workMarker = marker(root, new THREE.Vector3(WORK_X, 6.4, -2.5), '#F2C53D')
   finish('workbench', work)
 
-  // your market stall: one good on the counter per active listing
-  const stall = place('stall')
+  // your market stall: one good on the counter per active listing (scenery since 0.13.0: you sell at the Palazzo,
+  // but buyers still come here to pick up what they bought)
+  const stall = scenery()
   box(stall, 3.2, 0.95, 1.3, C.wood, -8.2, 1, 1.9)
   for (const [x, z] of [[-9.7, 1.3], [-6.7, 1.3], [-9.7, 2.5], [-6.7, 2.5]]) box(stall, 0.12, 2.6, 0.12, C.woodDark, x, 1, z)
   {
@@ -342,7 +349,7 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   const goods = instanced(stall, new THREE.BoxGeometry(0.42, 0.42, 0.42), whiteMat,
     Array.from({ length: 6 }, (_, i) => new THREE.Vector3(-9.3 + (i % 3) * 1.1, 2.16 + Math.floor(i / 3) * 0.44, 1.75 + (i % 2) * 0.2)),
     { colors: (i) => ['#F2C53D', '#2FB59D', '#C7733E', '#B5683A', '#2A4C9A', '#EFA9A0'][i], rotY: (i) => i * 0.4 })
-  finish('stall', stall)
+  bake(stall, vc)
 
   // where customers wait at the door (the order board). The customers themselves are blobs the engine
   // walks in and out (0.10.0); here are their spots and the lemon "ready to fill" marker over each.
@@ -367,8 +374,9 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     { colors: (i) => (i % 3 === 0 ? '#B9824F' : i % 3 === 1 ? '#A9784A' : '#C49260'), rotY: (i) => (i % 3) * 0.2 - 0.2 })
   finish('bag', store)
 
-  // the Mercato: a loggia with arches and banners
-  const mercato = place('mercato')
+  // the Dogana (customs house): a loggia with arches and banners. Scenery since 0.13.0; it was the Mercato
+  // until the market moved up to the Palazzo
+  const mercato = scenery()
   const MX = -22
   box(mercato, 10, 0.3, 6, C.stoneDark, MX, 1, -3)
   box(mercato, 10, 5.2, 0.5, '#F4EBD8', MX, 1.3, -5.8)
@@ -383,14 +391,14 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     for (let k = 0; k < 4; k++) box(mercato, 0.4, 0.4, 0.4, ['#F2C53D', '#2FB59D', '#C7733E', '#EFA9A0'][k], MX + dx - 0.9 + k * 0.6, 2.2, -3.2)
   }
   {
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.15), new THREE.MeshStandardMaterial({ map: signTexture('Mercato') }))
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.15), new THREE.MeshStandardMaterial({ map: signTexture('Dogana') }))
     sign.position.set(MX, 5.95, 0.02)
     mercato.add(sign)
   }
-  finish('mercato', mercato)
+  bake(mercato, vc)
 
-  // the guild hall: players, profiles and trades
-  const hall = place('city')
+  // the guild hall: scenery since 0.13.0 (players, friends and trades are at the Palazzo now)
+  const hall = scenery()
   const HX = 21
   box(hall, 8, 6.4, 5, '#EFD9B5', HX, 1, -3.6)
   hipRoof(hall, 8.6, 5.6, 2, C.roof, HX, 7.4, -3.6)
@@ -406,27 +414,16 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     box(hall, 0.5, 0.5, 0.07, '#F2C53D', HX + dx, 5.4, -0.98, false)
   }
   box(hall, 4, 0.3, 1.4, C.stoneDark, HX, 1, -0.4)
-  finish('city', hall)
+  bake(hall, vc)
 
-  // the Duke's notice board by the storehouse (0.9.0): the city-wide order. A herald blob stands beside it.
-  const duke = place('duke')
-  for (const dx of [-1.1, 1.1]) box(duke, 0.16, 2.6, 0.16, C.woodDark, 17.6 + dx, 1, 0.2)
-  box(duke, 2.6, 1.7, 0.14, '#6E4A2C', 17.6, 2.0, 0.2)
-  box(duke, 2.3, 1.4, 0.05, C.cream, 17.6, 2.15, 0.29, false)
-  box(duke, 2.8, 0.22, 0.4, C.roof, 17.6, 3.7, 0.2)
-  box(duke, 0.6, 0.16, 0.06, '#A9492A', 17.6, 3.2, 0.33, false)
-  for (let i = 0; i < 4; i++) box(duke, 1.5 - i * 0.18, 0.06, 0.02, '#4A6B6F', 17.6, 2.45 + i * 0.25, 0.33, false)
-  box(duke, 0.5, 1.6, 0.05, '#2A4C9A', 16.0, 2.6, 0.2, false)
-  box(duke, 0.5, 0.3, 0.05, '#F2C53D', 16.0, 4.2, 0.2, false)
-  finish('duke', duke)
 
-  // the Steps up to the guild quarters (0.9.0): an arch with a sign over the stairs at the east end
+  // the Steps up to the Palazzo (0.9.0; straight to the Palazzo since 0.13.0): an arch over the stairs at the east end
   const stepsUp = place('steps')
   for (const dx of [-1.5, 1.5]) box(stepsUp, 0.5, 4.2, 0.5, '#F4EBD8', 27 + dx, 1, -1.4)
   box(stepsUp, 3.6, 0.6, 0.6, '#F4EBD8', 27, 5.2, -1.4)
   solid(stepsUp, new THREE.SphereGeometry(0.35, 8, 6), C.lemon, 27, 6.1, -1.4)
   {
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), new THREE.MeshStandardMaterial({ map: signTexture('To the quarters') }))
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), new THREE.MeshStandardMaterial({ map: signTexture('To the Palazzo') }))
     sign.position.set(27, 4.6, -1.08)
     stepsUp.add(sign)
   }
@@ -474,7 +471,6 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     return ship
   }
   const galley = makeShip(8, 2.4, '#7A4E2D', '#1F8A87', [{ x: 1, h: 6.5, a: 2.8, b: 2.2 }, { x: -2, h: 4.8, a: 2, b: 1.6 }])
-  picks.set('news', [galley])
   const gozzo = makeShip(3.4, 1.3, '#F5F0E4', '#1F8A87', [])
   gozzo.position.set(12.5, 0, 9)
   gozzo.rotation.y = -Math.PI / 2 + 0.1
@@ -565,24 +561,20 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   // ------------------------------------------------------------ focus and label points
   const shipCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(22, 0, 21), new THREE.Vector3(14, 0, 24), new THREE.Vector3(5.3, 0, 11.5))
   const focus: Partial<Record<PickId, THREE.Vector3>> = {
-    duke: new THREE.Vector3(17.6, 2, 0.4), steps: new THREE.Vector3(27, 2, -1.2),
+    steps: new THREE.Vector3(27, 2, -1.2),
     station: new THREE.Vector3(STATION_X, 2, -3.5), workbench: new THREE.Vector3(WORK_X, 2.2, -2.4),
     orders: new THREE.Vector3(-3, 1.5, 0.6), ledger: new THREE.Vector3(-3, 3, -3), bag: new THREE.Vector3(12.5, 2.5, -2.6),
-    stall: new THREE.Vector3(-8.2, 1.8, 1.9), mercato: new THREE.Vector3(MX, 3, -3), city: new THREE.Vector3(HX, 4, -3.4),
-    news: new THREE.Vector3(),
   }
   const labels: Partial<Record<PickId, THREE.Vector3>> = {
-    duke: new THREE.Vector3(17.6, 5.4, 0.2), steps: new THREE.Vector3(27, 7.3, -1.4),
+    steps: new THREE.Vector3(27, 7.3, -1.4),
     station: new THREE.Vector3(STATION_X, kit.stationLabelY, -3.8), workbench: new THREE.Vector3(WORK_X, 5.9, -2.2),
     orders: new THREE.Vector3(-2.6, 3.7, 1.2), ledger: new THREE.Vector3(-3, 8.7, -3.6), bag: new THREE.Vector3(13, 7.4, -3.6),
-    stall: new THREE.Vector3(-8.2, 4.4, 1.9), mercato: new THREE.Vector3(MX, 9, -3), city: new THREE.Vector3(HX, 13.6, -3.6),
-    news: new THREE.Vector3(),
   }
 
   return {
     root, picks, highlight, setBottega, builderSpot: new THREE.Vector3(1.6, 1, -0.4),
-    focusPoint: (id) => (id === 'news' ? galley.position.clone().setY(2) : (focus[id] ?? new THREE.Vector3()).clone()),
-    labelPoint: (id) => (id === 'news' ? galley.position.clone().setY(8.4) : labels[id] ?? new THREE.Vector3(0, -100, 0)),
+    focusPoint: (id) => (focus[id] ?? new THREE.Vector3()).clone(),
+    labelPoint: (id) => labels[id] ?? new THREE.Vector3(0, -100, 0),
     live: {
       station: stationSets, stationCaps, stationMarker, workMarker, workLight, workGlow, workAnim, crates, goods, customers, bunting,
       galley, gozzo, gulls, particles, particleKind,

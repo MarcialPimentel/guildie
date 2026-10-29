@@ -7,18 +7,11 @@ declare(strict_types=1);
  * nothing here changes gold or items. Owns: friends, city_prefs.
  */
 
-const CITY_STALLS = 12;              // bottegas around a piazza
 const CITY_ECHO_SECONDS = 1800;      // crafters who acted in the last 30 minutes show as echoes
 const CITY_TOKEN_SECONDS = 600;      // a presence pass lasts 10 minutes
 const FRIENDS_MAX = 50;
 const CITY_LOOKS = 6;                // body colors (client/src/world/blobs.ts BODY_COLORS)
 const CITY_PALAZZO = 'palazzo';      // the shared square with the city hall (0.11.0): a room like a quarter, open to every guild
-
-/** The quarters: one per guild in content/professions.json. */
-function city_quarters(): array
-{
-    return array_keys(content_professions());
-}
 
 /**
  * How many hats a guild has (its guild.hats names in content/professions.json; the client draws one per name).
@@ -158,7 +151,7 @@ function city_presence_token(int $playerId): array
     $payload = b64url(json_encode([
         'pid' => $me['id'], 'n' => $me['name'], 'p' => $me['profession'], 'l' => $me['look'], 'ht' => $me['hat'], 'r' => $me['rank'],
         's' => $me['slaps'] ? 1 : 0, 'exp' => $exp,
-        'q' => [...city_quarters(), CITY_PALAZZO],   // the rooms a pass may open: one per guild, plus the Palazzo
+        'q' => [CITY_PALAZZO],   // the rooms a pass may open: the Palazzo, the one shared square since 0.13.0
     ], JSON_UNESCAPED_UNICODE));
     $sig = b64url(hash_hmac('sha256', $payload, $secret, true));
     return ['enabled' => true, 'url' => $url, 'token' => "$payload.$sig", 'expires_in' => CITY_TOKEN_SECONDS, 'me' => $me];
@@ -320,51 +313,3 @@ function city_stalls(PDO $pdo, int $viewerId, array $playerIds, array $friendIds
     return $out;
 }
 
-/**
- * One guild quarter: up to 12 stalls, friends first (from any guild), then this guild's crafters
- * by who was seen most recently. You get a stall in your own guild's quarter.
- */
-function city_quarter(int $viewerId, string $quarter): array
-{
-    if (!in_array($quarter, city_quarters(), true)) {
-        throw new ApiError('bad_request', 'Quarter must be one of: ' . implode(', ', city_quarters()) . '.');
-    }
-    $pdo = db();
-    $friendIds = friends_ids($pdo, $viewerId);
-    $stmt = $pdo->prepare('SELECT player_id FROM player_professions WHERE profession_id = ?');
-    $stmt->execute([$quarter]);
-    $guild = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
-    $seen = players_last_seen($pdo);
-    usort($guild, fn($a, $b) => ($seen[$a] ?? PHP_INT_MAX) <=> ($seen[$b] ?? PHP_INT_MAX) ?: $a <=> $b);
-
-    $ids = [];
-    foreach ($friendIds as $id) {
-        $ids[] = $id;
-    }
-    if (in_array($viewerId, $guild, true) && !in_array($viewerId, $ids, true)) {
-        $ids[] = $viewerId;
-    }
-    foreach ($guild as $id) {
-        if (count($ids) >= CITY_STALLS) {
-            break;
-        }
-        if (!in_array($id, $ids, true)) {
-            $ids[] = $id;
-        }
-    }
-    $ids = array_slice($ids, 0, CITY_STALLS);
-    $def = content_profession($quarter);
-    return [
-        'quarter'  => $quarter,
-        'name'     => city_quarter_name($quarter),
-        'guild'    => $def['name'] ?? $quarter,
-        'crafters' => count($guild),
-        'stalls'   => city_stalls($pdo, $viewerId, $ids, $friendIds),
-    ];
-}
-
-function city_quarter_name(string $quarter): string
-{
-    $g = content_profession($quarter)['guild'] ?? null;   // content/professions.json
-    return $g ? sprintf('%s quarter · %s', $g['quarter'], $g['piazza']) : $quarter;
-}

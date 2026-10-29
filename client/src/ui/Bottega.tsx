@@ -89,7 +89,7 @@ export function BottegaCard({ state, now }: { state: GameState; now: number }) {
             ))}
           </div>
           {!skilled && <p class="muted small">The guild lets you build it from skill {next.needs_skill}. You are at {p.skill}.</p>}
-          {skilled && !canAfford && <p class="muted small">Craft what you can, and buy the rest at the Mercato, on the Wanted board or from other crafters.</p>}
+          {skilled && !canAfford && <p class="muted small">Craft what you can, and buy the rest at the Palazzo's marketplace (with a buy offer if nobody sells it) or from other crafters.</p>}
           <ActionButton
             action={() => session.workshopUpgrade()}
             success={`The builders are at work on your ${next.name}.`}

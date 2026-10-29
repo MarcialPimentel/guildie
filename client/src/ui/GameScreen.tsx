@@ -93,9 +93,12 @@ export function GameScreen() {
     },
     openTab(name: TabName, req: TabRequest = {}) {
       if (mode === '3d') {
-        // In the harbor, a tab is a place: open its panel instead.
-        const id: PickId = name === 'workshop' ? 'workbench' : name === 'bag' ? 'bag' : name === 'city' ? 'city' : req.market === 'mine' ? 'stall' : 'mercato'
-        setPanel({ id, request: req })
+        // In 3D a tab is a place: open its panel instead. Trade happens at the Palazzo's marketplace (0.13.0),
+        // so the Mercato and the City walk you up there: the selling desk, your guild's vendor, or the hall.
+        const mine = state.profession?.id ?? ''
+        const id: PickId = name === 'workshop' ? 'workbench' : name === 'bag' ? 'bag' : name === 'city' ? 'hall'
+          : req.sellItem || req.market === 'sell' || req.market === 'mine' || req.market === 'offers' ? 'desk' : `vendor:${req.guild ?? mine}`
+        setPanel({ id, request: id === 'desk' && !req.market && !req.sellItem ? { ...req, market: 'sell' } : req })
         return
       }
       setRequest(req)
@@ -109,7 +112,7 @@ export function GameScreen() {
   const screenName = mode === '3d' ? `3D/${view || 'harbor'}` : TABS.find(([k]) => k === tab)![1] + (view ? `/${view}` : '')
 
   const openPanel = useCallback((id: PickId) => {
-    setPanel({ id, request: id === 'stall' ? { market: 'mine' } : id === 'mercato' ? { market: 'browse' } : {} })
+    setPanel({ id, request: id === 'desk' ? { market: 'sell' } : id.startsWith('vendor:') ? { market: 'browse', guild: id.slice(7) } : {} })
   }, [])
   const closePanel = useCallback(() => setPanel(null), [])
   const switchMode = (m: ViewMode) => {

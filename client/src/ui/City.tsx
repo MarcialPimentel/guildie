@@ -1,6 +1,7 @@
 // City (#31, #32, #38): every crafter in one list (gold and crafts columns, the Factotum title), their profiles
 // and shop windows, and direct trades. Views: players -> profile -> compose; trades (offers to you, yours, recent).
-// 0.9.0 (the living city): the guild quarters and friends as lists, and the Duke's order.
+// 0.9.0 (the living city): friends and the Duke's order. 0.13.0: no guild quarters; in 3D this sits in the
+// Palazzo's hall (players, friends, trades) under the Hall of honor.
 import { PalazzoList } from './Palazzo'
 import { useEffect, useState } from 'preact/hooks'
 import { duration, gold, seen } from '../format'
@@ -9,11 +10,10 @@ import { session, useSession } from '../session'
 import type { ItemCount, MarketRow, Offer } from '../types'
 import { ActionButton, Modes, Stepper, useGame, useLoad } from './common'
 import { DukeOrder } from './Duke'
-import { FriendsList, QuarterList } from './Quarters'
+import { FriendsList } from './Friends'
 
 type View =
   | { name: 'players' }
-  | { name: 'quarters' }
   | { name: 'friends' }
   | { name: 'duke' }
   | { name: 'palazzo' }
@@ -23,16 +23,16 @@ type View =
 
 const MAX_ITEM_QTY = 999
 
-export function City({ onView }: { onView: (v: string) => void }) {
+export function City({ onView, inHall = false }: { onView: (v: string) => void; inHall?: boolean }) {
   const s = useSession()
   const [view, setView] = useState<View>({ name: 'players' })
-  const [from, setFrom] = useState<'players' | 'quarters' | 'friends'>('players')
+  const [from, setFrom] = useState<'players' | 'friends'>('players')
   useEffect(() => onView(view.name), [view.name])
   const offers = s.state!.incoming_offers ?? 0
-  type Mode = 'players' | 'quarters' | 'friends' | 'duke' | 'palazzo' | 'trades'
+  type Mode = 'players' | 'friends' | 'duke' | 'palazzo' | 'trades'
   const mode: Mode = view.name === 'profile' || view.name === 'compose' ? from : view.name
   const open = (id: number) => {
-    if (view.name === 'players' || view.name === 'quarters' || view.name === 'friends') setFrom(view.name)
+    if (view.name === 'players' || view.name === 'friends') setFrom(view.name)
     setView({ name: 'profile', id })
   }
 
@@ -40,11 +40,15 @@ export function City({ onView }: { onView: (v: string) => void }) {
     <>
       <Modes<Mode>
         value={mode}
-        options={[['players', 'Players'], ['quarters', 'Quarters'], ['friends', 'Friends'], ['duke', "Duke's order"], ['palazzo', 'Palazzo'], ['trades', offers > 0 ? `Trades (${offers})` : 'Trades']]}
+        options={[
+          ['players', 'Players'], ['friends', 'Friends'],
+          // in the 3D Palazzo the Duke's lectern and the officials are places of their own
+          ...(inHall ? [] : [['duke', "Duke's order"], ['palazzo', 'Palazzo']] as [Mode, string][]),
+          ['trades', offers > 0 ? `Trades (${offers})` : 'Trades'],
+        ]}
         onChange={(m) => setView({ name: m } as View)}
       />
       {view.name === 'players' && <Players open={open} />}
-      {view.name === 'quarters' && <QuarterList open={open} />}
       {view.name === 'friends' && <FriendsList open={open} />}
       {view.name === 'duke' && <DukeOrder />}
       {view.name === 'palazzo' && <PalazzoList />}
@@ -115,7 +119,7 @@ function Players({ open }: { open: (id: number) => void }) {
 
 /**
  * A crafter's shop window and trade form, for the 3D world's side panel (tap a player or their stall).
- * `extra` adds buttons under the profile (e.g. Wave and Slap when they're in the quarter with you).
+ * `extra` adds buttons under the profile (e.g. Wave and Slap when they're in the Palazzo with you).
  */
 export function Crafter({ id, extra }: { id: number; extra?: preact.ComponentChildren }) {
   const [composing, setComposing] = useState<string | null>(null)
@@ -144,7 +148,7 @@ function ProfileView({ id, back, trade, extra }: { id: number; back: (() => void
       {p.can_trade && <button onClick={() => trade(p.name)} data-testid="propose-trade">Propose a trade</button>}
       {!p.me && (p.friend
         ? <ActionButton class="secondary small" action={() => session.friendRemove(p.id)} success={`${p.name} removed from your friends.`} after={() => reload()} testid="friend-remove">★ Friend · remove</ActionButton>
-        : <ActionButton class="secondary small" action={() => session.friendAdd(p.id)} success={`${p.name} is now your friend: their stall shows first in every quarter.`} after={() => reload()} testid="friend-add">Add friend</ActionButton>)}
+        : <ActionButton class="secondary small" action={() => session.friendAdd(p.id)} success={`${p.name} is now your friend.`} after={() => reload()} testid="friend-add">Add friend</ActionButton>)}
       {extra}
       <h2>Shop window</h2>
       {p.listings.length === 0 && <p class="muted">Nothing listed at the Mercato right now.</p>}

@@ -12,13 +12,16 @@
 import * as THREE from 'three'
 import { Blob, Glove, Shadows, blobMaterial, knownCharacter, parcelGeometry, type Character, type Emote } from './blobs'
 import { buildHarbor, type Harbor } from './harbor'
-import { buildQuarter, QUARTER_BOUNDS, QUARTER_SPAWN, type Quarter } from './quarter'
+import { QUARTER_BOUNDS, QUARTER_SPAWN, type Quarter } from './square'
+import { GUILDS } from '../guilds'
 import { buildPalazzo } from './palazzo'
 import { PALAZZO, type MyLook, type Peer, type PickId, type ProfessionId, type RoomEmote, type SaleShow, type Scene, type StallInfo, type WorldCallbacks, type WorldEngine, type WorldLabel, type WorldState } from './types'
 
-const HARBOR_PICKS: PickId[] = ['station', 'workbench', 'orders', 'ledger', 'bag', 'stall', 'mercato', 'city', 'news', 'duke', 'steps']
-const QUARTER_PICKS: PickId[] = ['duke', 'trainer', 'home']
-const PALAZZO_PICKS: PickId[] = ['duke', 'hall', 'wanted', 'notary', 'crier', 'steward', 'home']
+// 0.13.0: the quay keeps only your own work; trade, the Duke, friends and the officials are up at the Palazzo.
+const HARBOR_PICKS: PickId[] = ['station', 'workbench', 'orders', 'ledger', 'bag', 'steps']
+// The Palazzo (the only square since 0.13.0): the hall, the Factotum's statue, the marketplace ring (one vendor
+// per guild in content, plus the selling desk), the Duke's lectern and the officials.
+const PALAZZO_PICKS: PickId[] = ['duke', 'hall', 'statue', ...GUILDS.map((g) => `vendor:${g.id}` as PickId), 'desk', 'notary', 'crier', 'steward', 'home']
 
 const DAY = { sky: '#BFE6EA', hemiSky: '#E6F7F7', hemiGround: '#E8D3B0', hemi: 1.3, sun: 2.4, sunCol: '#FFF0D2', sea: '#FFFFFF', win: 0, lamp: 0.25, lampLight: 0, door: 0.25 }
 const NIGHT = { sky: '#0F2B3A', hemiSky: '#3C6585', hemiGround: '#1B2B33', hemi: 0.55, sun: 0.55, sunCol: '#9FB8E8', sea: '#3E6F86', win: 1.6, lamp: 2.4, lampLight: 14, door: 1.2 }
@@ -81,10 +84,10 @@ declare global {
       buyers(): string[]
       /** Townsfolk positions, and whether each is walking somewhere. */
       townsfolk(): { x: number; z: number; walking: boolean }[]
-      /** The guild trainer standing at the hall door (in a quarter). */
-      trainer(): string | null
-      /** The officials standing in the Palazzo (0.11.0). */
+      /** The officials and vendors standing in the Palazzo (0.11.0; vendors 0.13.0). */
       officials(): string[]
+      /** The Factotum's statue: whose guild and name, or null when nobody holds the title (0.13.0). */
+      statue(): { profession: string; name: string } | null
       /** Your bottega's shown level and whether scaffolding is up (0.11.0). */
       bottega(): { level: number; building: boolean; builder: boolean }
       me(): { x: number; z: number; scene: Scene; look: number; hat: number; rank: number }
@@ -199,7 +202,6 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   herald.root.position.set(16.0, 1, 1.1)
   herald.root.rotation.y = 0.3
   harbor.root.add(herald.root)
-  tagPick(herald.root, { kind: 'place', id: 'duke' })
   let lastSlap: { from: number; to: number } | null = null
   let lastEmote: { id: number; e: string } | null = null
   /** Customers at your door, by order id (0.10.0): they walk in, speak, take the goods and leave. */
@@ -207,8 +209,6 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   const customers = new Map<number, Customer>()
   /** Buyers walking to your stall for real sales. */
   const buyers: (Walker & { character: string })[] = []
-  /** The guild trainer at the hall door of the quarter you're in. */
-  let trainer: Blob | null = null
   /** The Palazzo's officials (0.11.0). */
   let officials: Blob[] = []
   /** A mason at work on your bottega while an upgrade is being built (0.11.0). */
@@ -258,8 +258,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       l.height = l.el.offsetHeight || l.height
     }
   }
-  const allPicks: PickId[] = [...new Set([...HARBOR_PICKS, ...QUARTER_PICKS, ...PALAZZO_PICKS])]
-  const scenePicks = (): PickId[] => (scene === 'harbor' ? HARBOR_PICKS : scene === PALAZZO ? PALAZZO_PICKS : QUARTER_PICKS)
+  const allPicks: PickId[] = [...new Set([...HARBOR_PICKS, ...PALAZZO_PICKS])]
+  const scenePicks = (): PickId[] => (scene === 'harbor' ? HARBOR_PICKS : PALAZZO_PICKS)
   for (const id of allPicks) {
     const l = makeLabel(`place:${id}`, `world-label-${id}`, 'world-label', () => placeLabelPoint(id), () => pickPlace(id), true)
     l.el.addEventListener('pointerenter', () => setHover({ kind: 'place', id }))
@@ -477,7 +477,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   }
   for (const [id, objs] of harbor.picks) {
     for (const obj of objs) {
-      if (id !== 'news') hitBox(obj)   // the galley is big already, and it sails
+      hitBox(obj)
       tagPick(obj, { kind: 'place', id })
     }
   }
@@ -485,11 +485,9 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     const out: THREE.Object3D[] = []
     if (scene === 'harbor') {
       for (const objs of harbor.picks.values()) out.push(...objs.filter((o) => o.visible))
-      out.push(herald.root)
       for (const c of customers.values()) out.push(c.blob.root)
     } else if (quarter) {
       for (const objs of quarter.picks.values()) out.push(...objs)
-      if (trainer) out.push(trainer.root)
       for (const o of officials) out.push(o.root)
       quarter.slots.forEach((s, i) => { if (stalls[i]) out.push(s.group) })
       for (const p of peers.values()) out.push(p.blob.root)
@@ -547,7 +545,6 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   /** Where your merchant stands to use a place: in front of it, on the walkable ground. */
   const doorPoint = (id: PickId): THREE.Vector3 => {
     if (scene === 'harbor') {
-      if (id === 'news') return new THREE.Vector3(9.5, 1, 3.4)
       const f = harbor.focusPoint(id)
       return clampWalk(new THREE.Vector3(f.x, 1, f.z + 2.2))
     }
@@ -953,6 +950,30 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     }, reduceMotion ? 0 : 700)
   }
 
+  // ------------------------------------------------------------ the Factotum (0.13.0)
+  // The city's richest merchant stands on the plinth in the middle of the Palazzo, cast in bronze, and their
+  // portrait hangs over the hall door. The server says who (the Hall of honor); the UI paints the portrait.
+  let factotum: { profession: string; name: string; look: number; hat: number; rank: number } | null = null
+  let statueBlob: Blob | null = null
+  // a bronze tint over the merchant's own colors, so the hat, sash and face still read from across the square
+  const bronze = new THREE.MeshStandardMaterial({ vertexColors: true, color: '#C99A5B', metalness: 0.45, roughness: 0.4 })
+  const placeStatue = () => {
+    const spot = quarter?.statue
+    if (!quarter || !spot) return
+    if (statueBlob) { statueBlob.root.removeFromParent(); statueBlob.dispose(); statueBlob = null }
+    if (!factotum) return
+    const b = new Blob({ character: factotum.profession as Character, look: factotum.look, hat: factotum.hat, rank: factotum.rank })
+    // cast in bronze: the body and hands only (not the invisible click column or the hidden white flag)
+    b.root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !m.userData.hitBox && m.visible && (m.material as THREE.MeshBasicMaterial).visible !== false) { m.material = bronze; m.castShadow = true } })
+    b.root.position.copy(spot.at)
+    b.root.scale.multiplyScalar(spot.scale)
+    b.root.rotation.y = 0
+    tagPick(b.root, { kind: 'place', id: 'statue' })
+    quarter.root.add(b.root)
+    statueBlob = b
+    shadowsDirty = true
+  }
+
   // ------------------------------------------------------------ scenes
   const setStalls = (list: StallInfo[]) => {
     stalls = list.slice(0, quarter?.slots.length ?? 12)
@@ -986,34 +1007,25 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       scene = next
       if (next !== 'harbor' && quarterId !== next) {
         quarter?.dispose()
-        quarter = next === PALAZZO ? buildPalazzo() : buildQuarter(next)
+        quarter = buildPalazzo()
         quarterId = next
         scene3.add(quarter.root)
         for (const [id, objs] of quarter.picks) for (const obj of objs) { hitBox(obj); tagPick(obj, { kind: 'place', id }) }
         for (const slot of quarter.slots) hitBox(slot.group)
-        trainer?.dispose()
-        trainer = null
         for (const o of officials) o.dispose()
         officials = []
-        if (next === PALAZZO) {
-          // the Palazzo's officials: each one is a place you click to talk to them
-          for (const n of quarter.npcSpots ?? []) {
-            const b = new Blob({ character: n.character as Character })
-            b.root.position.copy(n.at)
-            b.root.rotation.y = n.facing
-            tagPick(b.root, { kind: 'place', id: n.id })
-            hitBox(b.root)
-            quarter.root.add(b.root)
-            officials.push(b)
-          }
-        } else {
-          // the guild trainer, an elder in the guild's colors, stands by the hall door
-          trainer = new Blob({ character: `trainer:${next}` })
-          trainer.root.position.set(2.7, 1, -13.2)
-          trainer.root.rotation.y = -0.25
-          tagPick(trainer.root, { kind: 'place', id: 'trainer' })
-          quarter.root.add(trainer.root)
+        // the officials and the market's vendors: each one is a place you click (to talk, or to trade)
+        for (const n of quarter.npcSpots ?? []) {
+          const b = new Blob({ character: n.character as Character, hat: n.hat })
+          b.root.position.copy(n.at)
+          b.root.rotation.y = n.facing
+          tagPick(b.root, { kind: 'place', id: n.id })
+          hitBox(b.root)
+          quarter.root.add(b.root)
+          officials.push(b)
         }
+        statueBlob = null
+        placeStatue()
       }
       harbor.root.visible = next === 'harbor'
       if (quarter) quarter.root.visible = next !== 'harbor'
@@ -1156,7 +1168,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     for (const c of customers.values()) stepWalker(c, walkStep, null)
     for (const b of buyers) stepWalker(b, walkStep, null)
     if (scene === 'harbor') { herald.update(step, 0, reduceMotion); builder?.update(step, 0, reduceMotion) }
-    else { trainer?.update(step, 0, reduceMotion); for (const o of officials) o.update(step, 0, reduceMotion) }
+    else for (const o of officials) o.update(step, 0, reduceMotion)
     for (const g of ghosts.values()) g.blob.update(step, 0, reduceMotion)
     shadows.update(everyone())
     gloves.forEach((g) => g.update(step))
@@ -1261,7 +1273,6 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     for (const c of customers.values()) yield c.blob
     for (const b of buyers) yield b.blob
     yield herald
-    if (trainer) yield trainer
     for (const o of officials) yield o
     if (builder && scene === 'harbor') yield builder
   }
@@ -1297,7 +1308,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     customers: () => [...customers.values()].map((c) => ({ order: c.order, character: c.character, state: c.state })),
     buyers: () => buyers.map((b) => b.character),
     townsfolk: () => npcs.map((n) => ({ x: n.pos.x, z: n.pos.z, walking: !!n.target })),
-    trainer: () => (trainer && scene !== 'harbor' ? trainer.opts.character : null),
+    statue: () => (statueBlob && factotum ? { profession: factotum.profession, name: factotum.name } : null),
     officials: () => (scene === PALAZZO ? officials.map((o) => o.opts.character as string) : []),
     bottega: () => ({ ...bottegaShown, builder: !!builder }),
     peers: () => [...peers.keys()],
@@ -1377,6 +1388,21 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     orderTurnedDown,
     sales,
     herald: heraldSays,
+    setFactotum(f, portrait) {
+      const same = JSON.stringify(f) === JSON.stringify(factotum)
+      factotum = f ? { ...f } : null
+      if (!same) placeStatue()
+      const mat = quarter?.portrait
+      if (mat && portrait) {
+        const old = mat.map
+        const t = new THREE.CanvasTexture(portrait)
+        t.colorSpace = THREE.SRGBColorSpace
+        mat.map = t
+        mat.needsUpdate = true
+        old?.dispose()
+      }
+      wake()
+    },
     slap,
     setSlaps(id, on) {
       if (id === myId) { mySlaps = on; me.blob.setSlapsOff(!on) }

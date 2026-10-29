@@ -22,6 +22,25 @@ Decided with Marz on 2026-10-29 (`/next-build Living City`). Builds on the livin
 
 ---
 
+## 0.13.0: one square
+
+Decided with Marz on 2026-10-29: the loop is **gather and craft on your quay, then go up to the Palazzo to trade and meet people**, like a grand exchange.
+
+- **The quay keeps only your own work:**
+  - station, workbench (its Recipes list opens the guild trainer), customers, your bottega, the storehouse, and the Steps;
+  - the Mercato loggia (renamed the **Dogana**), the guild hall and your stall stay as scenery, and buyers still come to the stall to pick up what they bought;
+  - the news galley still sails in for events;
+  - the herald only announces new Duke's orders.
+- **No more guild quarters.** The Steps lead straight to the Palazzo, the one live room (`palazzo`). Clicking a player there opens their bottega.
+- **The marketplace** replaces the Wanted board in the middle of the square: a ring of vendor stalls around the statue, open toward the Steps.
+  - **One vendor per guild** (from content, so the Glassblower gets one automatically) shows that guild's goods.
+  - **The selling desk** shows Sell, My listings and **Buy offers** (the Wanted board's rules unchanged, §4).
+  - On a computer, trade happens here: Mercato links from the quay (the storehouse's Sell) walk you up the Steps. Phones keep the Mercato tab.
+- **Il Factotum**, the richest merchant: their own merchant (guild dress, colour, hat and sash) stands on the plinth in bronze. Their portrait hangs in a gilded frame over the Palazzo's door, and the Hall of honor shows it too.
+- **The Palazzo's door** opens the Hall of honor plus the city's merchants, friends and trades (the guild hall's lists).
+
+---
+
 ## 2. The bottega upgrades (#51, reworked)
 
 **The rule (Marz):** to go past the top of a rank, build the next workshop upgrade.
@@ -70,7 +89,7 @@ Up the Steps, next to the three guild quarters. **Open to every guild**, with li
 
 ---
 
-## 4. The Wanted board
+## 4. Buy offers (the Wanted board until 0.13.0)
 
 Players post paid requests: *"Wanted: 10 Leather Grips at 11 ducats each."* Any other crafter brings all or part of it.
 
