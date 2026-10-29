@@ -26,4 +26,4 @@ export const beard = () => P(sph(0.34, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.P
 export const chain = () => [P(tor(0.46, 0.035, 3, 14), '#E3B54A', 0, 0.98, 0.02, { rx: Math.PI / 2 + 0.25 }), P(sph(0.09, 6, 4), '#E3B54A', 0, 0.86, 0.5)]
 
 /** Props held in the right hand. */
-export type Prop = 'oar' | 'fan' | 'loaf' | 'mallet' | 'spyglass' | 'jar' | 'basket' | 'magnifier' | 'parasol' | 'fish' | 'sack' | 'crate' | 'purse' | 'trumpet' | 'hammer' | 'note' | 'scroll'
+export type Prop = 'oar' | 'fan' | 'loaf' | 'mallet' | 'spyglass' | 'jar' | 'basket' | 'magnifier' | 'parasol' | 'fish' | 'sack' | 'crate' | 'purse' | 'trumpet' | 'hammer' | 'note' | 'scroll' | 'bell' | 'quill'

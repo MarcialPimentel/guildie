@@ -1,0 +1,50 @@
+{
+  "_comment": "The Palazzo's three officials (0.11.0, docs/palazzo.md §5). Each tells a rumor built from real game data (rumor: 'market' = the counting house's price moves, 'week' = tomorrow's Guild Week day, 'events' = an announced event or the Duke's slowest line), one small favor per player per day (favor: 'raws' = your guild's raw materials, 'goods' = goods your guild makes, 'imports' = another guild's goods up to your rank), and flavor lines. Rewards and sizes: economy.json palazzo. character: the 3D look (client/src/world/blobs.ts).",
+  "npcs": [
+    {
+      "id": "notary",
+      "name": "Ser Benedetto",
+      "title": "the Palazzo's notary",
+      "character": "notary",
+      "rumor": "market",
+      "favor": "raws",
+      "favor_line": "The archive needs {items} for ink and seals. I pay fairly, and in writing.",
+      "lines": [
+        "Every contract in Portovela passes under this quill.",
+        "A merchant's word is good. A merchant's word with a seal is better.",
+        "Read the small print, signore. I wrote most of it.",
+        "The Wanted board is mine to keep. Fair prices only, or I strike them out."
+      ]
+    },
+    {
+      "id": "crier",
+      "name": "Tonio",
+      "title": "the town crier",
+      "character": "crier",
+      "rumor": "week",
+      "favor": "goods",
+      "favor_line": "My bell's cracked and my throat is dry. Bring me {items} and I'll cry your name in every street.",
+      "lines": [
+        "Hear ye! Hear ye! ...sorry, habit.",
+        "I know every price, every quarrel and every wedding in Portovela.",
+        "Louder? I can always be louder.",
+        "The best news is the news nobody else has heard yet."
+      ]
+    },
+    {
+      "id": "steward",
+      "name": "Donna Lucrezia",
+      "title": "the Duke's steward",
+      "character": "steward",
+      "rumor": "events",
+      "favor": "imports",
+      "favor_line": "His Grace's household is short of {items}. The other guilds make them; I trust you know who to ask.",
+      "lines": [
+        "The Duke notices who helps the city. So do I.",
+        "A city is only as rich as its guilds are willing to trade.",
+        "His Grace dislikes waiting. I dislike it more.",
+        "The Hall of honor has room for one more portrait, I think."
+      ]
+    }
+  ]
+}

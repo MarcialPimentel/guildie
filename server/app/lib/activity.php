@@ -91,6 +91,14 @@ function activity_text(string $type, array $p): string
         'bought'            => sprintf('Bought %d %s from %s for %s.', $n('quantity'), $item(), $p['seller'] ?? 'someone', ducats($n('total'))),
         'listing_cancelled' => sprintf('Cancelled your listing: %d %s returned.', $n('quantity'), $item()) . deposit_note($p),
         'listing_expired'   => sprintf('Your listing expired: %d %s returned.', $n('quantity'), $item()) . deposit_note($p),
+        'workshop_started'  => sprintf('The builders are at work on your %s (%s paid). Ready in %s.', $p['name'] ?? 'new workshop', ducats($n('gold')), orders_duration_text($n('seconds'))),
+        'workshop_built'    => sprintf('Your %s is open! Your bottega is now a %s.', $p['name'] ?? 'new workshop', strtolower((string) ($p['look'] ?? 'finer place'))),
+        'wanted_posted'     => sprintf('Posted on the Wanted board: %d %s at %s each (%s held).', $n('quantity'), $item(), ducats($n('unit_price')), ducats($n('held'))),
+        'wanted_filled'     => sprintf("Filled %s's request: %d %s for %s (after %s cut).", $p['for'] ?? 'a crafter', $n('quantity'), $item(), ducats($n('earned')), ducats($n('cut'))),
+        'wanted_received'   => sprintf('%s filled your request: %d %s for %s.%s', $p['from'] ?? 'A crafter', $n('quantity'), $item(), ducats($n('paid')), !empty($p['done']) ? ' Request complete.' : ''),
+        'wanted_cancelled'  => sprintf('You took down your request for %s. %s returned.', $item(), ucfirst(ducats($n('refund')))),
+        'wanted_expired'    => sprintf('Your request for %s expired (%d of %d filled). %s returned.', $item(), $n('filled'), $n('quantity'), ucfirst(ducats($n('refund')))),
+        'favor_done'        => sprintf('Did a favor for %s: %d %s for %s%s.', $p['npc'] ?? 'the Palazzo', $n('quantity'), $item(), ducats($n('reward')), $n('xp') > 0 ? sprintf(' (+%d XP)', $n('xp')) : ''),
         default             => $type,
     };
 }

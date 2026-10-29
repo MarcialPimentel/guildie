@@ -375,7 +375,7 @@ function orders_fill(int $playerId, int $orderId): array
 
         // XP (#30) and, sometimes, a rare recipe (#49).
         $row = progression_row($pdo, $playerId, true);
-        $xp = orders_xp($items, $order['kind']);
+        $xp = progression_at_cap($row) ? 0 : orders_xp($items, $order['kind']);
         $progress = progression_apply($pdo, $playerId, $row, $xp, 0, $now) + ['xp' => $xp, 'doubled' => false, 'discoveries' => []];
         progression_log_gain($pdo, $playerId, $row, $progress);
         $taught = null;

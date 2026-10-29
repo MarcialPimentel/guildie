@@ -24,6 +24,7 @@ function player_state(int $playerId): array
             'name'    => $def['name'],
             'tagline' => $def['tagline'],
             'progress' => progression_status($row, game_now()),
+            'workshop' => workshop_status($pdo, $playerId, $row, game_now()),
             'station' => gathering_status($playerId, $professionId),
             'recipes' => crafting_recipes($playerId, $professionId),
         ];
@@ -41,7 +42,7 @@ function player_state(int $playerId): array
         'profession'      => $profession,
         'inventory'       => inventory_list($playerId),
         'crafts'          => $profession ? crafting_jobs($playerId) : [],
-        'craft_slots'     => (int) econ('crafting.slots', 1),
+        'craft_slots'     => workshop_slots($professionId !== null ? workshop_level($pdo, $playerId) : 1),
         'max_batch'       => (int) econ('crafting.max_batch', 10),
         'active_listings' => (int) $stmt->fetchColumn(),
         'incoming_offers' => offers_incoming_count($playerId),

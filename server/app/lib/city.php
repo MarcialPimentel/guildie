@@ -12,6 +12,7 @@ const CITY_ECHO_SECONDS = 1800;      // crafters who acted in the last 30 minute
 const CITY_TOKEN_SECONDS = 600;      // a presence pass lasts 10 minutes
 const FRIENDS_MAX = 50;
 const CITY_LOOKS = 6;                // body colors (client/src/world/blobs.ts BODY_COLORS)
+const CITY_PALAZZO = 'palazzo';      // the shared square with the city hall (0.11.0): a room like a quarter, open to every guild
 
 /** The quarters: one per guild in content/professions.json. */
 function city_quarters(): array
@@ -157,7 +158,7 @@ function city_presence_token(int $playerId): array
     $payload = b64url(json_encode([
         'pid' => $me['id'], 'n' => $me['name'], 'p' => $me['profession'], 'l' => $me['look'], 'ht' => $me['hat'], 'r' => $me['rank'],
         's' => $me['slaps'] ? 1 : 0, 'exp' => $exp,
-        'q' => city_quarters(),   // the quarters a room may be opened for (one per guild in content)
+        'q' => [...city_quarters(), CITY_PALAZZO],   // the rooms a pass may open: one per guild, plus the Palazzo
     ], JSON_UNESCAPED_UNICODE));
     $sig = b64url(hash_hmac('sha256', $payload, $secret, true));
     return ['enabled' => true, 'url' => $url, 'token' => "$payload.$sig", 'expires_in' => CITY_TOKEN_SECONDS, 'me' => $me];
@@ -286,7 +287,7 @@ function city_stalls(PDO $pdo, int $viewerId, array $playerIds, array $friendIds
         return [];
     }
     $in = implode(',', array_fill(0, count($playerIds), '?'));
-    $stmt = $pdo->prepare("SELECT p.id, p.name, pp.profession_id FROM players p JOIN player_professions pp ON pp.player_id = p.id WHERE p.id IN ($in)");
+    $stmt = $pdo->prepare("SELECT p.id, p.name, pp.profession_id, pp.workshop_level FROM players p JOIN player_professions pp ON pp.player_id = p.id WHERE p.id IN ($in)");
     $stmt->execute($playerIds);
     $rows = array_column($stmt->fetchAll(), null, 'id');
     $listings = city_listings($pdo, $playerIds);
@@ -307,6 +308,7 @@ function city_stalls(PDO $pdo, int $viewerId, array $playerIds, array $friendIds
             'look'          => $looks[$id]['color'] ?? city_look($id),
             'hat'           => $looks[$id]['hat'] ?? 0,
             'rank'          => $looks[$id]['rank'] ?? 0,
+            'level'         => max(1, (int) $r['workshop_level']),
             'me'            => $id === $viewerId,
             'friend'        => in_array($id, $friendIds, true),
             'seen_ago'      => $seen[$id] ?? null,

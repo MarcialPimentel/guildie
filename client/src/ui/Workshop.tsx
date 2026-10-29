@@ -1,5 +1,6 @@
 // Bottega (the Workshop tab): the 30-second check-in (GDD 4.1, #39). Collect from the station, collect crafts, queue new crafts
 // and see what happened, all on one screen. On desktop the recipes sit in a second column.
+import { BottegaCard } from './Bottega'
 import { useState } from 'preact/hooks'
 import { ago, CLIENT_BUILD, duration, trimNumber } from '../format'
 import { Coins, ItemIcon } from './art'
@@ -34,6 +35,7 @@ export function Ledger({ state, now }: { state: GameState; now: number }) {
   const s = useSession()
   return (
     <>
+      <BottegaCard state={state} now={now} />
       <section class="stack tight">
         <h2>Recent activity</h2>
         {state.activity.length === 0 && <p class="muted">Nothing yet.</p>}

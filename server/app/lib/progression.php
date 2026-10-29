@@ -76,16 +76,34 @@ function progression_xp_needed(int $level): int
     return (int) round((float) prog('xp_base', 20) * (1 + $level / (float) prog('xp_scale', 20)) ** 2);
 }
 
-/** Turn banked XP into levels. Returns [skill, xp]. */
-function progression_level(int $skill, int $xp): array
+/**
+ * Turn banked XP into levels. Returns [skill, xp]. With a cap (the bottega's, 0.11.0 #51) skill stops there and
+ * XP beyond it is dropped: at the cap, crafts give no XP until the next upgrade is built.
+ */
+function progression_level(int $skill, int $xp, ?int $cap = null): array
 {
-    $max = progression_max_skill();
-    $skill = min($max, max(1, $skill));
+    $max = min(progression_max_skill(), $cap ?? PHP_INT_MAX);
+    $skill = max(1, $skill);
+    if ($skill >= $max) {
+        return [$skill, 0];   // at (or, for a kept rank, above) the cap
+    }
     while ($skill < $max && $xp >= progression_xp_needed($skill)) {
         $xp -= progression_xp_needed($skill);
         $skill++;
     }
     return [$skill, $skill >= $max ? 0 : max(0, $xp)];
+}
+
+/** The skill cap for a progression row (its bottega level and any rank kept from before 0.11.0). */
+function progression_cap(array $row): int
+{
+    return workshop_skill_cap((int) ($row['workshop_level'] ?? 1), $row['legacy_rank'] ?? null);
+}
+
+/** At the cap: crafts and orders give no XP until the next upgrade is built. */
+function progression_at_cap(?array $row): bool
+{
+    return $row !== null && $row['skill'] >= progression_cap($row) && progression_cap($row) < progression_max_skill();
 }
 
 // ---------------------------------------------------------------- recipes
@@ -178,16 +196,20 @@ function item_order_xp(string $itemId): float
 /** The player's progression row: profession_id, skill, xp, bonus_day, progress_version (or null). */
 function progression_row(PDO $pdo, int $playerId, bool $lock = false): ?array
 {
-    $stmt = $pdo->prepare('SELECT profession_id, skill, xp, bonus_day, progress_version FROM player_professions WHERE player_id = ?'
-        . ($lock ? ' FOR UPDATE' : ''));
+    $stmt = $pdo->prepare('SELECT profession_id, skill, xp, bonus_day, progress_version, workshop_level, legacy_rank, upgrade_to, upgrade_ready_at
+                           FROM player_professions WHERE player_id = ?' . ($lock ? ' FOR UPDATE' : ''));
     $stmt->execute([$playerId]);
     $row = $stmt->fetch();
     if (!$row) {
         return null;
     }
-    foreach (['skill', 'xp', 'bonus_day', 'progress_version'] as $k) {
+    foreach (['skill', 'xp', 'bonus_day', 'progress_version', 'workshop_level'] as $k) {
         $row[$k] = (int) $row[$k];
     }
+    foreach (['legacy_rank', 'upgrade_to', 'upgrade_ready_at'] as $k) {
+        $row[$k] = $row[$k] === null ? null : (int) $row[$k];
+    }
+    $row['workshop_level'] = max(1, $row['workshop_level']);
     return $row;
 }
 
@@ -244,13 +266,16 @@ function progression_day(int $now): int
 function progression_apply(PDO $pdo, int $playerId, array &$row, int $xpGain, int $skillGain, int $now): array
 {
     $from = $row['skill'];
-    [$skill, $xp] = progression_level($row['skill'] + $skillGain, $row['xp'] + max(0, $xpGain));
+    $cap = progression_cap($row);
+    $skillGain = $from >= $cap ? 0 : min($skillGain, $cap - $from);
+    [$skill, $xp] = progression_level($row['skill'] + $skillGain, $row['xp'] + max(0, $xpGain), $cap);
     $row['skill'] = $skill;
     $row['xp'] = $xp;
     $pdo->prepare('UPDATE player_professions SET skill = ?, xp = ?, bonus_day = ? WHERE player_id = ?')
         ->execute([$skill, $xp, $row['bonus_day'], $playerId]);
 
-    $report = ['skill_from' => $from, 'skill_to' => $skill, 'rank_up' => null, 'learned' => [], 'unlocked' => []];
+    $report = ['skill_from' => $from, 'skill_to' => $skill, 'rank_up' => null, 'learned' => [], 'unlocked' => [],
+               'capped' => $skill >= $cap && $cap < progression_max_skill()];
     $profession = content_profession($row['profession_id']);
     $oldRank = progression_rank_index($from);
     $newRank = progression_rank_index($skill);
@@ -278,6 +303,7 @@ function progression_merge(array $a, array $b): array
         'rank_up'    => $b['rank_up'] ?? $a['rank_up'],
         'learned'    => array_merge($a['learned'], $b['learned']),
         'unlocked'   => array_merge($a['unlocked'], $b['unlocked']),
+        'capped'     => !empty($b['capped']),
     ];
 }
 
@@ -304,6 +330,8 @@ function progression_status(array $row, int $now): array
     $next = progression_ranks()[progression_rank_index($skill) + 1] ?? null;
     return [
         'skill'             => $skill,
+        'cap'               => progression_cap($row),
+        'at_cap'            => progression_at_cap($row),
         'max_skill'         => progression_max_skill(),
         'xp'                => $row['xp'],
         'xp_needed'         => progression_xp_needed($skill),
@@ -362,8 +390,9 @@ function progression_upgrade(PDO $pdo, int $playerId): bool
     $profession = content_profession($professionId);
     gathering_unlock($pdo, $playerId, $profession, $skill, $now);
     progression_learn_starters($pdo, $playerId, $professionId, progression_rank_index($skill), $now);
-    $pdo->prepare('UPDATE player_professions SET skill = ?, xp = ?, progress_version = ? WHERE player_id = ?')
-        ->execute([$skill, $xp, PROGRESS_VERSION, $playerId]);
+    // They held this rank before bottega upgrades existed (0.11.0), so they keep it (migration 009).
+    $pdo->prepare('UPDATE player_professions SET skill = ?, xp = ?, progress_version = ?, legacy_rank = GREATEST(COALESCE(legacy_rank, 0), ?) WHERE player_id = ?')
+        ->execute([$skill, $xp, PROGRESS_VERSION, progression_rank_index($skill), $playerId]);
     activity_log($pdo, $playerId, 'skill_counted', [
         'profession' => $profession['name'], 'skill' => $skill, 'rank' => progression_rank($skill)['name'],
     ]);

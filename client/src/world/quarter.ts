@@ -30,8 +30,10 @@ export interface Quarter {
   highlight: Map<PickId, THREE.MeshStandardMaterial[]>
   focusPoint(id: PickId): THREE.Vector3
   labelPoint(id: PickId): THREE.Vector3
-  /** Paint a stall's sign ("" = to let). */
-  paintSign(slot: number, text: string, friend: boolean): void
+  /** Paint a stall's sign ("" = to let). level 1-4 (0.11.0): a weathered plank for a shack, gilded for a fine bottega. */
+  paintSign(slot: number, text: string, friend: boolean, level?: number): void
+  /** Officials who stand in this scene (the Palazzo, 0.11.0): each is a clickable place. */
+  npcSpots?: { id: PickId; character: string; at: THREE.Vector3; facing: number }[]
   dispose(): void
 }
 
@@ -178,15 +180,17 @@ export function buildQuarter(quarter: ProfessionId): Quarter {
     duke: new THREE.Vector3(0, 5.6, 0), trainer: new THREE.Vector3(0, 12.6, -17), home: new THREE.Vector3(0, 6, 18.6),
   }
 
-  const paintSign = (slot: number, text: string, friend: boolean) => {
+  const paintSign = (slot: number, text: string, friend: boolean, level = 2) => {
     const s = slots[slot]
     if (!s) return
     const c = s.sign.canvas.getContext('2d')!
-    c.fillStyle = text ? '#10323A' : '#6B7F80'
+    // a shack's sign is a weathered plank; finer bottegas get navy boards with gold trim
+    c.fillStyle = !text ? '#6B7F80' : level <= 1 ? '#7A5A30' : '#10323A'
     c.fillRect(0, 0, 512, 128)
-    c.strokeStyle = friend ? '#F2C53D' : '#E7D7B9'
-    c.lineWidth = friend ? 12 : 6
+    c.strokeStyle = friend ? '#F2C53D' : level >= 3 ? '#E3B54A' : '#E7D7B9'
+    c.lineWidth = friend || level >= 4 ? 12 : 6
     c.strokeRect(10, 10, 492, 108)
+    if (text && level >= 4) { c.strokeStyle = '#F2C53D'; c.lineWidth = 3; c.strokeRect(24, 24, 464, 80) }
     c.fillStyle = '#F6EEDC'
     c.textAlign = 'center'
     c.textBaseline = 'middle'

@@ -47,6 +47,40 @@ export interface Progress {
   rank_id: string
   next_rank: { name: string; at: number } | null
   first_craft_bonus: boolean
+  /** The highest skill your bottega allows (0.11.0, #51): build the next upgrade to go past it. */
+  cap: number
+  /** At the cap: crafts and orders give no XP until the next upgrade is built. */
+  at_cap: boolean
+}
+
+/** Your bottega and its next upgrade (0.11.0, #51, docs/palazzo.md §2). */
+export interface Workshop {
+  level: number
+  max_level: number
+  /** The current workbench's name ("Bellows forge"), or the level's look at level 1. */
+  name: string
+  /** How the building looks: "Rundown shack" .. "Fine bottega". */
+  look: string
+  slots: number
+  craft_speed: number
+  skill_cap: number
+  at_cap: boolean
+  /** Holds a rank from before 0.11.0 that the building hasn't caught up with yet. */
+  kept_rank: boolean
+  building: null | { level: number; name: string; ready_at: number; seconds: number; ready: boolean }
+  next: null | {
+    level: number
+    name: string
+    look: string
+    needs_skill: number
+    /** The rank this upgrade opens (null if you already hold it). */
+    opens_rank: string | null
+    slots: number
+    craft_speed: number
+    station_cap: number
+    station_rate: number
+    cost: { gold: number; seconds: number; items: { item_id: string; name: string; quantity: number; have: number; guild: string }[] }
+  }
 }
 
 /** What a collect or a filled order changed (#30, #49). */
@@ -60,6 +94,8 @@ export interface ProgressGain {
   doubled: boolean
   discoveries: string[]
   taught?: string | null
+  /** Skill is at the bottega's cap (0.11.0): no more XP until the next upgrade. */
+  capped?: boolean
 }
 
 /** A recipe at the guild trainer (#49). */
@@ -125,6 +161,7 @@ export interface GameState {
     station: { id: string; name: string; outputs: StationOutput[]; locked?: { item_id: string; name: string; unlock_skill: number }[] }
     recipes: Recipe[]
     progress: Progress
+    workshop: Workshop
   }
   inventory: InventoryItem[]
   crafts: CraftJob[]
@@ -368,6 +405,8 @@ export interface StallCard {
   look: number
   hat: number
   rank: number
+  /** Their bottega level 1-4 (0.11.0): a shack to a fine bottega. */
+  level: number
   me: boolean
   friend: boolean
   seen_ago: number | null
@@ -415,4 +454,57 @@ export interface DukeBoard {
   my_rank: number | null
   my_paid: number
   my_bonus: number
+}
+
+// ---------------------------------------------------------------- the Palazzo (0.11.0, docs/palazzo.md)
+
+export interface WantedPost {
+  id: number
+  player_id: number
+  player: string
+  profession: string
+  item_id: string
+  name: string
+  /** The guild that makes it. */
+  guild: string
+  quantity: number
+  remaining: number
+  unit_price: number
+  status: 'open' | 'filled' | 'cancelled' | 'expired'
+  expires_in: number
+  mine: boolean
+  /** How many you have in your storehouse. */
+  have: number
+}
+
+export interface WantedBoard {
+  posts: WantedPost[]
+  mine: WantedPost[]
+  /** The fair price band per item: what a post may offer per unit. */
+  bands: Record<string, { min: number; max: number; usual: number }>
+  max_open: number
+  hours: number
+  cut: number
+  gold: number
+}
+
+export interface HonorRow { id: number; name: string; profession: string; value: string; me: boolean }
+
+export interface Honors {
+  title: string
+  factotum: HonorRow | null
+  boards: { id: string; title: string; rows: HonorRow[] }[]
+}
+
+export interface PalazzoNpc { id: string; name: string; title: string; character: string; favor_done: boolean }
+
+export interface NpcTalk {
+  id: string
+  name: string
+  title: string
+  character: string
+  line: string
+  rumor: string
+  favor: null | { item_id: string; name: string; quantity: number; reward: number; xp: number; done: boolean; have: number; line: string }
+  resets_in: number
 }

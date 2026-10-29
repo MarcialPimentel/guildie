@@ -8,7 +8,7 @@ import * as THREE from 'three'
 import { isGuildId } from '../guilds'
 import { kitFor } from './guildKits'
 import { BODY_COLORS, SASH_COLORS } from './looks'
-import { INK, P, apron, band, box, capsule, cone, cyl, dome, robe, sph, tor, type Part, type Prop } from './parts'
+import { INK, P, apron, band, box, capsule, chain, cone, cyl, dome, robe, sph, tor, type Part, type Prop } from './parts'
 
 export { BODY_COLORS, RANK_NAMES } from './looks'
 
@@ -28,6 +28,7 @@ type Npc =
   | 'collector_quill' | 'collector_marchesa'
   | 'townsfolk' | 'adventurers' | 'workshops' | 'traders' | 'courier'
   | 'apprentice' | 'mason'
+  | 'notary' | 'crier' | 'steward'
 
 export type Emote = 'wave' | 'bow' | 'cheer' | 'shrug' | 'handover' | 'trumpet' | 'nod' | 'look' | 'rock' | 'stretch'
 const EMOTE_TIME: Record<Emote, number> = { wave: 1.2, bow: 1.4, cheer: 1.3, shrug: 1.1, handover: 1.0, trumpet: 2.0, nod: 0.7, look: 2.6, rock: 2.2, stretch: 1.6 }
@@ -101,6 +102,8 @@ const PROPS: Record<Prop, () => Part[]> = {
   hammer: () => [P(cyl(0.03, 0.03, 0.5, 5), '#8F4E2B', 0, 0.2, 0.05), P(box(0.26, 0.12, 0.12), '#C79A3A', 0, 0.45, 0.05)],
   note: () => [P(box(0.28, 0.2, 0.03), '#F6EEDC', 0, 0.05, 0.14), P(cyl(0.05, 0.05, 0.03, 6), '#B83A3A', 0, 0.05, 0.16, { rx: Math.PI / 2 })],
   scroll: () => [P(cyl(0.06, 0.06, 0.4, 6), '#F6EEDC', 0, 0.1, 0.12, { rz: Math.PI / 2 }), P(cyl(0.065, 0.065, 0.06, 6), '#B83A3A', 0, 0.1, 0.12, { rz: Math.PI / 2 })],
+  bell: () => [P(cyl(0.025, 0.025, 0.3, 5), '#5A3A28', 0, 0.12, 0.08), P(cone(0.16, 0.26, 8), '#E3B54A', 0, 0.36, 0.08, { rx: Math.PI }), P(sph(0.04, 5, 3), '#8A6A2A', 0, 0.22, 0.08)],
+  quill: () => [P(cone(0.05, 0.55, 4), '#F7F3EA', 0, 0.28, 0.1, { rz: -0.3 }), P(cyl(0.012, 0.012, 0.2, 4), '#2B2A33', 0.03, 0.02, 0.1, { rz: -0.3 })],
 }
 
 interface LookDef { skin: string; prop?: Prop; loop?: 'carry' | 'hammer'; top?: number; parts: () => Part[] }
@@ -131,6 +134,11 @@ const LOOKS: Record<Npc, LookDef> = {
   // hired hands (#51 workshop upgrades)
   apprentice: { skin: '#F6C9A2', prop: 'sack', loop: 'carry', parts: () => [robe('#EDE3CC', 0.8, 0.6), P(dome(0.36, 9, 3), '#B83A3A', 0, 1.3, -0.02, { sy: 0.6 })] },
   mason: { skin: '#F3D27A', prop: 'mallet', loop: 'hammer', parts: () => [robe('#8A8F96', 0.85, 0.7), P(dome(0.44, 9, 3), '#F5F0E4', 0, 1.2, -0.02, { sy: 0.6 })] },
+  // the Palazzo's officials (0.11.0): the notary in black with a red cap and quill, the town crier in the city's
+  // teal and lemon with a bell and a plumed hat, the Duke's steward in majolica blue with a gold chain of office
+  notary: { skin: '#F6C9A2', prop: 'quill', parts: () => [robe('#22252E', 1.0, 1.0, 0.62), P(box(0.14, 0.14, 0.04), '#F7F3EA', 0, 0.98, 0.5), P(cyl(0.3, 0.34, 0.26, 10), '#A3263A', 0, 1.36, 0), P(sph(0.05, 5, 3), '#E3B54A', 0, 1.62, 0)] },
+  crier: { skin: '#F2B98B', prop: 'bell', top: 2.2, parts: () => [robe('#1F8A87', 0.92, 0.85), band('#F2C53D', 0.72, 0.55), band('#F2C53D', 0.5, 0.57), P(cyl(0.58, 0.58, 0.05, 12), '#1E3557', 0, 1.36, 0), P(cyl(0.3, 0.32, 0.22, 10), '#1E3557', 0, 1.46, 0), P(cone(0.07, 0.9, 5), '#F2C53D', 0.3, 1.8, -0.12, { rz: -0.7 })] },
+  steward: { skin: '#E9D5F0', prop: 'scroll', parts: () => [robe('#2A4C9A', 1.0, 1.0, 0.7), ...chain(), P(tor(0.32, 0.12, 4, 12), '#F7F3EA', 0, 1.4, 0, { rx: Math.PI / 2 }), P(sph(0.29, 8, 5), '#2A4C9A', 0, 1.5, 0, { sy: 0.65 })] },
 }
 const isNpc = (c: string): c is Npc => c in LOOKS
 const isTrainer = (c: string) => c.startsWith('trainer:') && isGuildId(c.slice(8))

@@ -38,8 +38,12 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   // gaps in the mine's frame count too), and the label stays where it was.
   const mine = await page.evaluate(() => window.__guildieWorld?.screenPoint('station') ?? null)
   const before = await page.locator(id('world-label-station')).boundingBox()
-  await page.mouse.move(mine!.x, mine!.y)
-  await expect(page.locator(id('world-label-station'))).toHaveClass(/hover/)
+  // (A real mouse sends many moves; the test sends one, so it moves again until the first frames have settled.)
+  await expect(async () => {
+    await page.mouse.move(5, 5)
+    await page.mouse.move(mine!.x, mine!.y)
+    await expect(page.locator(id('world-label-station'))).toHaveClass(/hover/, { timeout: 1500 })
+  }).toPass({ timeout: 20_000 })
   expect(await page.locator(id('world-label-station')).boundingBox()).toEqual(before)
   await page.mouse.move(5, 5)
 
@@ -298,4 +302,63 @@ test('an older account is invited once to choose a look', async ({ page }, info)
   await expect(page.locator(`${id('world')}[data-ready="yes"]`)).toBeVisible({ timeout: 60_000 })
   await page.waitForTimeout(1500)
   await expect(page.locator(id('look-invite'))).toHaveCount(0)
+})
+
+test('the Palazzo: two guilds meet live, the officials, the Wanted board and your bottega', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'desktop', 'The 3D Palazzo is the desktop view; phones see it in City → Palazzo (play.spec.ts).')
+  const stamp = Date.now() % 1_000_000
+  const nameA = `pza${stamp}`, nameB = `pzb${stamp}`
+  const opts = { baseURL: info.project.use.baseURL, viewport: { width: 1280, height: 860 } }
+  const ctxA = await browser.newContext(opts)
+  const ctxB = await browser.newContext(opts)
+  const a = await ctxA.newPage()
+  const b = await ctxB.newPage()
+
+  // Your bottega (#51): a new crafter starts in the rundown shack; the card shows the upgrade that opens Journeyman.
+  await joinAs(a, nameA, 'blacksmith')
+  await expect.poll(() => a.evaluate(() => window.__guildieWorld!.bottega())).toMatchObject({ level: 1, building: false })
+  await a.click(id('dock-ledger'))
+  await expect(a.locator(id('bottega-look'))).toHaveText('Rundown shack')
+  await expect(a.locator(id('bottega-next'))).toContainText('Bellows forge')
+  await expect(a.locator(id('bottega-next'))).toContainText('opens Journeyman')
+  await expect(a.locator(id('bottega-build'))).toBeDisabled()
+  await a.keyboard.press('Escape')
+
+  // Up the Steps to the Palazzo: the hall, the Wanted board and three officials.
+  await goQuarter(a, 'palazzo')
+  await expect.poll(() => a.evaluate(() => window.__guildieWorld!.officials())).toEqual(['notary', 'crier', 'steward'])
+  await expect(a.locator(id('world-label-wanted'))).toBeVisible()
+  await expect(a.locator(id('world-label-notary'))).toContainText('Ser Benedetto')
+  await a.click(id('world-label-notary'))
+  await expect(a.locator(id('panel-notary'))).toBeVisible()
+  await expect(a.locator(id('npc-rumor'))).not.toBeEmpty()
+  await expect(a.locator(id('npc-favor'))).toBeVisible()
+  await a.click(id('dock-hall'))
+  await expect(a.locator(id('honors-skill'))).toBeVisible()
+
+  // Post a request on the Wanted board: the ducats are held.
+  await a.click(id('dock-wanted'))
+  await a.selectOption(id('wanted-item'), 'leather_grip')
+  await a.click(id('wanted-post'))
+  await message(a, 'Posted')
+  await expect(a.locator('[data-testid^="wanted-mine-"]')).toHaveCount(1)
+  await a.keyboard.press('Escape')
+
+  // A tanner arrives: the Palazzo is open to every guild, so they meet live, and the tanner sees the notice.
+  await joinAs(b, nameB, 'leatherworker')
+  await goQuarter(b, 'palazzo')
+  // Both are in the same room (A's camera may be zoomed in on the Wanted board, so check the room, not the screen).
+  await expect(peerLabel(b, nameA)).toBeVisible({ timeout: 20_000 })
+  const idB = await b.evaluate(() => window.__guildieWorld!.me())
+  await expect.poll(() => a.evaluate(() => window.__guildieWorld!.peers().length), { timeout: 20_000 }).toBe(1)
+  expect(idB.scene).toBe('palazzo')
+  await b.click(id('dock-wanted'))
+  await expect(b.locator('[data-testid^="wanted-post-"]', { hasText: nameA })).toContainText('Leather Grip')
+
+  // Back down the Steps.
+  await b.keyboard.press('Escape')
+  await b.click(id('dock-home'))
+  await expect(b.locator(`${id('world')}[data-scene="harbor"]`)).toBeVisible()
+  await ctxA.close()
+  await ctxB.close()
 })

@@ -17,7 +17,10 @@ export function QuarterChooser({ go }: { go: (quarter: string) => void }) {
   const mine = s.state!.profession?.id
   return (
     <section class="stack" data-testid="quarter-chooser">
-      <p class="muted">Each guild has a piazza up the Steps, lined with its crafters' bottegas. Other merchants walk there live.</p>
+      <p class="muted">Up the Steps: the Palazzo, where all three guilds meet, and a piazza for each guild, lined with its crafters' bottegas. Other merchants walk there live.</p>
+      <button class="secondary" onClick={() => go('palazzo')} data-testid="go-palazzo">
+        The Palazzo: Wanted board, Hall of honor, the city's officials
+      </button>
       {QUARTERS.map(([id, label]) => (
         <button class={id === mine ? '' : 'secondary'} onClick={() => go(id)} data-testid={`go-${id}`}>
           {label} quarter{id === mine ? ' (your guild)' : ''}

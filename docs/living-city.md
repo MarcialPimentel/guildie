@@ -6,6 +6,8 @@
 
 ---
 
+> **0.11.0:** the Steps also lead to the **Piazza del Palazzo**, a shared square for all three guilds with the Hall of honor, the Wanted board, the Duke's lectern and three officials. See [palazzo.md](palazzo.md).
+
 ## 1. What changes for the player
 
 | Today (0.7.0) | The living city (0.9.0) |

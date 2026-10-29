@@ -19,7 +19,9 @@ function crafting_recipes(int $playerId, string $professionId): array
         }
     }
     $pdo = db();
-    $skill = progression_row($pdo, $playerId)['skill'] ?? 1;
+    $row = progression_row($pdo, $playerId);
+    $skill = $row['skill'] ?? 1;
+    $level = $row['workshop_level'] ?? 1;
     $known = progression_known($pdo, $playerId);
 
     $out = [];
@@ -46,7 +48,7 @@ function crafting_recipes(int $playerId, string $professionId): array
             'output'       => ['item_id' => $recipe['output']['item_id'], 'quantity' => (int) $recipe['output']['quantity']],
             'value'        => (int) round(market_reference_value($recipe['output']['item_id']) * (int) $recipe['output']['quantity']),
             'inputs'       => $inputs,
-            'seconds_each' => (int) ceil($recipe['time_seconds'] * pace()),
+            'seconds_each' => workshop_craft_seconds($recipe['time_seconds'] * pace(), $level),
             'can_make'     => max(0, $maxBatch),
             'skill'        => recipe_skill($recipe),
             'colour'       => recipe_colour($recipe, $skill)['id'],
@@ -110,7 +112,8 @@ function crafting_start(int $playerId, string $recipeId, int $quantity): void
         // Lock the player's open jobs so two quick taps can't both take the last slot.
         $stmt = $pdo->prepare('SELECT COUNT(*) FROM craft_jobs WHERE player_id = ? AND collected_at IS NULL FOR UPDATE');
         $stmt->execute([$playerId]);
-        $slots = (int) econ('crafting.slots', 1);
+        $level = workshop_level($pdo, $playerId);
+        $slots = workshop_slots($level);
         if ((int) $stmt->fetchColumn() >= $slots) {
             throw new ApiError('no_free_slot', "All $slots crafting slots are busy. Collect a finished craft first.");
         }
@@ -120,7 +123,7 @@ function crafting_start(int $playerId, string $recipeId, int $quantity): void
         }
 
         $now = game_now();
-        $duration = (int) ceil($recipe['time_seconds'] * $quantity * pace());
+        $duration = workshop_craft_seconds($recipe['time_seconds'] * $quantity * pace(), $level);
         $pdo->prepare('INSERT INTO craft_jobs (player_id, recipe_id, quantity, started_at, ends_at) VALUES (?, ?, ?, ?, ?)')
             ->execute([$playerId, $recipe['id'], $quantity, $now, $now + $duration]);
         activity_log($pdo, $playerId, 'craft_started', [
@@ -170,6 +173,9 @@ function crafting_collect(int $playerId): array
             // Skill and XP (#30), worked out here on the server at collection.
             if ($row !== null) {
                 $xp = (int) round((int) $job['quantity'] * recipe_base_xp($recipe) * recipe_colour($recipe, $row['skill'])['factor']);
+                if (progression_at_cap($row)) {
+                    $xp = 0;   // at the bottega's cap (#51): no XP until the next upgrade is built
+                }
                 if ($xp > 0 && $row['bonus_day'] < $today) {
                     $xp *= (int) prog('first_craft_of_day', 2);
                     $row['bonus_day'] = $today;

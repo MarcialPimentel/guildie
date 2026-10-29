@@ -442,6 +442,32 @@ Player-posted orders are in the backlog.
 
 ---
 
+### 6.6 The Wanted board *(0.11.0)*
+
+| | |
+|---|---|
+| **Job** | Let players ask for exactly what they need from other guilds, at a fair price |
+| **Owns** | `wanted_posts` (poster, item, quantity, filled, unit price, ducats held, status, expiry) |
+| **Verbs** | Post, fill (all or part), take down |
+
+**Rules** (Marz, 2026-10-29) [tune]
+- The price per unit must sit inside the market band: `market.floor_multiplier` to `ceiling_multiplier` x the item's usual value.
+- The ducats for the whole request are held when it's posted; whatever isn't used comes back when it's taken down or expires (`wanted.hours`, the market tick refunds it).
+- Whoever fills it gets the goods' price minus the Mercato cut (`exchange.cut`), at once; the goods go to the poster's storehouse.
+- At most `wanted.max_open` (3) open requests per player. You can't fill your own. Two fills of the last unit at the same moment: one wins (both players' rows, then the post, are locked in id order).
+
+### 6.7 The Palazzo's officials *(0.11.0)*
+
+| | |
+|---|---|
+| **Job** | Rumors that teach the market, and a small useful task every day |
+| **Owns** | `npc_favors` (player, official, day, goods asked, reward, XP, done) |
+| **Verbs** | Talk, do the favor |
+
+**Rules** [tune]
+- Three officials in `content/palazzo.json`. Rumors are built from live data: the notary from the biggest price moves, the crier from tomorrow's Guild Week day, the steward from an announced event or the Duke's slowest line.
+- One favor per official per player per UTC day: goods worth about `palazzo.favor_target_value` (60) ducats, from your guild's raws (notary), your guild's goods (crier) or another guild's goods up to your rank (steward). It pays `favor_reward_multiplier` (1.2) x usual value, under the Guild Suppliers' 1.5x, plus order XP (none at the bottega's cap).
+
 ## 7. Meta systems
 
 ### 7.1 Workshop & Buildings
@@ -456,10 +482,11 @@ Player-posted orders are in the backlog.
 **Rules**
 - Buildings from GDD 8.1: profession workstation, gathering station, Storehouse, Water Wheel (Journeyman+), Mailbox, Guild Board.
 - Upgrades cost gold and materials (a sink) and take time.
-- **Maximum building level is capped by profession rank** [Confirmed], which keeps the two progression tracks aligned (see 5.1).
+- ~~Maximum building level is capped by profession rank~~ **Since 0.11.0 the building opens the rank** (Marz, 2026-10-29): skill stops at the top of the rank the bottega allows (25 / 50 / 75 / 100) and crafts, orders and favors give no XP at that cap; building the next level steps you into the next rank. One bottega level covers the workstation and the station. Players who held a rank before 0.11.0 keep it (`legacy_rank`).
+- **0.11.0 as built:** `workshop.php`; levels and their effects in `economy.json` → `workshop` (craft slots 2/3/4/5, crafts 0/10/20/30% faster, station cap x1.5 from level 3, station rate x1.25 at level 4); costs in `professions.json` → `workshop` (always both other guilds' goods, only goods one rank lower can make). Owns `player_professions.workshop_level`, `legacy_rank`, `upgrade_to`, `upgrade_ready_at` (migration 009). Actions `workshop_upgrade` (pay now, build timer) and `workshop_open` (+1 skill into the new rank when you were waiting at the cap). Details: [palazzo.md](palazzo.md) §2.
 - **Machines** (Expert+: water wheels, gear trains, clockwork) automate work and cost **lamp oil and wages** as an ongoing running cost: a sink that scales with how much you automate (replaced coal, 2026-10-28).
 
-**Milestone:** M2 (core upgrades), the 3D harbor on desktop (0.7.0), M4 (final 3D art, machine visuals).
+**Milestone:** M2 (core upgrades), the 3D harbor on desktop (0.7.0), the rank gate and four visible bottega levels (0.11.0), M4 (final 3D art, machine visuals).
 
 ### 7.2 Calendar & Events
 
@@ -530,6 +557,10 @@ The 3D harbor also acts out results the other systems already decided (0.10.0, c
 **Milestone:** 0.9.0.
 
 ---
+
+### 7.7 The Palazzo and the Hall of honor *(0.11.0)*
+
+The shared square up the Steps where all three guilds meet ([palazzo.md](palazzo.md)): a realtime room like a quarter (`palazzo` is in every presence pass's room list), with the Hall of honor (Il Factotum, the richest, the most skilled, the Duke's best helpers, the finest bottegas; derived views, `honors`), the Wanted board (6.6), the Duke's lectern (6.5) and the officials (6.7). Phones get the same as lists under City → Palazzo.
 
 ## 8. Cross-cutting systems
 
