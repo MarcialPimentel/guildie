@@ -1,20 +1,20 @@
 // The 3D view's layout (desktop): the harbor fills the screen, every place opens a side panel with the
 // same screens the classic view uses, and a dock offers every place as a plain button too.
-// 0.9.0: the Steps lead to the guild quarters, where tapping a player or a stall opens their bottega.
+// 0.13.0: the quay keeps only your own work; the Steps lead to the Palazzo, the one shared square, with the
+// marketplace (a vendor per guild and the selling desk), the Hall of honor and the city's merchants, the
+// Duke's lectern and the officials. Tapping a player there opens their bottega.
 import type { ComponentChildren } from 'preact'
 import { useCallback, useEffect, useState } from 'preact/hooks'
-import { session, useSession } from '../session'
+import { useSession } from '../session'
+import { GUILDS, guild } from '../guilds'
 import { PALAZZO, type PickId, type Scene } from '../world/types'
 import { Bag } from './Bag'
 import { City, Crafter } from './City'
-import { useLoad, useNow, type TabRequest } from './common'
+import { useNow, type TabRequest } from './common'
 import { DukeOrder } from './Duke'
-import { QuarterChooser } from './Quarters'
-import { Trainer } from './Trainer'
 import { Market } from './Market'
 import { Orders } from './Orders'
-import { HallOfHonor, OfficialView, Wanted } from './Palazzo'
-import { NewsBoard } from './Ticker'
+import { HallOfHonor, OfficialView } from './Palazzo'
 import { Crafts, Ledger, Recipes, Station } from './Workshop'
 import { World } from './World'
 
@@ -28,22 +28,24 @@ export interface Panel {
 export const PANEL_WIDTH = 460
 
 const DOCK: [PickId, string][] = [
-  ['station', 'Station'], ['workbench', 'Workbench'], ['orders', 'Customers'], ['stall', 'Your stall'],
-  ['mercato', 'Mercato'], ['bag', 'Storehouse'], ['city', 'Guild hall'], ['news', 'News'], ['ledger', 'Ledger'],
-  ['duke', "Duke's order"], ['steps', 'Up the Steps'],
+  ['station', 'Station'], ['workbench', 'Workbench'], ['orders', 'Customers'], ['bag', 'Storehouse'], ['ledger', 'Your bottega'],
+  ['steps', 'Up to the Palazzo'],
 ]
-const QUARTER_DOCK: [PickId, string][] = [['home', 'Back to your bottega'], ['duke', "Duke's order"], ['trainer', 'Guild hall'], ['steps', 'Elsewhere up the Steps']]
 const PALAZZO_DOCK: [PickId, string][] = [
-  ['home', 'Back to your bottega'], ['wanted', 'Wanted board'], ['hall', 'Hall of honor'], ['duke', "Duke's order"],
-  ['notary', 'Notary'], ['crier', 'Crier'], ['steward', 'Steward'], ['steps', 'Elsewhere up the Steps'],
+  ['home', 'Back to your bottega'],
+  ...GUILDS.map((g) => [`vendor:${g.id}` as PickId, g.goods] as [PickId, string]),
+  ['desk', 'Selling desk'], ['hall', 'Hall of honor'], ['duke', "Duke's order"],
+  ['notary', 'Notary'], ['crier', 'Crier'], ['steward', 'Steward'],
 ]
 
-const TITLES: Record<PickId | 'visit', string> = {
+const TITLES: Partial<Record<PickId | 'visit', string>> = {
   station: '', workbench: 'Workbench', orders: 'Customers at your door', ledger: 'Your bottega', bag: 'Storehouse',
-  stall: 'Your stall', mercato: 'The Mercato', city: 'Guild hall', news: 'Harbor news',
-  duke: "The Duke's order", steps: 'Up the Steps', trainer: 'Guild hall', home: '', visit: 'A bottega',
-  hall: 'The Hall of honor', wanted: 'The Wanted board', notary: 'The notary', crier: 'The town crier', steward: "The Duke's steward",
+  duke: "The Duke's order", steps: 'Up the Steps', home: '', visit: 'A bottega', desk: 'The selling desk',
+  hall: 'The Palazzo', statue: 'Il Factotum', notary: 'The notary', crier: 'The town crier', steward: "The Duke's steward",
 }
+const titleOf = (id: PickId | 'visit') => (id.startsWith('vendor:') ? `The ${guild(id.slice(7)).goods.toLowerCase()} vendor` : TITLES[id] ?? '')
+/** Places that live up at the Palazzo: opening one from the quay walks you up there (0.13.0). */
+const atPalazzo = (id: PickId | 'visit') => id === 'desk' || id === 'hall' || id === 'statue' || id.startsWith('vendor:')
 
 interface Props {
   panel: Panel | null
@@ -62,8 +64,13 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
   const go = useCallback((next: Scene) => { close(); setScene(next) }, [close])
   const pick = useCallback((id: PickId) => {
     if (id === 'home') go('harbor')
+    else if (id === 'steps') go(PALAZZO)
     else open(id)
   }, [open, go])
+  // A trade or city link from the quay (the storehouse's "Sell", a Mercato tab request) takes you up the Steps.
+  useEffect(() => {
+    if (panel && atPalazzo(panel.id) && scene === 'harbor') setScene(PALAZZO)
+  }, [panel?.id])
   const visit = useCallback((playerId: number) => show({ id: 'visit', request: {}, playerId }), [show])
 
   useEffect(() => {
@@ -76,8 +83,8 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
   // On a narrow screen (a phone trying ?view=3d) the panel takes the whole width.
   const width = Math.min(PANEL_WIDTH, window.innerWidth)
   const covers = width >= window.innerWidth
-  const title = panel ? (panel.id === 'station' ? state.profession!.station.name : TITLES[panel.id]) : ''
-  const dock = scene === 'harbor' ? DOCK : scene === PALAZZO ? PALAZZO_DOCK : QUARTER_DOCK
+  const title = panel ? (panel.id === 'station' ? state.profession!.station.name : titleOf(panel.id)) : ''
+  const dock = scene === 'harbor' ? DOCK : PALAZZO_DOCK
   let body: ComponentChildren = null
   if (panel) {
     switch (panel.id) {
@@ -86,19 +93,16 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
       case 'orders': body = <Orders />; break
       case 'ledger': body = <Ledger state={state} now={now} />; break
       case 'bag': body = <Bag />; break
-      case 'stall':
-      case 'mercato': body = <Market key={panel.id} request={panel.request} onView={() => {}} />; break
-      case 'city': body = <City onView={() => {}} />; break
-      case 'news': body = <News />; break
+      case 'desk': body = <Market key={panel.id} request={panel.request} onView={() => {}} desk />; break
       case 'duke': body = <DukeOrder />; break
-      case 'steps': body = <QuarterChooser go={(q) => go(q as Scene)} />; break
-      case 'trainer': body = <GuildHall />; break
-      case 'hall': body = <HallOfHonor />; break
-      case 'wanted': body = <Wanted />; break
+      case 'hall': body = <><HallOfHonor /><City onView={() => {}} inHall /></>; break
+      case 'statue': body = <HallOfHonor />; break
       case 'notary':
       case 'crier':
       case 'steward': body = <OfficialView key={panel.id} npc={panel.id} />; break
       case 'visit': body = panel.playerId ? <Crafter key={panel.playerId} id={panel.playerId} /> : null; break
+      default:
+        if (panel.id.startsWith('vendor:')) body = <Market key={panel.id} request={{ market: 'browse', guild: panel.id.slice(7), ...panel.request }} onView={() => {}} vendor />
     }
   }
 
@@ -132,19 +136,3 @@ export function HarborView({ panel, open, show, close, onFail, onView }: Props) 
   )
 }
 
-function News() {
-  const [data] = useLoad(() => session.news(), [], true)
-  if (!data) return <p class="muted">Asking at the docks…</p>
-  if (!data.news.length) return <p class="muted">A quiet day in the harbor.</p>
-  return (
-    <>
-      <NewsBoard news={data.news} />
-      <p class="muted small">When an event is on, a galley is moored at the pier. Prices react on the Mercato.</p>
-    </>
-  )
-}
-
-/** The guild hall door in a quarter: the guild trainer (M2 #49), who teaches your guild's recipes. */
-function GuildHall() {
-  return <Trainer />
-}

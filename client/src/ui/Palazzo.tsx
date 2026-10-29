@@ -1,6 +1,7 @@
-// The Palazzo (0.11.0, docs/palazzo.md): the city hall on the shared square where all three guilds meet.
-// The Wanted board (players' paid requests), the Hall of honor and the three officials (rumors, one favor a day
-// each). Desktop opens these from places in the 3D Palazzo; phones see them in City → Palazzo.
+// The Palazzo (0.11.0, docs/palazzo.md): the city hall on the shared square where every guild meets.
+// Buy offers (players' paid requests; the Wanted board until 0.13.0, now part of the marketplace), the Hall of
+// honor with the Factotum's portrait, and the three officials (rumors, one favor a day each). Desktop opens these
+// from places in the 3D Palazzo; phones see buy offers in the Mercato tab and the rest in City → Palazzo.
 // The server decides prices, payouts, favors and rumors.
 import { useState } from 'preact/hooks'
 import items from '../../../content/items.json'
@@ -9,30 +10,31 @@ import { session, useSession } from '../session'
 import type { NpcTalk, WantedBoard, WantedPost } from '../types'
 import { Coins, ItemIcon } from './art'
 import { ActionButton, Modes, Stepper, useGame, useLoad } from './common'
+import { Portrait } from './Look'
 import { celebrate, gainText } from './Progress'
 
 const ITEMS: { id: string; name: string; profession: string }[] = items.items.map((i) => ({ id: i.id, name: i.name, profession: i.profession }))
 export const OFFICIALS = ['notary', 'crier', 'steward'] as const
 export type Official = (typeof OFFICIALS)[number]
 
-// ---------------------------------------------------------------- the Wanted board
+// ---------------------------------------------------------------- buy offers (the Wanted board until 0.13.0)
 
-export function Wanted() {
+export function BuyOffers() {
   const [board, reload] = useLoad(() => session.wanted(), [], true)
   if (!board) return <p class="muted">The notary pins up the notices…</p>
   return (
     <section class="stack" data-testid="wanted">
       <p class="muted small">
-        Post what you need and other crafters bring it. Your ducats are held on the notice until it's filled; whoever fills it
-        is paid at once, minus the Mercato's {Math.round(board.cut * 100)}% cut. Notices last {board.hours} hours.
+        Offer to buy what you need and other crafters bring it. Your ducats are held on the offer until it's filled; whoever
+        fills it is paid at once, minus the Mercato's {Math.round(board.cut * 100)}% cut. Offers last {board.hours} hours.
       </p>
-      <h2>Notices</h2>
-      {board.posts.length === 0 && <p class="muted">No requests from other crafters right now.</p>}
+      <h2>Buy offers</h2>
+      {board.posts.length === 0 && <p class="muted">No buy offers from other crafters right now.</p>}
       {board.posts.map((p) => <Notice post={p} after={reload} />)}
       <PostForm board={board} after={reload} />
       {board.mine.length > 0 && (
         <>
-          <h2>Your requests</h2>
+          <h2>Your buy offers</h2>
           {board.mine.map((p) => <Mine post={p} after={reload} />)}
         </>
       )}
@@ -149,6 +151,9 @@ export function HallOfHonor() {
     <section class="stack" data-testid="honors">
       {h.factotum && (
         <div class="card center" data-testid="factotum">
+          {h.factotum.look && (
+            <Portrait guild={h.factotum.look.profession_id} color={h.factotum.look.color} hat={h.factotum.look.hat} rank={h.factotum.look.rank} size={110} />
+          )}
           <p class="tiny muted">{h.title}</p>
           <h2>{h.factotum.name}{h.factotum.me ? ' (you!)' : ''}</h2>
           <p class="small">{h.factotum.profession} · {h.factotum.value}</p>
@@ -232,19 +237,18 @@ function Talk({ talk, after, say }: { talk: NpcTalk; after: () => void; say: (m:
 
 /** Phones and the classic view: everything in the Palazzo as one tabbed list (City → Palazzo). */
 export function PalazzoList() {
-  type Mode = 'wanted' | 'honors' | Official
-  const [mode, setMode] = useState<Mode>('wanted')
+  type Mode = 'honors' | Official
+  const [mode, setMode] = useState<Mode>('honors')
   const [npcs] = useLoad(() => session.palazzo(), [], true)
   const name = (id: string) => npcs?.npcs.find((n) => n.id === id)?.name ?? id
   return (
     <section class="stack" data-testid="palazzo">
-      <p class="muted small">The Piazza del Palazzo, where all three guilds meet: the Wanted board, the Hall of honor and the city's officials.</p>
+      <p class="muted small">The Piazza del Palazzo, where every guild meets: the Hall of honor and the city's officials. Buying and selling is in the Mercato tab.</p>
       <Modes<Mode>
         value={mode}
-        options={[['wanted', 'Wanted'], ['honors', 'Hall of honor'], ...OFFICIALS.map((o) => [o, name(o)] as [Mode, string])]}
+        options={[['honors', 'Hall of honor'], ...OFFICIALS.map((o) => [o, name(o)] as [Mode, string])]}
         onChange={setMode}
       />
-      {mode === 'wanted' && <Wanted />}
       {mode === 'honors' && <HallOfHonor />}
       {(OFFICIALS as readonly string[]).includes(mode) && <OfficialView key={mode} npc={mode} />}
     </section>

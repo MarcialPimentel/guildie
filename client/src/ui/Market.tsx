@@ -1,5 +1,8 @@
-// The Mercato (the Exchange, systems.md 6.1): browse prices, buy, sell, and manage your listings.
-// Views: browse -> item detail; sell list -> sell form; my listings.
+// The Mercato (the Exchange, systems.md 6.1): browse prices, buy, sell, manage your listings, and buy offers
+// (players' paid requests for goods; the Wanted board until 0.13.0).
+// Views: browse -> item detail; sell list -> sell form; my listings; buy offers.
+// In 3D (0.13.0) the Mercato is the Palazzo's marketplace: a guild's vendor shows that guild's goods
+// (`vendor`), and the selling desk shows selling, your listings and buy offers (`desk`).
 import type { ComponentChild } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
 import { ago, duration, gold } from '../format'
@@ -8,13 +11,14 @@ import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
 import type { Listing, MarketRow, SellQuote } from '../types'
 import { ActionButton, Modes, Stepper, useGame, useLoad, type TabRequest } from './common'
+import { BuyOffers } from './Palazzo'
 import { NewsBoard, Sparkline, Trend } from './Ticker'
 
 
-type View = { name: 'browse' } | { name: 'item'; itemId: string } | { name: 'sell' } | { name: 'sell_form'; itemId: string; qty: number } | { name: 'mine' }
+type View = { name: 'browse' } | { name: 'item'; itemId: string } | { name: 'sell' } | { name: 'sell_form'; itemId: string; qty: number } | { name: 'mine' } | { name: 'offers' }
 
-export function Market({ request, onView }: { request: TabRequest; onView: (v: string) => void }) {
-  const [view, setView] = useState<View>({ name: 'browse' })
+export function Market({ request, onView, vendor = false, desk = false }: { request: TabRequest; onView: (v: string) => void; vendor?: boolean; desk?: boolean }) {
+  const [view, setView] = useState<View>(desk ? { name: 'sell' } : { name: 'browse' })
 
   // Requests from other tabs (e.g. Bag → Sell this item).
   useEffect(() => {
@@ -26,25 +30,29 @@ export function Market({ request, onView }: { request: TabRequest; onView: (v: s
   const mode = view.name === 'item' ? 'browse' : view.name === 'sell_form' ? 'sell' : view.name
   return (
     <>
-      <Modes
-        value={mode}
-        options={[['browse', 'Browse'], ['sell', 'Sell'], ['mine', 'My listings']]}
-        onChange={(m) => setView({ name: m } as View)}
-      />
-      {view.name === 'browse' && <Browse open={(itemId) => setView({ name: 'item', itemId })} />}
+      {!vendor && (
+        <Modes
+          value={mode}
+          options={[...(desk ? [] : [['browse', 'Browse'] as [string, string]]), ['sell', 'Sell'], ['mine', 'My listings'], ['offers', 'Buy offers']]}
+          onChange={(m) => setView({ name: m } as View)}
+        />
+      )}
+      {view.name === 'browse' && <Browse guild={request.guild} open={(itemId) => setView({ name: 'item', itemId })} />}
       {view.name === 'item' && <ItemDetail itemId={view.itemId} back={() => setView({ name: 'browse' })} />}
       {view.name === 'sell' && <SellList open={(itemId, qty) => setView({ name: 'sell_form', itemId, qty })} />}
       {view.name === 'sell_form' && (
         <SellForm key={view.itemId} itemId={view.itemId} startQty={view.qty} back={() => setView({ name: 'sell' })} done={(v) => setView({ name: v } as View)} />
       )}
       {view.name === 'mine' && <MyListings />}
+      {view.name === 'offers' && <BuyOffers />}
     </>
   )
 }
 
 // ---------------------------------------------------------------- browse
 
-function Browse({ open }: { open: (itemId: string) => void }) {
+/** Every guild's goods, your guild first; or one guild's goods only (a vendor's stall in the Palazzo, 0.13.0). */
+function Browse({ open, guild: only }: { open: (itemId: string) => void; guild?: string }) {
   const s = useSession()
   const [data] = useLoad(() => session.market(), [], true)
   if (!data) return <p class="muted">Loading the Mercato…</p>
@@ -53,7 +61,7 @@ function Browse({ open }: { open: (itemId: string) => void }) {
   data.items.forEach((item) => (groups[item.profession] ??= []).push(item))
   // your guild first, then the others in content order; any group this build doesn't know comes last
   const known = GUILDS.map((g) => g.id)
-  const order = [mine, ...known, ...Object.keys(groups)].filter((p, i, a) => p && a.indexOf(p) === i && groups[p])
+  const order = (only ? [only] : [mine, ...known, ...Object.keys(groups)]).filter((p, i, a) => p && a.indexOf(p) === i && groups[p])
 
   return (
     <>

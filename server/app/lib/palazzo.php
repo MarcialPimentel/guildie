@@ -57,9 +57,17 @@ function palazzo_honors(int $viewerId): array
                              WHERE pp.workshop_level > 1 ORDER BY pp.workshop_level DESC, pp.skill DESC, p.name ASC LIMIT $n")->fetchAll();
 
     $factotum = $gold[0] ?? null;
+    $fRow = null;
+    if ($factotum) {
+        // The Factotum's merchant (0.13.0): the statue in the middle of the Palazzo and the portrait over the door.
+        $look = city_looks($pdo, [(int) $factotum['id']])[(int) $factotum['id']] ?? null;
+        $fRow = $row($factotum, ducats((int) $factotum['gold'])) + ['look' => $look ? [
+            'profession_id' => $factotum['profession_id'], 'color' => $look['color'], 'hat' => $look['hat'], 'rank' => $look['rank'],
+        ] : null];
+    }
     return [
         'title'    => city_top_title(),
-        'factotum' => $factotum ? $row($factotum, ducats((int) $factotum['gold'])) : null,
+        'factotum' => $fRow,
         'boards'   => [
             ['id' => 'gold', 'title' => 'The richest', 'rows' => array_map(fn($r) => $row($r, ducats((int) $r['gold'])), $gold)],
             ['id' => 'skill', 'title' => 'The most skilled', 'rows' => array_map(fn($r) => $row($r, sprintf('%s %d · %s',
