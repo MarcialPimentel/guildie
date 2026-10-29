@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Starbloom">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M32 40V58" fill="none" stroke="#6E9B48" stroke-width="4"/>
+  <path d="M32 50Q22 44 18 50Q24 56 32 52" fill="#6E9B48"/>
+  <path d="M32 6L37 21L53 21L40 30L45 46L32 36L19 46L24 30L11 21L27 21Z" fill="#B49AE8"/>
+  <circle cx="32" cy="27" r="6" fill="#F2C53D"/>
+</g>
+<circle cx="50" cy="10" r="1.8" fill="#F2C53D"/>
+<circle cx="12" cy="12" r="1.4" fill="#F2C53D"/>
+<path d="M50 6v8M46 10h8" stroke="#F2C53D" stroke-width="1.4" stroke-linecap="round"/>
+<path d="M28 15l2-5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+</svg>

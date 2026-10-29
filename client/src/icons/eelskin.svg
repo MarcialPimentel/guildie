@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Eelskin">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M6 22Q18 10 30 22Q42 34 56 22L58 34Q44 46 30 34Q18 22 8 34Z" fill="#4E7A72"/>
+</g>
+<path d="M14 23q8-4 14 3M36 33q8 3 16-4" stroke="#9FD3C6" stroke-width="2" stroke-linecap="round" fill="none"/>
+<circle cx="20" cy="27" r="1.2" fill="#2C4A44"/><circle cx="40" cy="34" r="1.2" fill="#2C4A44"/><circle cx="48" cy="31" r="1.2" fill="#2C4A44"/>
+</svg>

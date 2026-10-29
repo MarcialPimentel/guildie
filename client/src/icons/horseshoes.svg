@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Horseshoes">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M14 14H24V36Q24 44 32 44Q40 44 40 36V14H50V36Q50 54 32 54Q14 54 14 36Z" fill="#7C868C"/>
+</g>
+<circle cx="19" cy="22" r="1.8" fill="#10323A"/>
+<circle cx="19" cy="32" r="1.8" fill="#10323A"/>
+<circle cx="45" cy="22" r="1.8" fill="#10323A"/>
+<circle cx="45" cy="32" r="1.8" fill="#10323A"/>
+<path d="M18 40q2 8 10 10" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".6"/>
+</svg>

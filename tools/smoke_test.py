@@ -334,7 +334,7 @@ check("unknown sort rejected", s == 400, r)
 s, r = call("player_profile", {"player_id": id_a}, token=tok_b)
 check("profile of A: guild, skill, crafts, recipes, can trade", s == 200 and r["data"]["profession"] == "Alchemist" and r["data"]["skill"] >= 2
       and r["data"]["rank_name"] == "Apprentice" and r["data"]["crafted"] >= batch and r["data"]["recipes_known"] == 1
-      and r["data"]["recipes_total"] == 4 and r["data"]["can_trade"], r)
+      and r["data"]["recipes_total"] == len([x for x in RECIPES if x["profession"] == "alchemist" and not x.get("rare")]) and r["data"]["can_trade"], r)
 s, r = call("player_profile", {"player_id": id_b}, token=tok_b)
 check("own profile: can't trade with yourself", s == 200 and r["data"]["me"] and not r["data"]["can_trade"], r)
 s, r = call("player_profile", {"player_id": 999999999}, token=tok_b)
@@ -440,6 +440,10 @@ check("orders name their customer's id (for the 3D customer's look)", all(o["cus
 check("Apprentice: no bundle orders", all(o["kind"] in ("standard", "collector") for o in orders), [o["kind"] for o in orders])
 check("standard orders pay more than market value", all(o["reward_gold"] > 0 for o in orders), orders)
 check("orders pay XP (#30)", all(o["reward_xp"] > 0 for o in orders), [o.get("reward_xp") for o in orders])
+# 0.12.0: an Apprentice's rare-material reward is never a raw unlocked above their skill (raws 3 and 4 are 40 and 65).
+second_raws = {g["station"]["outputs"][1]["item_id"] for g in GUILDS}
+check("Apprentice order rewards: only second raws as rare materials", all(i["item_id"] in second_raws for o in orders for i in o.get("reward_items", [])),
+      [o.get("reward_items") for o in orders])
 check("Apprentice orders only ask for goods you know or can learn now", all(i["item_id"] == "healing_draught" for o in orders for i in o["items"]),
       [[i["item_id"] for i in o["items"]] for o in orders])
 rare_offers = [o["reward_recipe"]["id"] for o in orders if o.get("reward_recipe")]
@@ -505,6 +509,9 @@ check("new blacksmith knows only Brass Fittings", [x["id"] for x in st["professi
 check("new blacksmith's mine yields copper only; iron ore at skill 15",
       [o["item_id"] for o in st["profession"]["station"]["outputs"]] == ["copper_ore"]
       and st["profession"]["station"]["locked"][0]["unlock_skill"] == 15, st["profession"]["station"])
+bs_locked = [(o["item_id"], o["unlock_skill"]) for g in GUILDS if g["id"] == "blacksmith" for o in g["station"]["outputs"] if o.get("unlock_skill", 1) > 1]
+check("the mine's later raws stay locked until their skill (0.12.0: coal at 40, silver at 65)",
+      [(x["item_id"], x["unlock_skill"]) for x in st["profession"]["station"]["locked"]] == bs_locked, st["profession"]["station"]["locked"])
 for rid, why in (("copper_lantern", "trainer"), ("iron_sword", "trainer"), ("arsenale_fittings", "rare")):
     s, r = call("start_craft", {"recipe_id": rid, "quantity": 1}, token=tok_d)
     check(f"can't craft unknown {rid}", s == 400 and r["error"]["code"] == "recipe_not_known" and why in r["error"]["message"], r)
@@ -594,8 +601,8 @@ if PLAYER_TOOL:
     check("rank-up: Journeyman at 26", pr.get("skill_to") == 26 and pr.get("rank_up") == "Journeyman", r)
     check("rank-up teaches the Journeyman starter free (Iron Ingot)", pr.get("learned") == ["Iron Ingot"]
           and any(x["id"] == "iron_ingot" for x in r["data"]["state"]["profession"]["recipes"]), pr)
-    check("passing skill 15 opens iron ore at the mine", pr.get("unlocked") == ["Iron Ore"]
-          and not r["data"]["state"]["profession"]["station"]["locked"], r["data"]["state"]["profession"]["station"])
+    check("passing skill 15 opens iron ore at the mine; later raws stay locked", pr.get("unlocked") == ["Iron Ore"]
+          and all(x["unlock_skill"] > 26 for x in r["data"]["state"]["profession"]["station"]["locked"]), r["data"]["state"]["profession"]["station"])
     check("rank-up in activity", any(a["type"] == "rank_up" and "Journeyman Blacksmith" in a["text"] for a in r["data"]["state"]["activity"]), r["data"]["state"]["activity"][:5])
     st = r["data"]["state"]["profession"]["progress"]
     check("header data: Blacksmith 26/100 · Journeyman, Expert next at 51", st["skill"] == 26 and st["rank"] == "Journeyman"
@@ -612,7 +619,7 @@ if PLAYER_TOOL:
     st = r["data"]["profession"]
     check("legacy player: skill counted from past crafts", st["progress"]["skill"] == 6, st["progress"])
     check("legacy player keeps every guild recipe (not the rare ones)", sorted(x["id"] for x in st["recipes"])
-          == sorted(x["id"] for x in RECIPES if x["profession"] == "blacksmith" and not x.get("rare")), st["recipes"])
+          == ["brass_fittings", "copper_lantern", "iron_ingot", "iron_sword"], st["recipes"])   # the recipes of that time, not the 0.12.0 ladder
     check("legacy player keeps both raws", [o["item_id"] for o in st["station"]["outputs"]] == ["copper_ore", "iron_ore"], st["station"])
     check("legacy upgrade in activity", any(a["type"] == "skill_counted" for a in r["data"]["activity"]), r["data"]["activity"][:3])
     s, r = call("start_craft", {"recipe_id": "iron_sword", "quantity": 1}, token=tok_d)

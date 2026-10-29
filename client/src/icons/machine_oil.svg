@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Machine Oil">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M10 28H40V54H10Z" fill="#7C868C"/>
+  <path d="M40 34L56 18L58 21L44 40" fill="#9AA3A8"/>
+  <path d="M10 28L16 20H34L40 28Z" fill="#9AA3A8"/>
+  <path d="M14 20Q14 12 22 12H30" fill="none" stroke-width="3"/>
+  <rect x="14" y="36" width="22" height="12" rx="2" fill="#F2C53D" stroke-width="2"/>
+</g>
+<path d="M58 24q1 4-1 6q-3-2-1-6z" fill="#8F5A2B"/>
+<path d="M14 32v2" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+<path d="M19 42h12" stroke="#10323A" stroke-width="2" stroke-linecap="round"/>
+</svg>

@@ -177,7 +177,9 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
         $kind = 'bundle';
     }
 
-    $target = rand_between((float) $s['target_value_min'], (float) $s['target_value_max']);
+    // The order's size grows with your rank (0.12.0), so a Master isn't asked for one prestige good far over target.
+    [$lo, $hi] = $s['target_value_by_rank'][progression_rank_index($skill)] ?? [$s['target_value_min'], $s['target_value_max']];
+    $target = rand_between((float) $lo, (float) $hi);
     $items = [];
     if ($kind === 'collector') {
         $item = orders_pick(orders_own_items($professionId, !$bundles, $skill, $known));

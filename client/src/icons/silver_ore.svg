@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Silver Ore">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M8 47L13 33L28 28L36 38L32 51L13 53Z" fill="#7C868C"/>
+  <path d="M28 45L31 27L44 19L56 29L54 46L39 52Z" fill="#9AA3A8"/>
+  <path d="M36 26L42 22L46 28L40 32Z" fill="#E8EEF2" stroke-width="2"/>
+  <path d="M15 40L20 37L23 42L18 45Z" fill="#E8EEF2" stroke-width="2"/>
+  <path d="M44 36L49 34L51 39L46 41Z" fill="#E8EEF2" stroke-width="2"/>
+</g>
+<path d="M38 25l3-1" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+<circle cx="26" cy="20" r="1.8" fill="#FFFFFF"/>
+<path d="M26 15v10M21 20h10" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>
+</svg>

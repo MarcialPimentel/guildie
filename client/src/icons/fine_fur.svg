@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Fine Fur">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M12 14Q20 8 24 14Q32 8 40 14Q44 8 52 14L50 26Q56 34 50 42L52 52Q44 58 40 52Q32 58 24 52Q20 58 12 52L14 42Q8 34 14 26Z" fill="#E8D9B5"/>
+  <path d="M22 22Q32 18 42 22Q46 32 42 44Q32 48 22 44Q18 32 22 22Z" fill="#B5833E" stroke-width="2"/>
+</g>
+<path d="M26 28q2-2 4 0M33 26q2-2 4 0M28 36q2-2 4 0M35 36q2-2 4 0" stroke="#E8D9B5" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+<path d="M16 20q2-3 5-3" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" opacity=".8"/>
+</svg>

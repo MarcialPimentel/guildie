@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Volatile Spirit">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M26 20H38V50Q38 56 32 56Q26 56 26 50Z" fill="#DDF3EF"/>
+  <path d="M27 34H37V50Q37 55 32 55Q27 55 27 50Z" fill="#4C7BD9" stroke-width="0"/>
+  <path d="M26 20H38V50Q38 56 32 56Q26 56 26 50Z" fill="none"/>
+  <rect x="24" y="15" width="16" height="6" rx="2" fill="#B07A4A"/>
+</g>
+<path d="M32 13q-6-5 0-12q2 5 5 6q-1 4-5 6z" fill="#7FB0FF" stroke="#10323A" stroke-width="1.8"/>
+<path d="M32 11q-2-3 0-6q2 3 0 6z" fill="#DDF3EF"/>
+<path d="M29 26v6" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>
+</svg>

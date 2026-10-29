@@ -15,6 +15,9 @@ declare(strict_types=1);
  */
 
 const PROGRESS_VERSION = 1;
+/** The recipes every guild had before 0.8.0, which players from then keep (progression_upgrade). */
+const PRE_080_RECIPES = ['brass_fittings', 'copper_lantern', 'iron_ingot', 'iron_sword', 'healing_draught', 'smelting_flux',
+    'tanning_solution', 'steam_tonic', 'leather_grip', 'hide_satchel', 'cured_leather', 'rugged_jerkin'];
 
 function prog(string $key, mixed $default = null): mixed
 {
@@ -358,8 +361,9 @@ function progression_upgrade(PDO $pdo, int $playerId): bool
     }
     $now = game_now();
     $professionId = $row['profession_id'];
+    // Players from before 0.8.0 knew every recipe of that time; they keep those, not the ladder added since (0.12.0).
     foreach (content_recipes_for($professionId) as $r) {
-        if (!recipe_is_rare($r)) {
+        if (!recipe_is_rare($r) && in_array($r['id'], PRE_080_RECIPES, true)) {
             progression_learn($pdo, $playerId, $r['id'], 'legacy', $now);
         }
     }

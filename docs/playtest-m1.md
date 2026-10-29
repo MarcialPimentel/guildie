@@ -28,6 +28,15 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
 10. **Little surprises:** collecting can turn up a rich vein, a bumper crop or a prize pelt, and crafts sometimes come out with a bonus item.
 11. **While you were away:** come back after a while and the game shows what happened, with one tap to collect everything.
 
+## New in 0.12.0: the long road to 100
+
+- **Every guild now has 16 recipes, all the way to skill 100.** Open the guild trainer (the guild hall door in 3D, or the Recipes list in the Bottega tab) to see what you can learn next, what each recipe needs and which other guild's goods it uses.
+- **New raws:** at skill 40 your station starts gathering a third raw (Coal, Frostcap or Eelskin), and at 65 a fourth (Silver Ore, Starbloom or Fine Fur).
+- **New rare recipes** for Expert and Master can turn up on orders.
+- **Bigger orders as you rank up:** higher ranks get orders sized for their goods.
+- **The last bottega upgrade** (which opens Master) now needs Gears, Machine Oil and Drive Belts.
+- **Questions for this playtest:** Is there always a recipe worth learning next? Do you have a goal (a recipe or a good) you're saving up for? Which other guild's goods did you need first, and could you get them?
+
 ## New in 0.11.0: the Palazzo and your bottega
 
 - **Your bottega starts as a rundown shack.** At skill 25 your skill stops and crafts give no XP. Open your bottega (the 3D bottega door, or the Bottega tab) to see the upgrade that opens Journeyman, what it needs and what you have. Gather or buy the goods, build it, wait for the builders, then open it: you become a Journeyman and the shack becomes a repaired workshop.

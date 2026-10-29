@@ -103,7 +103,19 @@
       "demand_per_hour": {
         "healing_draught": 4,
         "copper_lantern": 4,
-        "hide_satchel": 5
+        "hide_satchel": 5,
+        "copper_kettle": 0.65,
+        "lamp_oil": 1.2,
+        "horseshoes": 0.36,
+        "iron_lockbox": 0.22,
+        "work_gloves": 0.77,
+        "trail_boots": 0.39,
+        "dyed_satchel": 0.24,
+        "strong_healing_draught": 0.44,
+        "saddle": 0.12,
+        "fur_lined_cloak": 0.14,
+        "clockwork_mechanism": 0.04,
+        "elixir_of_vigor": 0.07
       }
     },
     "adventurers": {
@@ -115,7 +127,17 @@
         "healing_draught": 2,
         "steam_tonic": 3,
         "iron_sword": 1.2,
-        "rugged_jerkin": 1.5
+        "rugged_jerkin": 1.5,
+        "regatta_blade": 0.06,
+        "pump_valve": 0.1,
+        "frost_draught": 0.44,
+        "blasting_powder": 0.48,
+        "preserving_brine": 0.24,
+        "eelskin_coat": 0.25,
+        "explorers_pack": 0.12,
+        "diving_suit": 0.05,
+        "aether_tonic": 0.04,
+        "ornithopter_harness": 0.06
       }
     },
     "workshops": {
@@ -129,7 +151,21 @@
         "smelting_flux": 1,
         "tanning_solution": 1,
         "iron_ingot": 0.5,
-        "cured_leather": 0.5
+        "cured_leather": 0.5,
+        "pig_iron": 0.2,
+        "hide_cord": 0.2,
+        "philosophers_salt": 0.04,
+        "dye_set": 0.4,
+        "gears": 0.09,
+        "machine_oil": 0.13,
+        "drive_belt": 0.07,
+        "steel_bar": 0.05,
+        "silver_filigree": 0.09,
+        "volatile_spirit": 0.08,
+        "pressure_gasket": 0.06,
+        "pressure_gauge": 0.08,
+        "etching_acid": 0.24,
+        "trip_hammer": 0.03
       }
     },
     "traders": {

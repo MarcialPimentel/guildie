@@ -277,6 +277,11 @@ for o in duke.get("orders", []):
     if len({item_prof.get(ln.get("item_id")) for ln in lines}) < 2:
         err(f"duke: order {o.get('id')!r} must ask for goods from at least two guilds (it's a city-wide order)")
 
+# Orders grow with rank (0.12.0): one rising [min, max] value range per rank.
+tv = orders.get("settings", {}).get("target_value_by_rank")
+if tv is not None and (len(tv) != len(ranks) or any(not (0 < a <= b) for a, b in tv) or [a for a, _ in tv] != sorted(a for a, _ in tv)):
+    err("orders: settings.target_value_by_rank needs one rising [min, max] pair per rank")
+
 # ---------------------------------------------------------------- guilds are content (0.10.3)
 # Each guild's names, colors and hats live in professions.json; its art is two files named after its kit.
 # A guild without them would draw as plain art in the game, so CI stops it here instead.

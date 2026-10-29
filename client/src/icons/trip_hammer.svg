@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Trip Hammer">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="6" y="48" width="52" height="8" rx="2" fill="#7A4E2D"/>
+  <rect x="12" y="38" width="16" height="10" fill="#5E666B"/>
+  <path d="M12 14L52 26L50 32L10 20Z" fill="#A9784A"/>
+  <rect x="8" y="16" width="12" height="18" rx="2" fill="#7C868C" transform="rotate(16 14 25)"/>
+  <circle cx="48" cy="40" r="10" fill="none" stroke="#B8891A" stroke-width="6" stroke-dasharray="3.6 3" stroke-linecap="butt"/>
+  <circle cx="48" cy="40" r="8" fill="#E0B04A"/>
+</g>
+<circle cx="48" cy="40" r="2.5" fill="#10323A"/>
+<path d="M14 19l8 2" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+<path d="M30 44l3-4M33 46l4-2" stroke="#FFC24D" stroke-width="2" stroke-linecap="round"/>
+</svg>

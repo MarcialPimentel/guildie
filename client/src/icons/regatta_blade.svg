@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Regatta Blade">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M48 8L54 10L52 16L24 44L20 40Z" fill="#D6DDE1"/>
+  <circle cx="20" cy="44" r="8" fill="none" stroke="#B8891A" stroke-width="5" stroke-dasharray="3 2.6" stroke-linecap="butt"/>
+  <circle cx="20" cy="44" r="6.5" fill="#E0B04A"/>
+  <path d="M15 49L8 56" fill="none" stroke="#8F4E2B" stroke-width="6"/>
+</g>
+<path d="M47 13L27 33" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+<circle cx="20" cy="44" r="2" fill="#10323A"/>
+<path d="M10 51l3 3" stroke="#B8891A" stroke-width="2" stroke-linecap="round"/>
+</svg>

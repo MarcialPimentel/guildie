@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Clockwork Mechanism">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <circle cx="32" cy="34" r="22" fill="#C7733E"/>
+  <circle cx="32" cy="34" r="17" fill="#3B3633" stroke-width="2"/>
+  <circle cx="28" cy="37" r="9" fill="none" stroke="#E0B04A" stroke-width="5" stroke-dasharray="3 2.6" stroke-linecap="butt"/>
+  <circle cx="28" cy="37" r="7.5" fill="#E0B04A" stroke-width="2"/>
+  <circle cx="40" cy="27" r="5.5" fill="none" stroke="#9AA3A8" stroke-width="4" stroke-dasharray="2.4 2" stroke-linecap="butt"/>
+  <circle cx="40" cy="27" r="4.5" fill="#9AA3A8" stroke-width="2"/>
+  <path d="M32 12V6M27 6H37" fill="none" stroke-width="3"/>
+</g>
+<circle cx="28" cy="37" r="2" fill="#10323A"/>
+<circle cx="40" cy="27" r="1.4" fill="#10323A"/>
+<path d="M14 28q3-9 12-13" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".55"/>
+</svg>

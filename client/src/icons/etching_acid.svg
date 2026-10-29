@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Etching Acid">
+<g stroke="#10323A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="27" y="8" width="10" height="16" fill="#DDF3EF"/>
+  <circle cx="32" cy="40" r="17" fill="#DDF3EF"/>
+  <path d="M15.4 36H48.6A17 17 0 1 1 15.4 36Z" fill="#9BD63A" stroke-width="0"/>
+  <circle cx="32" cy="40" r="17" fill="none"/>
+  <rect x="25" y="4" width="14" height="6" rx="2.5" fill="#8F4E2B"/>
+</g>
+<circle cx="26" cy="44" r="2.5" fill="#E6FFB3"/>
+<circle cx="36" cy="40" r="1.8" fill="#E6FFB3"/>
+<circle cx="31" cy="49" r="1.4" fill="#E6FFB3"/>
+<path d="M50 16q3 4 0 6q-3-2 0-6z" fill="#9BD63A" stroke="#10323A" stroke-width="1.5"/>
+<path d="M22 30l-2 3" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+</svg>
