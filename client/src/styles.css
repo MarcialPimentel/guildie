@@ -379,3 +379,51 @@ body.in-world .header-skill { height: 20px; margin-top: 0; padding-bottom: 0; al
 .look-row { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
 .guild-head { display: flex; gap: 12px; align-items: center; }
 .portrait { flex: none; overflow: visible; }
+
+/* ---------------------------------------------------------------- the new-player guide (0.14.0, ui/Guide.tsx) */
+.guide { border: 2px solid #F2C53D; background: #FFF9E4; color: #10323A; margin: 10px auto; max-width: 720px; }
+.guide h3 { margin: 2px 0; font-size: 18px; }
+.guide p { margin: 2px 0 6px; }
+.guide.ready { border-color: #2FB59D; background: #EAF7F2; }
+.guide.floating { position: absolute; left: 14px; top: 52px; z-index: 6; width: min(340px, calc(100% - 28px)); margin: 0; box-shadow: 0 6px 18px rgba(16, 50, 58, 0.18); }
+@media (max-width: 899px) { .guide.floating { top: 10px; } }
+@keyframes guide-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 197, 61, 0.9); }
+  50% { box-shadow: 0 0 0 7px rgba(242, 197, 61, 0); }
+}
+/* the button to press next pulses (body[data-guide] is the guide's current step, or "claim") */
+body[data-guide="collect"] [data-testid="dock-station"],
+body[data-guide="collect"] [data-testid="tab-workshop"],
+body[data-guide="collect"] [data-testid="collect-station"],
+body[data-guide="craft"] [data-testid="dock-workbench"],
+body[data-guide="craft"] [data-testid="tab-workshop"],
+body[data-guide="craft"] [data-testid^="craft-"],
+body[data-guide="craft"] [data-testid="collect-crafts"],
+body[data-guide="train"] [data-testid="dock-workbench"],
+body[data-guide="train"] [data-testid="tab-workshop"],
+body[data-guide="train"] [data-testid^="craft-"],
+body[data-guide="train"] [data-testid="collect-crafts"],
+body[data-guide="train"] [data-testid="dock-home"],
+body[data-guide="learn"] [data-testid="dock-workbench"],
+body[data-guide="learn"] [data-testid="tab-workshop"],
+body[data-guide="learn"] [data-testid="trainer-open"],
+body[data-guide="learn"] [data-testid^="learn-"]:not(:disabled),
+body[data-guide="collect"] [data-testid="dock-home"],
+body[data-guide="craft"] [data-testid="dock-home"],
+body[data-guide="learn"] [data-testid="dock-home"],
+body[data-guide="palazzo"] [data-testid="dock-steps"],
+body[data-guide="palazzo"] [data-testid="tab-city"],
+body[data-guide="palazzo"] [data-testid="mode-palazzo"],
+body[data-guide="slap"] [data-testid="world-slap"],
+body[data-guide="claim"] [data-testid="guide-claim"] {
+  animation: guide-pulse 1.4s ease-in-out infinite;
+  outline: 2px solid #F2C53D;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-guide] [data-testid] { animation: none !important; }
+}
+.guide .muted { color: #4A6B6F; }
+/* the floating card never blocks the world under it: only its buttons take clicks */
+.guide.floating { pointer-events: none; }
+.guide.floating button { pointer-events: auto; }

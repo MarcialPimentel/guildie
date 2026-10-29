@@ -37,12 +37,19 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(page.locator(id('skill'))).toHaveText('Alchemist 1/100 · Apprentice')   // skill and rank (#30)
   await expect(page.locator(id('xp-bar'))).toBeVisible()
   await expect(page.locator(id('gold'))).toHaveText(/^[\d,]+ ducats?$/)
+  // The new-player guide (0.14.0): the first step is to collect, and the collect button pulses.
+  await expect(page.locator(id('guide'))).toHaveAttribute('data-step', 'collect')
+  await expect(page.locator('body')).toHaveAttribute('data-guide', 'collect')
   await expect(page.locator('.tabbar button')).toHaveCount(4)
   await expect(page.locator(id('world'))).toHaveCount(0)   // no 3D on the classic view (phones: never downloaded)
 
   // --- workshop: collect, then craft from the recipes on the same screen (#39)
   await page.click(id('collect-station'))
   await expect(page.locator(id('message'))).toBeVisible()   // "Collected." or a surprise (#48)
+  // The guide: collecting made the step ready; claim it, and the next step is to craft.
+  await page.click(id('guide-claim'))
+  await message(page, /\+20 ducats/)
+  await expect(page.locator(id('guide'))).toHaveAttribute('data-step', 'craft')
 
   // --- the order board (#44): three customers, or a customer on the way
   await expect(page.locator(id('orders'))).toBeVisible()

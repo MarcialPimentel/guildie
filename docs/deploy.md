@@ -260,6 +260,14 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.14.0 (the new-player guide)
+
+Fully automatic. Migration 010 adds the guide's table and marks every existing player's guide as finished; it runs on its own on the first request after the upload. The ping URL shows `"build":"0.14.0 (build …)"` and `"schema":10`.
+
+What players notice: a **new** merchant sees a "First steps" card with one step at a time and ducats to claim; on a computer an arrow points at the place. Existing players see nothing new.
+
+---
+
 ## Deploying 0.13.0 (one square)
 
 Fully automatic, with no database change. The ping URL shows `"build":"0.13.0 (build …)"`. The realtime rooms restart on the droplet as usual; passes now list only the `palazzo` room.

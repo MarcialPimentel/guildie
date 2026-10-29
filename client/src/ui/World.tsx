@@ -186,7 +186,10 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
         }
         case 'wave': e.wave(m.id); break
         case 'emote': e.emote(m.id, m.e); break
-        case 'slap': e.slap(m.from, m.to); break
+        case 'slap':
+          e.slap(m.from, m.to)
+          if (m.from === myId && session.state?.guide && !session.state.guide.finished) session.guideMark('slap')
+          break
         case 'pref': e.setSlaps(m.id, m.s === 1); break
         case 'nope': game.say(m.why, true); break
       }
@@ -222,6 +225,18 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     engine.current?.setFactotum(f)
     if (factotum?.look) portraitCanvas(factotum).then((c) => engine.current?.setFactotum(f, c)).catch(() => {})
   }, [JSON.stringify(factotum), scene, ready])
+  // The new-player guide (0.14.0): an arrow over the place to go next, and the Palazzo visit reported once.
+  const guide = state.guide
+  const guideStep = guide && !guide.finished ? guide.step : null
+  useEffect(() => {
+    if (!ready) return
+    let target = (guideStep && !guideStep.ready ? guideStep.target : null) as PickId | null
+    if (target && scene === PALAZZO) target = target === 'steps' ? null : 'home'   // quay places: head back down first
+    engine.current?.setGuide(target)
+  }, [ready, scene, guideStep?.id, guideStep?.ready])
+  useEffect(() => {
+    if (ready && scene === PALAZZO && guideStep) session.guideMark('palazzo')
+  }, [ready, scene, guideStep?.id])
   // A new rank (sash) or look mid-scene.
   useEffect(() => {
     if (ready) engine.current!.setMyLook(myLook(me!))

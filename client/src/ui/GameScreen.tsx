@@ -1,6 +1,7 @@
 // The main game screen: header (name, guild, ducats, view switch, Feedback), a message line, and either
 // the classic view (tabs: Bottega, Mercato, Bag, City) or the 3D harbor with side panels (desktop, 0.7.0).
 // Both views use the same screens, the same background refresh and the same "While you were away".
+import { GuideCard } from './Guide'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { errorMessage, type ApiResult } from '../api'
 import { Coins } from './art'
@@ -169,6 +170,7 @@ export function GameScreen() {
         </div>
       </nav>
 
+      <GuideCard />
       <main class="page" data-testid={`screen-${tab}`}>
         {tab === 'workshop' && <Workshop />}
         {tab === 'market' && <Market request={request} onView={setView} />}

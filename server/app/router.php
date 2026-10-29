@@ -58,6 +58,10 @@ function guildie_actions(): array
         'workshop_open'     => [['POST'],        true,  'action_workshop_open'],
         'palazzo'           => [['GET'],         true,  'action_palazzo'],
         'honors'            => [['GET'],         true,  'action_honors'],
+        // 0.14.0: the new-player guide (content/guide.json)
+        'guide_claim'       => [['POST'],        true,  'action_guide_claim'],
+        'guide_skip'        => [['POST'],        true,  'action_guide_skip'],
+        'guide_mark'        => [['POST'],        true,  'action_guide_mark'],
         'npc_talk'          => [['POST'],        true,  'action_npc_talk'],
         'npc_favor'         => [['POST'],        true,  'action_npc_favor'],
         'wanted'            => [['GET'],         true,  'action_wanted'],
@@ -354,6 +358,21 @@ function action_palazzo(array $body, ?int $playerId): array
 function action_honors(array $body, ?int $playerId): array
 {
     return palazzo_honors($playerId);
+}
+
+function action_guide_claim(array $body, ?int $playerId): array
+{
+    return guide_advance($playerId, body_string($body, 'step'), false);
+}
+
+function action_guide_skip(array $body, ?int $playerId): array
+{
+    return guide_advance($playerId, body_string($body, 'step'), true);
+}
+
+function action_guide_mark(array $body, ?int $playerId): array
+{
+    return guide_mark($playerId, body_string($body, 'what'));
 }
 
 function action_npc_talk(array $body, ?int $playerId): array

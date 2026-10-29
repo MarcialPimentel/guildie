@@ -28,6 +28,12 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
 10. **Little surprises:** collecting can turn up a rich vein, a bumper crop or a prize pelt, and crafts sometimes come out with a bonus item.
 11. **While you were away:** come back after a while and the game shows what happened, with one tap to collect everything.
 
+## New in 0.14.0: first steps
+
+- **A new merchant gets a guide:** a card with one step at a time (collect, craft, train to skill 6, learn a recipe, walk up to the Palazzo, and an optional slap). The button to press pulses, and on a computer a lemon arrow points at the place. Claim ducats at each step, and a 150-ducat purse at the end.
+- **Try it with a new account** (accounts from before 0.14.0 have already done it all, so they don't see the guide).
+- **Questions for this playtest:** Was it always clear what to do next? Did any step feel slow (especially training to skill 6)? Did the rewards feel worth it?
+
 ## New in 0.13.0: one square
 
 - **Your quay is just your workshop now:** station, workbench, customers, your bottega and the storehouse. The guild trainer is in the workbench's Recipes list.
