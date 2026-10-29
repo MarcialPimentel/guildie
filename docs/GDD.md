@@ -738,6 +738,7 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-29 | **Rank sashes** (#30): none, sea-glass, majolica, gold with a medallion; rank comes from skill in the signed presence pass | Your rank is visible to other players without a new table |
 | 2026-10-29 | **Choose your look:** six body colors and three hats per guild, free, picked when joining a guild and changeable in the 3D city; saved on the server (migration 008). Accounts from before 0.10.0 keep their look and get a one-time invitation | Marz: "players should select their character design upon new account creation". Unlocking hats by rank or events stays a later gameplay decision |
 | 2026-10-29 | Characters stay **built in code** (merged vertex-colored shapes, spring wobble, no skeletons, no .glb files) | At this camera distance shapes and colors carry the read; keeps downloads small and the art fully in the repo |
+| 2026-10-29 | **Smooth people (0.10.1):** characters are smooth-shaded with more segments (about 1,750 triangles each instead of 590; same draw calls); the town stays faceted. Townsfolk, customers and buyers ease in and out of walks, and other players glide without stop-start | Marz's playtest of 0.10.0: visible facet lines on the characters, and people moving in stops and starts |
 
 ---
 

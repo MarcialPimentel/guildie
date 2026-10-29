@@ -30,13 +30,17 @@ const EMOTE_TIME: Record<Emote, number> = { wave: 1.2, bow: 1.4, cheer: 1.3, shr
 // ------------------------------------------------------------------ building shapes
 type Part = { geo: THREE.BufferGeometry; c: string; x: number; y: number; z: number; rx?: number; ry?: number; rz?: number; sx?: number; sy?: number; sz?: number; order?: THREE.EulerOrder }
 const P = (geo: THREE.BufferGeometry, c: string, x = 0, y = 0, z = 0, o: Partial<Part> = {}): Part => ({ geo, c, x, y, z, ...o })
-const sph = (r: number, w = 8, h = 6, ...a: number[]) => new THREE.SphereGeometry(r, w, h, ...a)
-const cyl = (rt: number, rb: number, h: number, s = 10, open = false) => new THREE.CylinderGeometry(rt, rb, h, s, 1, open)
+// 0.10.1: people are smooth-shaded with 1.5x the curve segments of 0.10.0 (the town stays faceted).
+// Every rounded part goes through these helpers, so SEG sets how smooth the whole cast is.
+const SEG = 1.5
+const seg = (n: number, k = SEG) => Math.max(3, Math.round(n * k))
+const sph = (r: number, w = 8, h = 6, ...a: number[]) => new THREE.SphereGeometry(r, seg(w), seg(h), ...a)
+const cyl = (rt: number, rb: number, h: number, s = 10, open = false) => new THREE.CylinderGeometry(rt, rb, h, seg(s, 1.6), 1, open)
 const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d)
-const cone = (r: number, h: number, s = 8) => new THREE.ConeGeometry(r, h, s)
-const tor = (r: number, t: number, rs = 3, ts = 12, arc = Math.PI * 2) => new THREE.TorusGeometry(r, t, rs, ts, arc)
-const dome = (r: number, w = 8, h = 3) => new THREE.SphereGeometry(r, w, h, 0, Math.PI * 2, 0, Math.PI / 2)
-const capsule = (r: number, l: number, c = 2, s = 6) => new THREE.CapsuleGeometry(r, l, c, s)
+const cone = (r: number, h: number, s = 8) => new THREE.ConeGeometry(r, h, seg(s, 1.6))
+const tor = (r: number, t: number, rs = 3, ts = 12, arc = Math.PI * 2) => new THREE.TorusGeometry(r, t, seg(rs), seg(ts), arc)
+const dome = (r: number, w = 8, h = 3) => new THREE.SphereGeometry(r, seg(w), seg(h), 0, Math.PI * 2, 0, Math.PI / 2)
+const capsule = (r: number, l: number, c = 2, s = 6) => new THREE.CapsuleGeometry(r, l, seg(c), seg(s))
 
 /** Paint each part one color, move it into place and merge them into one geometry. */
 function merge(parts: Part[]): THREE.BufferGeometry {
@@ -69,7 +73,7 @@ function merge(parts: Part[]): THREE.BufferGeometry {
 
 // the shared blob: body, feet, eyes and blush (about 300 triangles; flat shading hides the low count)
 const base = (skin: string): Part[] => [
-  P(new THREE.CapsuleGeometry(0.5, 0.42, 3, 8), skin, 0, 0.72, 0),
+  P(new THREE.CapsuleGeometry(0.5, 0.42, 5, 20), skin, 0, 0.72, 0),   // the main silhouette: extra round
   P(sph(0.17, 6, 3), '#5A3A28', -0.22, 0.05, 0.1, { sy: 0.55, sz: 1.3 }),
   P(sph(0.17, 6, 3), '#5A3A28', 0.22, 0.05, 0.1, { sy: 0.55, sz: 1.3 }),
   P(sph(0.065, 4, 3), INK, -0.16, 1.06, 0.45),
@@ -234,8 +238,8 @@ export function parcelGeometry(kind: 'sack' | 'jar' | 'crate'): THREE.BufferGeom
   return cached(`parcel|${kind}`, () => merge(PROPS[kind]()))
 }
 
-const opaque = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true })
-const ghostMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true, transparent: true, opacity: 0.42, depthWrite: false })
+const opaque = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 })
+const ghostMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, transparent: true, opacity: 0.42, depthWrite: false })
 export const blobMaterial = opaque
 const ringMat = new THREE.MeshBasicMaterial({ color: '#F2C53D', transparent: true, opacity: 0.85, depthWrite: false })
 const ringGeo = new THREE.RingGeometry(0.62, 0.78, 26)
