@@ -65,8 +65,8 @@ A quarter holds **30 visible players** [tune]. The 31st person to arrive opens a
 - **Move:** WASD or the arrow keys; or click the ground to walk there. The camera follows gently; dragging still turns it.
 - **Click a place** (or its label, or the dock button): the panel opens at once, as in 0.7.0, and your merchant hurries over (fast enough to arrive in about a second), so a check-in is never slower than before.
 - **Doors can't be blocked:** players and townsfolk are not solid. You walk through each other (with a little squash), and clicking a shop opens it wherever you're standing.
-- **Look:** a blob in your guild's dress and hat, with a body color picked from your player number (customization later; see §9).
-- **Wave:** `E` or the Wave button. **Slap:** `F` or the Slap button when you're next to someone (see §4).
+- **Look:** a blob in your guild's dress, with the body color and hat you chose when you joined (0.10.0; accounts from before then start with a color picked from their player number and are invited once to choose). Your rank shows as a sash.
+- **Wave:** `E` or the Wave button; **bow, cheer, shrug** (0.10.0): `1`, `2`, `3` or their buttons. **Slap:** `F` or the Slap button when you're next to someone (see §4).
 - **Reduced motion:** no wobble or camera follow; walking still works.
 
 ---
@@ -146,10 +146,10 @@ The hosted services compared first (checked on 2026-10-28 on each provider's pri
 | From | Message | Meaning |
 |---|---|---|
 | client | `mv x z h` | I'm here, facing h (sent ≤ 5 times a second while moving, plus one when I stop) |
-| client | `wave` / `slap to` / `pref slaps` | Wave; slap a player; turn slaps on or off |
+| client | `wave` / `emote e` / `slap to` / `pref slaps` | Wave; bow, cheer or shrug (0.10.0); slap a player; turn slaps on or off |
 | room | `welcome you players[]` | Who's here, with names, guilds, looks and positions (from their passes) |
 | room | `join p` / `leave id` / `mv id x z h` | Someone arrived, left or moved |
-| room | `wave id` / `slap from to` / `pref id slaps` | Show a wave or a slap; someone changed their slap setting |
+| room | `wave id` / `emote id e` / `slap from to` / `pref id slaps` | Show a wave, an emote or a slap; someone changed their slap setting |
 
 The room clamps positions to the piazza, drops a client that floods it, refuses a slap if either player has slaps off, if they're more than 2.5 m apart, or if the slapper slapped in the last 1.5 s. When the tab is hidden for a minute, the client disconnects; it reconnects when you come back.
 
@@ -185,6 +185,7 @@ Short look pass; details and rules in [art-direction.md](art-direction.md) §9.
 - **The glove:** an oversized white cartoon glove with a lemon cuff, about the size of a blob's head. It pops in, swings, and pops out.
 - **Townsfolk** use the same blob with plain dress (porter, priest, fishwife); **echoes** are the player's own blob at 45% opacity.
 - Budget: a blob is 4 meshes, about 600 triangles; 30 players plus townsfolk stay under 150 draw calls.
+- **0.10.0, the people of Portovela** (art-direction.md §9.1): you choose your body color and hat when you join a guild (and later with "Your look" in the 3D city; older accounts are invited once), a rank sash shows your rank, and bow, cheer and shrug join the wave. The order customers, market buyers, the herald and a guild trainer at each hall door act out what the server decided. A blob is now 3 draw calls and about 580 triangles.
 
 ---
 

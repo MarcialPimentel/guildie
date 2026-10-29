@@ -1,7 +1,7 @@
 // @ts-check
 // The rules of one quarter room (docs/living-city.md section 7, systems.md 7.5), used by the realtime server
-// (server.mjs) and tested on their own (test/room.test.mjs). Cosmetic only: positions, waves and
-// slaps. Nothing here knows about gold or items; the PHP server stays the judge of everything with value.
+// (server.mjs) and tested on their own (test/room.test.mjs). Cosmetic only: positions, emotes (wave, bow,
+// cheer, shrug) and slaps. Nothing here knows about gold or items; the PHP server stays the judge of everything with value.
 //
 // A "connection" is whatever the host uses for a socket; the host passes a send(conn, text) function.
 
@@ -13,13 +13,15 @@ export const CAPACITY = 30
 export const SLAP_REACH = 2.5
 export const SLAP_COOLDOWN_MS = 1500
 export const WAVE_COOLDOWN_MS = 1000
+/** Emotes anyone can play (0.10.0). They share the wave's cooldown. */
+export const EMOTES = ['wave', 'bow', 'cheer', 'shrug']
 const RATE_PER_SEC = 10
 const RATE_BURST = 20
 const FLOOD_DROPS = 60
 
 /**
- * @typedef {{ pid: number, n: string, p: string, l: number, s: number, exp: number }} Claims  (the signed pass)
- * @typedef {{ id: number, n: string, p: string, l: number, s: number, x: number, z: number, h: number }} Player
+ * @typedef {{ pid: number, n: string, p: string, l: number, ht?: number, r?: number, s: number, exp: number }} Claims  (the signed pass; ht = hat, r = rank, from 0.10.0)
+ * @typedef {{ id: number, n: string, p: string, l: number, ht: number, r: number, s: number, x: number, z: number, h: number }} Player
  * @typedef {{ player: Player, tokens: number, refill: number, drops: number, dropWindow: number, lastSlap: number, lastWave: number }} Seat
  */
 
@@ -79,7 +81,7 @@ export class Room {
       }
     }
     /** @type {Player} */
-    const player = { id: claims.pid, n: String(claims.n).slice(0, 20), p: String(claims.p), l: Number(claims.l) | 0, s: claims.s ? 1 : 0, x: SPAWN.x, z: SPAWN.z, h: Math.PI }
+    const player = { id: claims.pid, n: String(claims.n).slice(0, 20), p: String(claims.p), l: Number(claims.l) | 0, ht: clamp(Number(claims.ht) | 0, 0, 2), r: clamp(Number(claims.r) | 0, 0, 3), s: claims.s ? 1 : 0, x: SPAWN.x, z: SPAWN.z, h: Math.PI }
     const others = [...this.seats.values()].map((s) => s.player)
     this.seat(conn, player)
     this.onSeat(conn, player)
@@ -124,6 +126,13 @@ export class Room {
         seat.lastWave = t
         this.broadcast({ t: 'wave', id: me.id })
         return
+      case 'emote': {
+        // Waves go out as 'wave' too, so a client from before 0.10.0 still sees them.
+        if (!EMOTES.includes(m.e) || t - seat.lastWave < WAVE_COOLDOWN_MS) return
+        seat.lastWave = t
+        this.broadcast(m.e === 'wave' ? { t: 'wave', id: me.id } : { t: 'emote', id: me.id, e: m.e })
+        return
+      }
       case 'slap': {
         const target = [...this.seats.values()].find((s) => s.player.id === m.to)
         const refuse = (why) => this.sendTo(conn, { t: 'nope', why })

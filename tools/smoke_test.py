@@ -431,6 +431,7 @@ board = r["data"] if r.get("ok") else {}
 orders = board.get("orders", [])
 check("order board has 3 orders", s == 200 and len(orders) == 3, r)
 check("orders have items, a customer and a reward", all(o["items"] and o["customer"] and o["reward_gold"] > 0 for o in orders), orders)
+check("orders name their customer's id (for the 3D customer's look)", all(o["customer_id"] for o in orders), [o.get("customer_id") for o in orders])
 check("Apprentice: no bundle orders", all(o["kind"] in ("standard", "collector") for o in orders), [o["kind"] for o in orders])
 check("standard orders pay more than market value", all(o["reward_gold"] > 0 for o in orders), orders)
 check("orders pay XP (#30)", all(o["reward_xp"] > 0 for o in orders), [o.get("reward_xp") for o in orders])
@@ -608,8 +609,31 @@ if pt.get("enabled"):
     check("presence pass has a realtime url", pt["url"].startswith(("ws://", "wss://")), pt)
 else:
     print("SKIP  presence pass signature (no realtime_url/realtime_secret in config.php)")
+    check("presence pass carries the look, hat and rank (0.10.0)", claims["l"] == pt["me"]["look"] and claims["ht"] == pt["me"]["hat"]
+          and claims["r"] == pt["me"]["rank"], claims)
 s, r = call("presence_token", token=register("np")[2])
 check("no presence pass before joining a guild", s == 409, r)
+
+# Looks (0.10.0, migration 008): chosen when joining a guild, or later; older accounts keep the 0.9.0 look.
+check("an account that never chose keeps the old look", pt["me"]["look"] == id_a % 6 and pt["me"]["hat"] == 0
+      and pt["me"]["look_chosen"] is False and pt["me"]["rank"] in (0, 1, 2, 3), pt.get("me"))
+s, r = call("city_look", {"color": 4, "hat": 2}, token=tok_a)
+check("choose a look", s == 200 and r["data"] == {"color": 4, "hat": 2, "chosen": True, "rank": pt["me"]["rank"]}, r)
+s, r = call("presence_token", token=tok_a)
+check("the pass carries the chosen look", s == 200 and r["data"]["me"]["look"] == 4 and r["data"]["me"]["hat"] == 2
+      and r["data"]["me"]["look_chosen"] is True and r["data"]["me"]["slaps"] is True, r)
+s, r = call("city_look", {"color": 6, "hat": 0}, token=tok_a)
+check("body color must be 0-5", s == 400, r)
+s, r = call("city_look", {"color": 1, "hat": 3}, token=tok_a)
+check("hat must be 0-2", s == 400, r)
+_, _, tok_look, _ = register("lk")
+s, r = call("choose_profession", {"profession_id": "leatherworker", "look_color": 9, "look_hat": 1}, token=tok_look)
+check("joining with a bad look is refused (and nothing is joined)", s == 400, r)
+s, r = call("choose_profession", {"profession_id": "leatherworker", "look_color": 2, "look_hat": 1}, token=tok_look)
+check("join a guild with a chosen look", s == 200, r)
+s, r = call("presence_token", token=tok_look)
+check("the new merchant has the look chosen at signup", s == 200 and r["data"]["me"]["look"] == 2 and r["data"]["me"]["hat"] == 1
+      and r["data"]["me"]["look_chosen"] is True and r["data"]["me"]["profession"] == "leatherworker", r)
 s, r = call("city_prefs", {"slaps": False}, token=tok_a)
 check("turn slaps off", s == 200 and r["data"]["slaps"] is False, r)
 s, r = call("presence_token", token=tok_a)
@@ -658,6 +682,8 @@ if TICK:
     s, r = call("get_state", token=tok_a)
     check("tick: traders buy underpriced listings", r["data"]["player"]["gold"] > gold_before, (gold_before, r["data"]["player"]))
     check("tick: sale to an NPC shows in activity", any(a["type"] == "sold" and "trader" in a["text"] for a in r["data"]["activity"]), r["data"]["activity"][:3])
+    check("tick: the sale says which kind of buyer it was (0.10.0)", any(a["type"] == "sold" and a.get("sale", {}).get("buyer") == "traders"
+          and a["sale"]["quantity"] == 1 for a in r["data"]["activity"]), r["data"]["activity"][:3])
 
     # A buys another guild's input from the suppliers (always available). B was drained to ~0 gold above.
     s, r = call("market_item", {"item_id": "brass_fittings"}, token=tok_a)

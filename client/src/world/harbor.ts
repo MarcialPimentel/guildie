@@ -33,7 +33,8 @@ export interface Harbor {
     workAnim: THREE.Object3D | null
     crates: THREE.InstancedMesh
     goods: THREE.InstancedMesh
-    customers: { group: THREE.Group; marker: THREE.Object3D; home: THREE.Vector3; hat: THREE.MeshStandardMaterial }[]
+    /** Where up to three customers wait, with the marker shown over a customer whose order you can fill. */
+    customers: { marker: THREE.Object3D; home: THREE.Vector3 }[]
     bunting: THREE.Object3D
     galley: THREE.Group
     gozzo: THREE.Group
@@ -338,25 +339,15 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     { colors: (i) => ['#F2C53D', '#2FB59D', '#C7733E', '#B5683A', '#2A4C9A', '#EFA9A0'][i], rotY: (i) => i * 0.4 })
   finish('stall', stall)
 
-  // customers waiting at the door (the order board)
+  // where customers wait at the door (the order board). The customers themselves are blobs the engine
+  // walks in and out (0.10.0); here are their spots and the lemon "ready to fill" marker over each.
   const customers: Harbor['live']['customers'] = []
-  const custColors = ['#2A4C9A', '#8F4E2B', '#4E6F2C']
-  ;[[-4.7, 0.9], [-3, 1.25], [-1.3, 0.9]].forEach(([x, z], i) => {
-    const g = place('orders') as THREE.Group
-    const hat = new THREE.MeshStandardMaterial({ color: '#B83A3A', roughness: 0.9, flatShading: true })
-    solid(g, new THREE.CapsuleGeometry(0.34, 0.6, 3, 8), custColors[i], 0, 0.75, 0)
-    solid(g, new THREE.SphereGeometry(0.28, 10, 8), '#E7B98F', 0, 1.62, 0)
-    const h = solid(g, new THREE.CylinderGeometry(0.3, 0.33, 0.18, 10), hat, 0.04, 1.86, 0)
-    h.rotation.z = 0.2
-    h.userData.keep = true
-    const m = marker(g, new THREE.Vector3(0, 2.55, 0), '#F2C53D')
+  ;[[-4.7, 0.9], [-3, 1.25], [-1.3, 0.9]].forEach(([x, z]) => {
+    const g = new THREE.Group()
     g.position.set(x, 1, z)
-    g.rotation.y = Math.PI
-    g.visible = false
-    const own = vertexColorMaterial()
-    bake(g, own)
-    highlight.set('orders', [...(highlight.get('orders') ?? []), own])
-    customers.push({ group: g, marker: m, home: new THREE.Vector3(x, 1, z), hat })
+    root.add(g)
+    const m = marker(g, new THREE.Vector3(0, 3.55, 0), '#F2C53D')
+    customers.push({ marker: m, home: new THREE.Vector3(x, 1, z) })
   })
 
   // the storehouse: one crate outside per kind of item in your bag

@@ -16,6 +16,8 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await page.fill(id('login-name'), name)
   await page.fill(id('login-password'), 'testpass')
   await page.click(id('register'))
+  await page.click(id('look-color-1'))
+  await page.click(id('hat-blacksmith-2'))
   await page.click(id('join-blacksmith'))
 
   // The harbor loads on its own (a separate download) and shows labels from the game state.
@@ -23,6 +25,14 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await expect(page.locator(id('view-toggle'))).toHaveText('Classic view')
   await expect(page.locator(id('world-label-station'))).toContainText('The Mine')
   await expect(page.locator(id('world-label-orders'))).toContainText('Customers')
+
+  // 0.10.0: the customers at your door are the named order customers (blobs with their own look), and
+  // someone who chose a look when joining isn't invited to choose again.
+  await expect.poll(() => page.evaluate(() => window.__guildieWorld!.customers().filter((c) => c.state === 'waiting').length), { timeout: 30_000 }).toBe(3)
+  const known = ['lady_ashworth', 'squire_pell', 'mother_hale', 'foreman_grigg', 'captain_vos', 'brother_amon', 'madame_orsini', 'collector_quill', 'collector_marchesa']
+  expect((await page.evaluate(() => window.__guildieWorld!.customers())).every((c) => known.includes(c.character))).toBe(true)
+  await expect(page.locator(id('look-invite'))).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => window.__guildieWorld!.me())).toMatchObject({ look: 1, hat: 2, rank: 0 })
 
   // Click the Mercato building itself: a real raycast through the canvas opens its panel.
   const at = await page.evaluate(() => window.__guildieWorld?.screenPoint('mercato') ?? null)
@@ -57,6 +67,11 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   // Every other place opens its screen.
   await page.click(id('dock-orders'))
   await expect(page.locator(id('orders'))).toBeVisible()
+  // Turning an order down: that customer shrugs and walks off (0.10.0).
+  const waiting = (await page.evaluate(() => window.__guildieWorld!.customers())).filter((c) => c.state === 'waiting').map((c) => c.order)
+  await page.locator(id('order-skip')).first().click()
+  await message(page, /turned down/)
+  await expect.poll(async () => (await page.evaluate(() => window.__guildieWorld!.customers())).filter((c) => waiting.includes(c.order) && c.state === 'waiting').length).toBe(2)
   await page.click(id('dock-stall'))
   await expect(page.locator(id('my-listings'))).toBeVisible()
   await page.click(id('dock-bag'))
@@ -69,6 +84,20 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await expect(page.locator(id('footer'))).toContainText(/Client .+ · Server/)
   await page.keyboard.press('Escape')
   await expect(page.locator('.side-panel')).toHaveCount(0)
+
+  // Your look (0.10.0): another body color and hat, saved on the server.
+  await page.click(id('world-look'))
+  await page.click(id('look-color-5'))
+  await page.click(id('look-hat-1'))
+  await page.click(id('look-save'))
+  await message(page, /leather coif/)
+  await expect(page.locator(id('look-sheet'))).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => window.__guildieWorld!.me())).toMatchObject({ look: 5, hat: 1 })
+
+  // Bow, cheer and shrug work on your own quay too (nobody else sees them there).
+  await page.locator('.world-canvas').focus()
+  await page.keyboard.press('2')
+  await expect.poll(() => page.evaluate(() => window.__guildieWorld!.lastEmote?.e)).toBe('cheer')
 
   // Night and day, and a sanity check that the scene stays light (it draws in a few dozen GPU calls).
   await page.click(id('world-night'))
@@ -90,11 +119,13 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
 // The living city (0.9.0): walk your merchant, open a place, go up to a guild quarter, see a second player
 // live (two browsers through the realtime room), follow their moves, slap, respect a slap opt-out, and visit
 // their bottega. Needs the realtime server running locally (realtime/src/server.mjs) and realtime_url in config.php.
-async function joinAs(page: Page, name: string, guild: string) {
+async function joinAs(page: Page, name: string, guild: string, look = { color: 0, hat: 0 }) {
   await page.goto('./?view=3d')
   await page.fill(id('login-name'), name)
   await page.fill(id('login-password'), 'testpass')
   await page.click(id('register'))
+  await page.click(id(`look-color-${look.color}`))
+  await page.click(id(`hat-${guild}-${look.hat}`))
   await page.click(id(`join-${guild}`))
   await expect(page.locator(`${id('world')}[data-ready="yes"]`)).toBeVisible({ timeout: 60_000 })
 }
@@ -105,6 +136,18 @@ async function goQuarter(page: Page, quarter: string) {
   await page.click(id(`go-${quarter}`))
   await expect(page.locator(`${id('world')}[data-scene="${quarter}"]`)).toBeVisible()
   await expect(page.locator(id('world-presence'))).not.toHaveAttribute('data-status', /idle|connecting/, { timeout: 20_000 })
+}
+
+/** A taps B (their bottega opens and A walks over), closes the panel, and waits until B sees A within reach. */
+async function walkUpTo(a: Page, b: Page, idA: number, idB: number) {
+  await a.click(id(`world-peer-${idB}`))
+  await expect(a.locator(id('panel-visit'))).toBeVisible()
+  await a.keyboard.press('Escape')
+  await expect.poll(async () => {
+    const pa = await b.evaluate((pid) => window.__guildieWorld!.peer(pid), idA)
+    const pb = await b.evaluate(() => window.__guildieWorld!.me())
+    return pa ? Math.hypot(pa.x - pb.x, pa.z - pb.z) : 99
+  }, { timeout: 10_000 }).toBeLessThan(2.4)
 }
 
 const me = (page: Page) => page.evaluate(() => window.__guildieWorld!.me())
@@ -147,8 +190,11 @@ test('the living city: walk, a quarter, a second player live, and a slap', async
   await expect(a.locator(id('world-presence'))).toHaveAttribute('data-status', 'live')
   await expect.poll(async () => (await me(a)).scene).toBe('blacksmith')   // after the fade
 
+  // The Smiths' trainer stands at the guild hall door (0.10.0).
+  expect(await a.evaluate(() => window.__guildieWorld!.trainer())).toBe('trainer:blacksmith')
+
   // A second player (another browser) arrives: each sees the other, live.
-  await joinAs(b, nameB, 'alchemist')
+  await joinAs(b, nameB, 'alchemist', { color: 4, hat: 1 })
   await goQuarter(b, 'blacksmith')
   await expect(b.locator(id('world-presence'))).toHaveAttribute('data-status', 'live')
   await expect(peerLabel(a, nameB)).toBeVisible()
@@ -157,7 +203,14 @@ test('the living city: walk, a quarter, a second player live, and a slap', async
   const idB = await peerId(a, nameB)
   await expect(a.locator(id('world-presence'))).toContainText(/[1-9]\d* other merchants? here/)
 
-  // Both arrived at the top of the Steps, so they're within reach: A slaps B, and B sees it.
+  // Emotes go through the room (0.10.0): B bows, A sees it.
+  await b.locator('.world-canvas').focus()
+  await b.keyboard.press('1')
+  await expect.poll(() => a.evaluate(() => window.__guildieWorld!.lastEmote)).toEqual({ id: idB, e: 'bow' })
+
+  // Arrivals spread out at the top of the Steps (0.10.0), so A walks up to B (tapping them opens their
+  // bottega and walks over), then slaps, and B sees it.
+  await walkUpTo(a, b, idA, idB)
   await a.locator('.world-canvas').focus()
   await a.keyboard.press('f')
   await expect.poll(() => b.evaluate(() => window.__guildieWorld!.lastSlap)).toEqual({ from: idA, to: idB })
@@ -167,6 +220,7 @@ test('the living city: walk, a quarter, a second player live, and a slap', async
   // B turns slaps off: A's next slap is refused by the room, and B wears the white flag.
   await b.click(id('world-slaps'))
   await expect(b.locator(id('world-slaps'))).toHaveText('Slaps: off')
+  await walkUpTo(a, b, idA, idB)   // the slap knocked B back a step
   await a.waitForTimeout(1600)   // the slapper's breather
   await a.click(id('world-slap'))
   await message(a, /slaps off/)
@@ -203,4 +257,27 @@ test('the living city: walk, a quarter, a second player live, and a slap', async
 
   await ctxA.close()
   await ctxB.close()
+})
+
+// Accounts from before 0.10.0 never chose a look: the 3D city invites them once; "Keep this one" saves the
+// look they already had, so the invitation doesn't come back.
+test('an older account is invited once to choose a look', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'The invitation lives in the 3D city.')
+  const name = `old${Date.now() % 1_000_000}`
+  const reg = await page.request.post('api/index.php?action=register', { data: { name, password: 'testpass' } })
+  const token = (await reg.json()).data.token as string
+  await page.request.post('api/index.php?action=choose_profession', { data: { profession_id: 'leatherworker' }, headers: { Authorization: `Bearer ${token}` } })
+
+  await page.goto('./?view=3d')
+  await page.fill(id('login-name'), name)
+  await page.fill(id('login-password'), 'testpass')
+  await page.click(id('login'))
+  await expect(page.locator(`${id('world')}[data-ready="yes"]`)).toBeVisible({ timeout: 60_000 })
+  await expect(page.locator(id('look-invite'))).toBeVisible()
+  await page.click(id('look-keep'))
+  await expect(page.locator(id('look-invite'))).toHaveCount(0)
+  await page.reload()
+  await expect(page.locator(`${id('world')}[data-ready="yes"]`)).toBeVisible({ timeout: 60_000 })
+  await page.waitForTimeout(1500)
+  await expect(page.locator(id('look-invite'))).toHaveCount(0)
 })

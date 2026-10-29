@@ -23,8 +23,13 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await page.fill(id('login-password'), 'testpass')
   await page.click(id('register'))
 
-  // --- choose a guild
+  // --- choose a guild, and how your merchant looks (0.10.0: a body color, and a hat on the guild's card)
   await expect(page.locator(id('guild-alchemist'))).toBeVisible()
+  await page.click(id('look-color-4'))
+  await expect(page.locator(id('look-color-4'))).toHaveAttribute('aria-checked', 'true')
+  await page.click(id('hat-alchemist-2'))
+  await expect(page.locator(id('hat-alchemist-2'))).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator(`${id('guild-alchemist')} svg.portrait`)).toHaveAttribute('aria-label', /Hood, Lavender/)
   await page.click(id('join-alchemist'))
   await expect(page.locator(id('who'))).toContainText(name)
   await expect(page.locator(id('skill'))).toHaveText('Alchemist 1/100 · Apprentice')   // skill and rank (#30)

@@ -47,6 +47,7 @@ function guildie_actions(): array
         // The living city (0.9.0, docs/living-city.md)
         'presence_token'    => [['GET', 'POST'], true,  'action_presence_token'],
         'city_prefs'        => [['POST'],        true,  'action_city_prefs'],
+        'city_look'         => [['POST'],        true,  'action_city_look'],
         'quarter'           => [['GET', 'POST'], true,  'action_quarter'],
         'friends'           => [['GET'],         true,  'action_friends'],
         'friend_add'        => [['POST'],        true,  'action_friend_add'],
@@ -97,7 +98,12 @@ function action_professions(array $body, ?int $playerId): array
 
 function action_choose_profession(array $body, ?int $playerId): array
 {
-    choose_profession($playerId, body_string($body, 'profession_id'));
+    // The look chosen on the same screen (0.10.0): optional, so older clients still join with the default look.
+    $look = null;
+    if (isset($body['look_color']) || isset($body['look_hat'])) {
+        $look = [body_int($body, 'look_color', 0, 0, CITY_LOOKS - 1), body_int($body, 'look_hat', 0, 0, CITY_HATS - 1)];
+    }
+    choose_profession($playerId, body_string($body, 'profession_id'), $look);
     return player_state($playerId);
 }
 
@@ -284,6 +290,11 @@ function action_city_prefs(array $body, ?int $playerId): array
         throw new ApiError('bad_request', "Field 'slaps' must be true or false.");
     }
     return city_set_prefs($playerId, $body['slaps']);
+}
+
+function action_city_look(array $body, ?int $playerId): array
+{
+    return city_set_look($playerId, body_int($body, 'color', 0, 0, CITY_LOOKS - 1), body_int($body, 'hat', 0, 0, CITY_HATS - 1));
 }
 
 function action_quarter(array $body, ?int $playerId): array

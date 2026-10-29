@@ -23,14 +23,15 @@ function require_profession(PDO $pdo, int $playerId): array
     return content_profession($id);
 }
 
-function choose_profession(int $playerId, string $professionId): void
+/** Join a guild. $look = [body color, hat] chosen on the same screen (0.10.0), or null for the default look. */
+function choose_profession(int $playerId, string $professionId, ?array $look = null): void
 {
     $profession = content_profession($professionId);
     if ($profession === null) {
         throw new ApiError('unknown_profession', 'That profession does not exist.');
     }
 
-    tx(function (PDO $pdo) use ($playerId, $profession) {
+    tx(function (PDO $pdo) use ($playerId, $profession, $look) {
         // Lock the player row so two quick taps can't both choose.
         $pdo->prepare('SELECT id FROM players WHERE id = ? FOR UPDATE')->execute([$playerId]);
         if (player_profession_id($pdo, $playerId) !== null) {
@@ -43,6 +44,9 @@ function choose_profession(int $playerId, string $professionId): void
 
         gathering_init($pdo, $playerId, $profession, $now);
         progression_learn_starters($pdo, $playerId, $profession['id'], 0, $now);   // the Apprentice starter recipe
+        if ($look !== null) {
+            city_save_look($pdo, $playerId, $look[0], $look[1]);
+        }
         activity_log($pdo, $playerId, 'profession_chosen', ['profession_id' => $profession['id'], 'profession_name' => $profession['name']]);
     });
 }

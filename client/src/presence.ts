@@ -5,7 +5,7 @@
 import { session } from './session'
 
 /** A merchant as the room describes them (short keys, from the signed pass). */
-export interface RoomPlayer { id: number; n: string; p: string; l: number; s: number; x: number; z: number; h: number }
+export interface RoomPlayer { id: number; n: string; p: string; l: number; ht?: number; r?: number; s: number; x: number; z: number; h: number }
 
 export type RoomEvent =
   | { t: 'welcome'; you: number; players: RoomPlayer[]; capacity: number }
@@ -14,6 +14,7 @@ export type RoomEvent =
   | { t: 'leave'; id: number }
   | { t: 'mv'; id: number; x: number; z: number; h: number }
   | { t: 'wave'; id: number }
+  | { t: 'emote'; id: number; e: 'bow' | 'cheer' | 'shrug' }
   | { t: 'slap'; from: number; to: number }
   | { t: 'pref'; id: number; s: number }
   | { t: 'nope'; why: string }
@@ -44,6 +45,16 @@ export class Presence {
     if (this.quarter === quarter && this.ws) return
     this.close()
     this.quarter = quarter
+    this.retry = 0
+    void this.open()
+  }
+
+  /** Rejoin with a fresh pass (after your look changed, so the room shows the new one). */
+  reconnect(): void {
+    const q = this.quarter
+    if (!q) return
+    this.close()
+    this.quarter = q
     this.retry = 0
     void this.open()
   }

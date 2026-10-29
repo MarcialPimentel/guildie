@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import test from 'node:test'
-import { BOUNDS, Room, SLAP_COOLDOWN_MS } from '../src/room.js'
+import { BOUNDS, Room, SLAP_COOLDOWN_MS, WAVE_COOLDOWN_MS } from '../src/room.js'
 import { verifyToken } from '../src/token.js'
 
 const SECRET = 'a-test-secret-of-some-length'
@@ -107,4 +107,35 @@ test('flooding is dropped, then disconnected', () => {
   assert.ok(said(b, 'mv').length <= 20)
   assert.deepEqual(closed.at(-1), [a, 4008])
   assert.equal(said(b, 'leave').at(-1).id, 1)
+})
+
+test('looks: hat and rank come from the pass, clamped', () => {
+  const { conn, said } = setup()
+  const a = conn(1, { ht: 2, r: 3 })
+  const b = conn(2, { ht: 9, r: -4 })
+  const pa = said(b, 'welcome')[0].players[0]
+  assert.deepEqual([pa.ht, pa.r], [2, 3])
+  const pb = said(a, 'join')[0].p
+  assert.deepEqual([pb.ht, pb.r], [2, 0])
+  const old = conn(3, { ht: undefined, r: undefined })   // a pass from before 0.10.0
+  assert.deepEqual([said(old, 'welcome')[0].players[0].ht, said(a, 'join')[1].p.r], [2, 0])
+})
+
+test('emotes: only the known ones, with the wave breather; a wave still goes out as a wave', () => {
+  const { room, conn, said, tick } = setup()
+  const a = conn(1)
+  const b = conn(2)
+  room.message(a, JSON.stringify({ t: 'emote', e: 'bow' }))
+  assert.deepEqual(said(b, 'emote'), [{ t: 'emote', id: 1, e: 'bow' }])
+  room.message(a, JSON.stringify({ t: 'emote', e: 'cheer' }))
+  assert.equal(said(b, 'emote').length, 1)   // too soon
+  tick(WAVE_COOLDOWN_MS)
+  room.message(a, JSON.stringify({ t: 'emote', e: 'dance' }))
+  room.message(a, JSON.stringify({ t: 'emote', e: { evil: 1 } }))
+  assert.equal(said(b, 'emote').length, 1)   // unknown emotes are dropped
+  room.message(a, JSON.stringify({ t: 'emote', e: 'wave' }))
+  assert.deepEqual(said(b, 'wave'), [{ t: 'wave', id: 1 }])
+  tick(WAVE_COOLDOWN_MS)
+  room.message(a, JSON.stringify({ t: 'emote', e: 'shrug' }))
+  assert.equal(said(a, 'emote').at(-1).e, 'shrug')   // the sender sees it too
 })

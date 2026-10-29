@@ -497,21 +497,24 @@ Social layer: guild orders needing several professions, a shared guild hall, gui
 
 | | |
 |---|---|
-| **Job** | Let players see each other move in the guild quarters: positions, waves and slaps. Cosmetic only |
-| **Owns** | `city_prefs` (slaps on/off); the realtime rooms (`realtime/`, a small container on the DigitalOcean droplet), which keep nothing after everyone leaves |
-| **Verbs** | Walk, Visit, Wave, Slap |
-| **Inputs** | A signed presence pass from the PHP server (`presence_token`: player id, name, guild, look, slaps, expiry in 10 min); recent `activity` for echoes |
+| **Job** | Let players see each other move in the guild quarters: positions, emotes and slaps. Cosmetic only |
+| **Owns** | `city_prefs` (slaps on/off; from 0.10.0 the chosen look: `look_color`, `look_hat`, both NULL until chosen); the realtime rooms (`realtime/`, a small container on the DigitalOcean droplet), which keep nothing after everyone leaves |
+| **Verbs** | Walk, Visit, Wave, Bow, Cheer, Shrug, Slap, Choose your look (`city_look`; also when joining a guild) |
+| **Inputs** | A signed presence pass from the PHP server (`presence_token`: player id, name, guild, body color, hat, rank, slaps, expiry in 10 min); recent `activity` for echoes |
 | **Outputs** | Nothing that changes game state |
 
 **Rules**
-- **Never touches value.** Gold, items, trades, orders and friends stay on the PHP server; the room only relays positions, waves and slaps.
+- **Never touches value.** Gold, items, trades, orders and friends stay on the PHP server; the room only relays positions, emotes (wave, bow, cheer, shrug; one per second) and slaps.
+- **Looks (0.10.0):** a body color 0–5 and a hat 0–2, checked by the server; players who never chose keep the 0.9.0 look (a color from their player number, the first hat). The rank sash comes from skill. Looks travel only in the signed pass, so nobody can show someone else's.
 - **Only logged-in players join:** the room checks the pass's HMAC-SHA256 signature (secret shared with `config.php` → `realtime_secret`) and expiry, and takes identity from the pass, never from the client.
 - **Rooms:** one per quarter copy (`smiths-1`, `smiths-2`, …), at most `30` players [tune]; a full room sends the join to the next copy.
 - **Fair play:** positions clamped to the piazza; at most 10 messages a second per client (more are dropped); a slap needs both players' slaps on, distance ≤ 2.5 m and 1.5 s since the slapper's last slap.
 - **Optional:** with no `realtime_url` configured, or the service unreachable, quarters still show stalls, townsfolk and **echoes** (crafters of that guild who acted in the last 30 minutes, from `activity`).
 - Players aren't solid, and clicking a place opens it from anywhere, so nobody can block a door.
 
-**Milestone:** 0.9.0 (desktop); phones get lists of the quarters, no live walkers.
+**Milestone:** 0.9.0 (desktop); phones get lists of the quarters, no live walkers. 0.10.0: looks, rank sashes, emotes.
+
+The 3D harbor also acts out results the other systems already decided (0.10.0, cosmetic): the order board's customers walk in, speak, take the goods or shrug (6.3); buyers walk to your stall for new `sold` entries in `activity` (their `sale.buyer` persona picks the costume); the herald announces new and fulfilled Duke's orders (6.5).
 
 ### 7.6 Friends *(0.9.0)*
 

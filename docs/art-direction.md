@@ -195,4 +195,60 @@ The **body color** is one of the plaster pastels (`#F2B98B #F3D27A #EFA9A0 #BFE3
 
 **Labels:** names float above heads in the same label style as places (Nunito on whitewash), smaller; friends get a lemon star. A player with slaps off shows a small white flag on their hat.
 
-**Budget:** 30 players + 8 townsfolk/echoes ≈ 120 draw calls in a quarter (the quay stays under 150 without them); shadows only from blobs near the camera.
+**Budget (0.9.0):** 30 players + 8 townsfolk/echoes ≈ 120 draw calls in a quarter (the quay stays under 150 without them); shadows only from blobs near the camera. Updated in §9.1.
+
+### 9.1 The people of Portovela (0.10.0)
+
+**Status:** approved by Marz on 2026-10-29 (all eight decisions of the character proposal, plus "players choose their look when they create their account"). The playable proposal is [`docs/art/characters-mockup.html`](art/characters-mockup.html).
+
+**One character kit** (`client/src/world/blobs.ts`): the same blob for everyone, dressed from a table of parts: dress, hat, one prop merged into the right hand, and a rank sash. No skeletons, no model files. A new character is a few lines of data.
+
+| Who | Where | Look | Driven by |
+|---|---|---|---|
+| Your merchant | Your quay, the quarters | Guild dress and one of three guild hats, your body color, lemon ring underfoot, rank sash | Your keys and clicks |
+| Other players | Quarters | The same, from their signed presence pass | The realtime room |
+| Echoes | At their stall | The player's blob at 42% | The quarter action |
+| Townsfolk | Quay (2), quarters (≤ 6) | Porter with a sack, priest, fishwife with a fish, sailor | Client only: wander and idle |
+| The Duke's herald | By the pier | Majolica tabard, lemon panel, feathered cap, trumpet with a banner | Trumpets new and fulfilled Duke's orders |
+| Guild trainer | Each guild hall door | An elder in the guild's colors: white beard, taller hat, gold chain | The `trainer` place |
+| Donna Vittoria | Your door | Lavender gown, round gold *balzo*, a fan | The order board |
+| Pellegrino the oarsman | | Striped shirt, floppy red cap, an oar | |
+| Madre Ilaria | | Grey habit, black veil with a white band, a loaf | |
+| Mastro Grigio | | Slate work smock, flat cap, a mallet | |
+| Captain Vos | | Navy coat, brass buttons, wide hat with a red plume, a spyglass | |
+| Fra Amon | | Brown friar's robe, rope belt, tonsure, a jar of salve | |
+| Signora Orsini | | Green dress, coral headscarf, a basket | |
+| Messer Quill (collector) | | Black doublet, white ruff, beret with a giant quill, a magnifier | |
+| La Marchesa (collector) | | Crimson gown, gold tiara, a parasol | |
+| Buyers | Walk to your stall | Townsperson (straw cap, basket), sailor, workshop hand (apron, crate), trader (saffron robe, turban, purse); a porter with a sealed note for sales to other players | New `sold` entries in your log |
+| Hired hands (#51) | Your quay, later | Apprentice in a linen smock carrying sacks; mason with a mallet | Your upgrades |
+
+**Looks you choose:** six body colors (the plaster pastels) and three hats per guild:
+
+| Guild | Hat 1 | Hat 2 | Hat 3 |
+|---|---|---|---|
+| Smiths | Felt cap | Leather coif | Bandana |
+| Alchemists | Pointed hat | Scholar's cap | Hood |
+| Tanners | Straw hat | Feathered beret | Cloth cap |
+
+Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9A` (Expert), lemon gold `#F2C53D` with a medallion (Master).
+
+**Moves** (squash, lean and hand positions; with reduced motion each becomes a held pose with no bounce):
+
+| Move | What happens | Time |
+|---|---|---|
+| Walk / stop | Bob 0.08 m, squash 6% per step, lean into travel; one overshoot wobble on stopping | loop / 0.4 s |
+| Idle | After 4 s still: look around, rock on the heels or stretch, never in sync | 2–3 s every 5–9 s |
+| Wave (E) | One hand up, three waggles | 1.2 s |
+| Bow (1) | Lean 30°, one hand to the chest, the other sweeps back | 1.4 s |
+| Cheer (2) | Both hands up, two hops | 1.3 s |
+| Shrug (3) | Hands out, palms up, small squash and head tilt | 1.1 s |
+| Slapped | Squash sideways, slide back 0.8 m, wobble, "Challenge!" | 0.6 s |
+| Hand over | Both hands forward; a parcel arcs across | 1.0 s |
+| Trumpet | The herald raises the trumpet and shouts | 2.0 s |
+| Carry / hammer | Loops for hired hands | loop |
+
+**Bubbles and labels:** at most three bubbles at a time (the newest replaces the oldest), lines cut to about 60 characters; people's name tags and bubbles never overlap (they stack upward). Arrivals in a quarter step onto one of eight spots at the top of the Steps. The slap glove is 1.6× its 0.9.0 size so it reads from the quarter camera.
+
+**Budget (measured):** a character is 3 draw calls (body, two hands; all ground shadows are one shared batch) and about 580 triangles on average (the largest, with a parasol or an oar, about 880). A quarter with 30 players and 8 others costs about 115 draw calls for people. The quay: 69 draw calls with three customers, your merchant, two townsfolk and the herald.
+
