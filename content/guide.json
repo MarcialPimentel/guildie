@@ -1,0 +1,11 @@
+{
+  "_comment": "The new-player guide (0.14.0, systems.md 8.3): a short chain of first steps, one at a time, each checked by the server and claimed for ducats; the final purse is paid when the last step is claimed or skipped. check: what the server looks for. activity = an activity row of that type (gathered, crafted); learned = a recipe learned from the trainer; mark = an event the client reports (palazzo: reached the Palazzo; slap: slapped another merchant), since the server can't see those. target: the place the guide points at (3D arrow and pulsing buttons). optional steps can be skipped. Every number is [tune].",
+  "final_reward": 150,
+  "steps": [
+    { "id": "collect", "title": "Collect from your station", "hint": "Your station has been gathering raw materials. Open it and tap Collect.", "reward": 20, "check": "activity:gathered", "target": "station" },
+    { "id": "craft", "title": "Craft something", "hint": "Open your workbench, start a craft, and collect it when it's ready.", "reward": 25, "check": "activity:crafted", "target": "workbench" },
+    { "id": "learn", "title": "Learn a recipe from the guild trainer", "hint": "At your workbench, open the guild trainer (under Recipes) and learn a new recipe. New recipes are how you level up.", "reward": 40, "check": "learned", "target": "workbench" },
+    { "id": "palazzo", "title": "Walk up to the Palazzo", "hint": "Take the Steps up to the Palazzo: the marketplace, the Hall of honor and every other merchant are there. On a phone: City → Palazzo.", "reward": 25, "check": "mark:palazzo", "target": "steps" },
+    { "id": "slap", "title": "Challenge a merchant (optional)", "hint": "In the Palazzo, walk up to another merchant and press F (or Slap): a gentlemanly duel challenge, just for fun.", "reward": 15, "check": "mark:slap", "target": null, "optional": true }
+  ]
+}

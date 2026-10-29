@@ -282,6 +282,28 @@ tv = orders.get("settings", {}).get("target_value_by_rank")
 if tv is not None and (len(tv) != len(ranks) or any(not (0 < a <= b) for a, b in tv) or [a for a, _ in tv] != sorted(a for a, _ in tv)):
     err("orders: settings.target_value_by_rank needs one rising [min, max] pair per rank")
 
+# The new-player guide (0.14.0): steps the server can check, pointing at places that exist.
+guide = load("guide.json")
+GUIDE_CHECKS = {"activity:gathered", "activity:crafted", "learned", "mark:palazzo", "mark:slap"}
+GUIDE_TARGETS = {None, "station", "workbench", "orders", "ledger", "bag", "steps"}
+if not guide.get("steps"):
+    err("guide: needs at least one step")
+unique_ids(guide.get("steps", []), "guide steps")
+if not (isinstance(guide.get("final_reward"), int) and guide["final_reward"] >= 0):
+    err("guide: final_reward must be a whole number >= 0")
+for st in guide.get("steps", []):
+    where = f"guide step {st.get('id')!r}"
+    if not st.get("title") or not st.get("hint"):
+        err(f"{where}: needs a title and a hint")
+    if not (isinstance(st.get("reward"), int) and st["reward"] >= 0):
+        err(f"{where}: reward must be a whole number >= 0")
+    if st.get("check") not in GUIDE_CHECKS:
+        err(f"{where}: check must be one of {sorted(GUIDE_CHECKS)} (the server knows how to check those)")
+    if st.get("target") not in GUIDE_TARGETS:
+        err(f"{where}: target must be a quay place or null")
+if len(guide.get("steps", [])) > 250:
+    err("guide: at most 250 steps (players from before 0.14.0 are stored at step 255)")
+
 # ---------------------------------------------------------------- guilds are content (0.10.3)
 # Each guild's names, colors and hats live in professions.json; its art is two files named after its kit.
 # A guild without them would draw as plain art in the game, so CI stops it here instead.

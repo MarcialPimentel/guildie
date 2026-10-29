@@ -51,6 +51,7 @@ require __DIR__ . '/lib/duke.php';
 require __DIR__ . '/lib/workshop.php';
 require __DIR__ . '/lib/wanted.php';
 require __DIR__ . '/lib/palazzo.php';
+require __DIR__ . '/lib/guide.php';
 require __DIR__ . '/lib/state.php';
 require __DIR__ . '/lib/tick.php';
 require __DIR__ . '/router.php';

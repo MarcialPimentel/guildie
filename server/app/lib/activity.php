@@ -70,6 +70,9 @@ function activity_text(string $type, array $p): string
         'sold_to_guild'     => sprintf('Sold %d %s to the guild for %s.', $n('quantity'), $item(), ducats($n('earned'))),
         'order_filled'      => sprintf('%s took %s and paid %s.', $p['customer'] ?? 'A customer', $p['items'] ?? '', $p['reward'] ?? ''),
         'surprise'          => (string) ($p['text'] ?? 'A lucky find!'),
+        'guide_step'        => !empty($p['skipped']) ? sprintf('First steps: skipped "%s".', $p['title'] ?? '')
+                                   : sprintf('First steps: %s (+%s).', $p['title'] ?? '', ducats($n('gold')))
+                                   . ($n('final') > 0 ? sprintf(' Guide finished: +%s!', ducats($n('final'))) : ''),
         'skill_up'          => sprintf('%s skill %d → %d (+%d XP).', $p['profession'] ?? 'Your', $n('from'), $n('to'), $n('xp'))
                                    . (empty($p['discoveries']) ? '' : ' First ' . implode(', ', $p['discoveries'])
                                        . (count($p['discoveries']) > 1 ? ': +1 skill each.' : ': +1 skill.')),
