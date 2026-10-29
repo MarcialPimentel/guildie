@@ -157,6 +157,7 @@ function city_presence_token(int $playerId): array
     $payload = b64url(json_encode([
         'pid' => $me['id'], 'n' => $me['name'], 'p' => $me['profession'], 'l' => $me['look'], 'ht' => $me['hat'], 'r' => $me['rank'],
         's' => $me['slaps'] ? 1 : 0, 'exp' => $exp,
+        'q' => city_quarters(),   // the quarters a room may be opened for (one per guild in content)
     ], JSON_UNESCAPED_UNICODE));
     $sig = b64url(hash_hmac('sha256', $payload, $secret, true));
     return ['enabled' => true, 'url' => $url, 'token' => "$payload.$sig", 'expires_in' => CITY_TOKEN_SECONDS, 'me' => $me];

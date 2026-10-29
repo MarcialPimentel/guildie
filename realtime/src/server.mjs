@@ -13,7 +13,7 @@
 //                     empty = any (tests and local play)
 import http from 'node:http'
 import { WebSocketServer } from 'ws'
-import { MAX_INSTANCES, QUARTERS, Room } from './room.js'
+import { MAX_INSTANCES, Room, quartersFor } from './room.js'
 import { verifyToken } from './token.js'
 
 const PORT = Number(process.env.PORT || 8788)
@@ -57,11 +57,13 @@ server.on('upgrade', async (req, socket, head) => {
     socket.destroy()
   }
   const url = new URL(req.url || '/', 'http://localhost')
-  const m = url.pathname.match(/^\/q\/([a-z]+)$/)
-  if (!m || !QUARTERS.includes(m[1])) return reject(404, 'Not Found')
+  const m = url.pathname.match(/^\/q\/([a-z_]{1,32})$/)
+  if (!m) return reject(404, 'Not Found')
   if (ORIGINS.length && !ORIGINS.includes(String(req.headers.origin || ''))) return reject(403, 'Forbidden')
   const claims = await verifyToken(url.searchParams.get('token'), SECRET)
   if (!claims) return reject(401, 'Unauthorized')
+  // Which quarters exist comes from the signed pass (the PHP server lists one per guild in content).
+  if (!quartersFor(claims).includes(m[1])) return reject(404, 'Not Found')
   // The first copy of the quarter with room takes the player.
   let name = null
   for (let n = 1; n <= MAX_INSTANCES && !name; n++) if (roomFor(`${m[1]}-${n}`).hasRoomFor(claims.pid)) name = `${m[1]}-${n}`
