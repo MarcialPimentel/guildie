@@ -42,6 +42,10 @@ interface Walker {
   moved: number
   /** Called once when it reaches its target. */
   onArrive?: () => void
+  /** Ease in and out of walks (townsfolk, customers, buyers): speed up from a stop, slow down to arrive. */
+  ease?: boolean
+  /** The speed it is walking at right now (for easing). */
+  cur?: number
 }
 
 interface PeerState extends Walker { peer: Peer; label: Label }
@@ -73,6 +77,8 @@ declare global {
       customers(): { order: number; character: string; state: string }[]
       /** Buyers walking to or from your stall. */
       buyers(): string[]
+      /** Townsfolk positions, and whether each is walking somewhere. */
+      townsfolk(): { x: number; z: number; walking: boolean }[]
       /** The guild trainer standing at the hall door (in a quarter). */
       trainer(): string | null
       me(): { x: number; z: number; scene: Scene; look: number; hat: number; rank: number }
@@ -542,10 +548,17 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     } else if (w.target) {
       const to = new THREE.Vector3().subVectors(w.target, w.pos).setY(0)
       const d = to.length()
-      const step = w.speed * dt
+      let v = w.speed
+      if (w.ease && !reduceMotion) {
+        // about half a second to get going, and a gentle slow-down over the last steps (never below a stroll)
+        w.cur = (w.cur ?? 0) + (w.speed - (w.cur ?? 0)) * Math.min(1, dt * 4)
+        v = Math.max(0.6, Math.min(w.cur, Math.sqrt(2 * 3 * d)))
+      }
+      const step = v * dt
       if (d <= step) {
         w.pos.copy(w.target)
         w.target = null
+        w.cur = 0
         const f = w.onArrive
         w.onArrive = undefined
         f?.()
@@ -565,9 +578,14 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   // ------------------------------------------------------------ townsfolk (fill quiet places) and echoes
   const NPC_DRESSES: Character[] = ['porter', 'priest', 'fishwife', 'sailor', 'porter', 'fishwife']
   const npcArea = () => (scene === 'harbor' ? { minX: -28, maxX: 28, minZ: 0.4, maxZ: 3.3 } : QUARTER_BOUNDS)
-  const randomSpot = (a: Npc['area']) => {
-    const v = new THREE.Vector3(a.minX + Math.random() * (a.maxX - a.minX), 1, a.minZ + Math.random() * (a.maxZ - a.minZ))
-    if (scene !== 'harbor' && v.length() < 3.4) v.setLength(3.6).setY(1)
+  const randomSpot = (a: Npc['area'], from?: THREE.Vector3) => {
+    // Townsfolk walk somewhere worth going: at least 7 m away, so a walk is one smooth stroll, not hops.
+    let v = new THREE.Vector3()
+    for (let tries = 0; tries < 8; tries++) {
+      v = new THREE.Vector3(a.minX + Math.random() * (a.maxX - a.minX), 1, a.minZ + Math.random() * (a.maxZ - a.minZ))
+      if (scene !== 'harbor' && v.length() < 3.4) v.setLength(3.6).setY(1)
+      if (!from || v.distanceTo(from) >= 7) break
+    }
     return v
   }
   const setTownsfolk = (n: number) => {
@@ -576,6 +594,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       const area = npcArea()
       const w = newWalker(new Blob({ character: NPC_DRESSES[npcs.length % NPC_DRESSES.length] }), randomSpot(area)) as Npc
       w.speed = 1.3 + Math.random() * 0.5
+      w.ease = true
       w.pause = Math.random() * 3
       w.area = area
       scene3.add(w.blob.root)
@@ -766,6 +785,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
         tagPick(blob.root, { kind: 'place', id: 'orders' })
         c = addWalker({ ...newWalker(blob, new THREE.Vector3(spot.x - 16, 1, spot.z + 1.4)), order, slot: w.slot, character, name: w.name, state: 'arriving' as Customer['state'] })
         c.speed = 3.2
+        c.ease = true
         customers.set(order, c)
         const cc = c
         const line = w.line
@@ -844,6 +864,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       const character: Character = knownCharacter(sale.buyer) ? sale.buyer : sale.buyer === 'player' ? 'courier' : 'townsfolk'
       const b = addWalker({ ...newWalker(new Blob({ character }), new THREE.Vector3(LEAVE_X - 4, 1, STALL_FRONT.z + 0.6)), character })
       b.speed = 3
+      b.ease = true
       buyers.push(b)
       const key = `b${++buyerSeq}`
       b.target = STALL_FRONT.clone().add(new THREE.Vector3((i - 1) * 1.3, 0, 0))
@@ -1006,6 +1027,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     // otherwise; with reduced motion, nothing ambient at all.
     const peopleMoving = keys.size > 0 || tapped.length > 0 || !!me.target || [...peers.values()].some((p) => p.target)
       || [...customers.values()].some((c) => c.target) || buyers.length > 0 || me.blob.busy || herald.busy
+      || npcs.some((n) => n.target)   // walking townsfolk get the full frame rate too (30 fps looked jerky)
       || [...peers.values()].some((p) => p.blob.busy) || [...customers.values()].some((c) => c.blob.busy)
     if (peopleMoving) wake(300)
     const moving = tweens.length > 0 || now < awakeUntil || Math.abs(nightGoal - night) > 0.001
@@ -1046,7 +1068,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     for (const n of npcs) {
       if (!n.target) {
         n.pause -= step
-        if (n.pause <= 0) { n.target = randomSpot(n.area); n.pause = 1 + Math.random() * 4 }
+        if (n.pause <= 0) { n.target = randomSpot(n.area, n.pos); n.pause = 2 + Math.random() * 4 }
       }
       stepWalker(n, walkStep, null)
     }
@@ -1191,6 +1213,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     lastEmote: null,
     customers: () => [...customers.values()].map((c) => ({ order: c.order, character: c.character, state: c.state })),
     buyers: () => buyers.map((b) => b.character),
+    townsfolk: () => npcs.map((n) => ({ x: n.pos.x, z: n.pos.z, walking: !!n.target })),
     trainer: () => (trainer && scene !== 'harbor' ? trainer.opts.character : null),
     peers: () => [...peers.keys()],
     peer: (id) => { const w = peers.get(id); return w ? { x: w.pos.x, z: w.pos.z } : null },
@@ -1239,7 +1262,9 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       if (!w) return
       const to = clampWalk(new THREE.Vector3(x, 1, z))
       if (w.pos.distanceTo(to) > 8) { w.pos.copy(to); w.target = null }
-      else { w.target = to; w.speed = Math.max(WALK_SPEED, w.pos.distanceTo(to) / 0.22) }
+      // The room sends a merchant's position up to 5 times a second. Glide there over a little longer than
+      // that, so they're still moving when the next one arrives (no stop-start between updates).
+      else { w.target = to; w.speed = THREE.MathUtils.clamp(w.pos.distanceTo(to) / 0.26, 0.5, 14) }
       w.peer.x = x
       w.peer.z = z
       w.peer.h = h

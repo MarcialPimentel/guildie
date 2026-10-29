@@ -250,5 +250,9 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 
 **Bubbles and labels:** at most three bubbles at a time (the newest replaces the oldest), lines cut to about 60 characters; people's name tags and bubbles never overlap (they stack upward). Arrivals in a quarter step onto one of eight spots at the top of the Steps. The slap glove is 1.6× its 0.9.0 size so it reads from the quarter camera.
 
-**Budget (measured):** a character is 3 draw calls (body, two hands; all ground shadows are one shared batch) and about 580 triangles on average (the largest, with a parasol or an oar, about 880). A quarter with 30 players and 8 others costs about 115 draw calls for people. The quay: 69 draw calls with three customers, your merchant, two townsfolk and the herald.
+**Budget (measured):** a character is 3 draw calls (body, two hands; all ground shadows are one shared batch). A quarter with 30 players and 8 others costs about 115 draw calls for people. The quay: 69 draw calls with three customers, your merchant, two townsfolk and the herald.
+
+**Smooth people (0.10.1, Marz's playtest: "add polygons to make the character models smoother"):** people are **smooth-shaded** with 1.5× the curve segments, and the body (the main silhouette) is extra round. About 1,750 triangles per person on average (2,100 at most; 0.10.0: about 590), so a full quarter is about 67,000 triangles for people, with the same draw calls. The town, props in the world and icons stay faceted low-poly; the people read as soft toys against it.
+
+**Smooth walking (0.10.1):** townsfolk, customers and buyers ease in and out of a walk (half a second to get going, a gentle slow-down to arrive); townsfolk stroll at least 7 m at a time and stand for 2–6 s between walks; other players glide between the room's position updates without stopping; walking people always get the full frame rate.
 
