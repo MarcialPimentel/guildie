@@ -258,3 +258,10 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 
 **Smooth walking (0.10.1):** townsfolk, customers and buyers ease in and out of a walk (half a second to get going, a gentle slow-down to arrive); townsfolk stroll at least 7 m at a time and stand for 2–6 s between walks; other players glide between the room's position updates without stopping; walking people always get the full frame rate.
 
+### 9.2 The Palazzo and the four bottegas (0.11.0)
+
+- **The Palazzo** (city hall): warm ochre plaster, an arcaded loggia of seven white arches, pointed windows, crenellations, every guild's banner on the façade (from content, so a new guild gets one), and a bell tower with a gilded bell and a clock. A merchant's statue in the middle of a herringbone-paved square; cypresses at the edges. Built in code like the quarters (`client/src/world/palazzo.ts`).
+- **Officials** (`blobs.ts`): the notary in black with a red cap and a quill; the town crier in teal and lemon with a bell and a plumed hat; the Duke's steward in majolica blue with a gold chain of office and a scroll.
+- **Your bottega, four looks** (`harbor.ts`): (1) a rundown shack of weathered planks, a patched lean-to roof, a boarded window and a barrel; (2) a repaired workshop, one floor of fresh plaster under tiles, teal shutters and a small awning; (3) the two-storey bottega of 0.7.0; (4) the same with a roof loggia (altana), lemon-gold trim, banners and a second lemon tree. While builders work: scaffolding of poles and planks, and a mason hammering at the door.
+- **Stall signs in the quarters** follow the owner's level: a weathered plank for a shack, navy for a workshop, gold trim from level 3, a double gilded frame for a fine bottega.
+

@@ -1,6 +1,6 @@
 # Guildie — Game Design Document
 
-**Version:** 0.7 · **Date:** 2026-10-28 · **Status:** M2 in progress (build 0.7.0, the 3D harbor)
+**Version:** 0.11 · **Date:** 2026-10-29 · **Status:** M2 in progress (build 0.11.0, the Palazzo and the bottega upgrades)
 **Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -445,6 +445,8 @@ The player's home screen is their **bottega** on the harbor quay, in low-poly 3D
 
 Upgrades cost gold and materials, take time, and are gated by profession rank.
 
+**Since 0.11.0 the bottega upgrade is the gate to the next rank** ([palazzo.md](palazzo.md) §2): your skill stops at the top of the rank your bottega allows (25 in the rundown shack, 50, 75, then 100), crafts give no XP there, and you build the next level with ducats plus goods from both other guilds to step into the next rank. Each level visibly rebuilds your bottega on the quay (shack, repaired workshop, two-storey bottega, fine bottega with a roof loggia) and adds craft slots, speed and station size. Players who held a rank before 0.11.0 keep it and build to get the look.
+
 ### 8.2 The return screen
 
 "While you were away" is the retention engine. It should list crafts completed, materials gathered (and whether storage capped), items sold with prices, new orders, and news events.
@@ -742,6 +744,15 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-29 | **The 4th guild is the Glassblower** (Murano glass), not the Tinker; it opens when it's ready, with no player-count gate | Marz's choice. Nobody makes glass today, while a Tinker would take the Blacksmith's Gears and Clockwork; NPC customers and buyers already keep a quiet quarter alive (Pillar 3) |
 | 2026-10-29 | **Guilds as data (0.10.3):** one guild description in `content/professions.json` that the server, realtime rooms and client all read, plus art kits found by file name; the validator enforces the web rules, icons and NPC demand. Built before the ladder (#50) | Marz asked for a modular, systematic design before new content ships; the architecture review found ~20 hand-written guild lists, several of which would have crashed with a 4th guild |
 | 2026-10-29 | **Easier pointing (0.10.2):** invisible hover boxes around every clickable place and person, hover that forgives a brief slip, and labels that light up instead of growing on hover | Marz's playtest: thin places (the trapper's lodge, the Duke's notice board) lost the hover, and their labels seemed to jump |
+| 2026-10-29 | **The Palazzo (0.11.0):** a shared square up the Steps, open to every guild and live like the quarters, with the city hall (Hall of honor), the Wanted board, the Duke's lectern and three officials ([palazzo.md](palazzo.md)) | Marz chose a new shared "city hall front". The quarters only gather one guild, but the game is built on needing the others (Pillar 5) |
+| 2026-10-29 | **Bottega upgrades open the ranks (#51 reworked):** skill stops at the top of the rank your bottega allows; crafts give no XP at the cap; building the next level (ducats plus both other guilds' goods, a build time) steps you into the next rank. Each level visibly rebuilds the bottega, from a rundown shack to a fine bottega | Marz: "to progress in a rank, one must dump resources into infrastructure… as you progress your shop should get better looking." Replaces "rank caps the building level" (2026-10-28) |
+| 2026-10-29 | An upgrade only asks for goods crafters **one rank lower** can make; levels 3 and 4 use today's Journeyman goods until the ladder's parts exist (#50) | Otherwise nobody could reach Journeyman: Journeyman goods only come from Journeymen |
+| 2026-10-29 | Players from before 0.11.0 **keep their rank** but start in the shack; building gives them the look and bonuses | Marz: "keep rank, build to get the look" |
+| 2026-10-29 | **The Wanted board:** paid requests from players; price per unit inside the market's fair band, ducats held when posting, the filler pays the Mercato cut, 3 open posts, 48 hours, then refunded | Marz's choice. The band stops funnelling ducats between accounts (GDD 6.7); the cut is a gold sink |
+| 2026-10-29 | **The Hall of honor:** Il Factotum plus the richest, the most skilled, the Duke's best helpers and the finest bottegas | Public goals: the M3 leaderboards pulled forward as a place |
+| 2026-10-29 | **Three officials** (notary, town crier, Duke's steward): rumors built from real game data, one favor a day each (1.2x usual value, under the suppliers' 1.5x, plus order XP), and flavor lines. The steward asks for another guild's goods | Marz asked for all three kinds of NPC interaction. Rumors make reading the market a skill (Pillar 2); favors give a 30-second visit a purpose (Pillar 4) |
+| 2026-10-29 | City-wide prosperity (the city growing from Duke's orders) **revisited later** | Marz preferred each player's bottega growing with their rank first |
+| 2026-10-29 | Machine running costs (lamp oil and wages) **come with the ladder and the balance pass**, not 0.11.0 | They need the ladder's Lamp Oil supply and a simulator run |
 
 ---
 

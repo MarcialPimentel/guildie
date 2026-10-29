@@ -28,6 +28,12 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
 10. **Little surprises:** collecting can turn up a rich vein, a bumper crop or a prize pelt, and crafts sometimes come out with a bonus item.
 11. **While you were away:** come back after a while and the game shows what happened, with one tap to collect everything.
 
+## New in 0.11.0: the Palazzo and your bottega
+
+- **Your bottega starts as a rundown shack.** At skill 25 your skill stops and crafts give no XP. Open your bottega (the 3D bottega door, or the Bottega tab) to see the upgrade that opens Journeyman, what it needs and what you have. Gather or buy the goods, build it, wait for the builders, then open it: you become a Journeyman and the shack becomes a repaired workshop.
+- **Up the Steps → the Palazzo:** the square where all three guilds meet. Click the Wanted board to post a request or fill someone else's; the Hall of honor for the city's best; and the notary, the crier and the steward for a rumor and one favor each per day. On a phone: City → Palazzo.
+- **Questions for this playtest:** Did the shack make you want to rebuild? Was the wall at 25 clear, and did building feel like an event? Did you use a rumor to trade? Did you post or fill a Wanted request?
+
 ## Things to know
 
 - **The city shops every 5 minutes.** Townsfolk, adventurers and guild workshops buy goods; prices go up when things are scarce and down when the market is flooded.

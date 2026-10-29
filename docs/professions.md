@@ -295,6 +295,8 @@ Pillar 5 (you need other crafters) pulls against Pillar 3 (it works with 5 playe
 
 Reaching a rank should be **an event**: the Clash of Clans Town Hall feeling. Each rank unlocks a workshop upgrade that **visibly changes** the workshop and what it can do. This is the main thing to look forward to between ranks.
 
+> **Changed in 0.11.0 (Marz, 2026-10-29):** the upgrade now *opens* the rank instead of being unlocked by it. Skill stops at 25, 50 and 75 until you build the next level, and crafts give no XP at that cap. One bottega level covers the workstation and the station; the bottega visibly grows from a rundown shack. Costs and the full rules as built are in [palazzo.md](palazzo.md) §2; the example path below is the earlier design, kept for the ladder's parts (#50).
+
 **Rules** [tune]
 - Each guild's **workstation** and **gathering station** each have upgrade levels. The **highest level is capped by rank** (systems.md 7.1): Journeyman unlocks level 2, Expert level 3, Master level 4.
 - An upgrade costs **gold plus parts from other guilds** (decided: yes). This is the strongest everyday reason to trade, and a large gold sink. It also takes **time to build**: "Your water-wheel forge will be ready in 6 h".
