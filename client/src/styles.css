@@ -427,3 +427,38 @@ body[data-guide="claim"] [data-testid="guide-claim"] {
 /* the floating card never blocks the world under it: only its buttons take clicks */
 .guide.floating { pointer-events: none; }
 .guide.floating button { pointer-events: auto; }
+
+/* ---------------------------------------------------------------- minigames (0.15.0, src/minigames/) */
+.minigame { border-top: 1px solid var(--line); padding-top: var(--gap); margin-top: 4px; }
+.minigame h3 { margin: 0; font: 600 19px/1.2 var(--display); color: var(--heading); }
+.strike { display: flex; flex-direction: column; gap: 10px; user-select: none; -webkit-user-select: none; }
+/* The bar: the look comes from the skin (rock seam, herb bed, forest trail). */
+.strike-bar {
+  position: relative; height: 72px; border-radius: 12px; overflow: hidden; touch-action: none; cursor: pointer;
+  background: linear-gradient(180deg, #4A403B, #2E2724); box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.strike-zone { position: absolute; top: 0; bottom: 0; background: rgba(242, 197, 61, 0.35); }
+.strike-zone.perfect { background: rgba(242, 197, 61, 0.9); box-shadow: 0 0 12px rgba(242, 197, 61, 0.9); }
+.skin-sickle .strike-bar { background: linear-gradient(180deg, #5D7A34, #3B4E22); }
+.skin-sickle .strike-zone { background: rgba(214, 228, 120, 0.4); }
+.skin-sickle .strike-zone.perfect { background: rgba(232, 240, 150, 0.95); box-shadow: 0 0 12px rgba(232, 240, 150, 0.8); }
+.skin-snare .strike-bar { background: linear-gradient(180deg, #4E5D3A, #2F3A24); }
+.skin-snare .strike-zone { background: rgba(227, 194, 122, 0.4); }
+.skin-snare .strike-zone.perfect { background: rgba(227, 194, 122, 0.95); box-shadow: 0 0 12px rgba(227, 194, 122, 0.8); }
+.strike-marker {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 4px; margin-left: -2px; background: #FFFFFF;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8); pointer-events: none;
+}
+.strike-marker svg { position: absolute; top: 6px; left: -14px; width: 32px; height: 32px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+.strike-flash {
+  position: absolute; inset: auto 0 6px 0; text-align: center; font: 700 18px/1 var(--display); color: #FFFFFF;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); pointer-events: none;
+}
+.strike-flash.perfect { color: var(--lemon); }
+.strike-flash.miss { color: #F3B5A0; }
+.strike-pips { display: flex; justify-content: center; gap: 6px; }
+.strike-pips .pip { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); background: transparent; }
+.strike-pips .pip.now { border-color: var(--accent); }
+.strike-pips .pip.perfect { background: var(--lemon); border-color: var(--lemon); }
+.strike-pips .pip.good { background: var(--accent); border-color: var(--accent); }
+.strike-pips .pip.miss { background: var(--panel-light); border-color: var(--error); }

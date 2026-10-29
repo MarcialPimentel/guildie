@@ -158,7 +158,7 @@ export interface GameState {
     id: string
     name: string
     tagline: string
-    station: { id: string; name: string; outputs: StationOutput[]; locked?: { item_id: string; name: string; unlock_skill: number }[] }
+    station: { id: string; name: string; outputs: StationOutput[]; locked?: { item_id: string; name: string; unlock_skill: number }[]; minigame?: StationMinigame | null }
     recipes: Recipe[]
     progress: Progress
     workshop: Workshop
@@ -519,4 +519,48 @@ export interface NpcTalk {
   rumor: string
   favor: null | { item_id: string; name: string; quantity: number; reward: number; xp: number; done: boolean; have: number; line: string }
   resets_in: number
+}
+
+// ---------------------------------------------------------------- minigames (0.15.0, content/minigames.json)
+
+/** What a full-score round would pay now: the station's first raw, scaled by tiredness. */
+export interface MinigamePreview {
+  item_id: string
+  name: string
+  max_units: number
+}
+
+/** The station's game: its rules (kind), its look (skin), its words from professions.json, and how fresh you are. */
+export interface StationMinigame extends MinigamePreview {
+  target: 'station'
+  kind: string
+  skin: string
+  words: { title: string; intro: string; button: string; perfect: string; good: string; miss: string; zone: string }
+  /** 1 = fresh; each round pays this share of full. */
+  freshness: number
+}
+
+/** A round the server rolled. The plan's shape belongs to the kind (e.g. StrikePlan). */
+export interface MinigameRound<Plan = unknown> extends MinigamePreview {
+  round_id: number
+  kind: string
+  plan: Plan
+  freshness: number
+}
+
+export interface MinigameReward {
+  item_id: string
+  name: string
+  quantity: number
+  /** A great round's find, with the station's find text ("Rich vein!"). */
+  find?: boolean
+  text: string
+}
+
+export interface MinigameResult {
+  score: number
+  steps: string[]
+  freshness: number
+  rewards: MinigameReward[]
+  next: MinigamePreview
 }

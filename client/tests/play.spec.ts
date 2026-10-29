@@ -204,3 +204,45 @@ test('every guild in content has a card, a portrait and all its hats', async ({ 
     }
   }
 })
+
+// Minigames (0.15.0, content/minigames.json): a blacksmith works the seam by hand. The test taps when the marker
+// is over the sweet spot (read from the bar each frame), the server scores the taps and pays Copper Ore.
+test('a blacksmith works the seam by hand', async ({ page }, info) => {
+  await page.goto(info.project.name === 'desktop' ? './?view=classic' : './')
+  await page.fill(id('login-name'), `pw_m${info.project.name.slice(0, 1)}${Date.now() % 1_000_000}`)
+  await page.fill(id('login-password'), 'testpass')
+  await page.click(id('register'))
+  await page.click(id('join-blacksmith'))
+  await expect(page.locator(id('minigame-freshness'))).toContainText(/^Fresh: a clean round brings up to \d+ Copper Ore/)
+  await page.click(id('minigame-open'))
+  await expect(page.locator(id('strike-bar'))).toBeVisible()
+
+  // Tap each swing once, when the marker is close to the centre of the sweet spot.
+  await page.evaluate(() => new Promise<void>((done) => {
+    let tapped = -1
+    const t0 = performance.now()
+    const frame = () => {
+      const bar = document.querySelector<HTMLElement>('[data-testid="strike-bar"]')
+      if (!bar || performance.now() - t0 > 60_000) return done()
+      const swing = Number(bar.dataset.swing)
+      const off = Math.abs(Number(bar.dataset.pos ?? -1) - Number(bar.dataset.center))
+      if (swing !== tapped && bar.dataset.pos !== undefined && off < 0.02) {
+        tapped = swing
+        document.querySelector<HTMLButtonElement>('[data-testid="strike-tap"]')!.click()
+      }
+      requestAnimationFrame(frame)
+    }
+    requestAnimationFrame(frame)
+  }))
+  const result = page.locator(id('minigame-result'))
+  await expect(result).toBeVisible({ timeout: 20_000 })
+  await expect(result).toContainText(/Work the seam: \d+%/)
+  await expect(result).toContainText(/\+\d+ Copper Ore/)
+  await expect(result.locator(id('minigame-freshness'))).toContainText(/^Tiring/)
+
+  // The ore is in the storehouse, and the station's game is ready again.
+  await page.click(id('minigame-close'))
+  await expect(page.locator(id('minigame-open'))).toBeVisible()
+  await page.click(id('tab-bag'))
+  await expect(page.locator(id('bag-copper_ore'))).toBeVisible()
+})

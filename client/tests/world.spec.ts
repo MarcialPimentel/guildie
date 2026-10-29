@@ -67,6 +67,8 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await expect(page.locator(id('panel-station'))).toBeVisible()
   await page.click(id('collect-station'))
   await expect(page.locator(id('message'))).toBeVisible()
+  // Minigames (0.15.0): the station's game is in the same panel (played through in play.spec.ts).
+  await expect(page.locator(id('minigame-open'))).toContainText('Work the seam')
 
   // The workbench (opened from its floating label once the panel is closed): craft, see the label say
   // it's ready, then collect.
