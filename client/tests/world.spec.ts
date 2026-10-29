@@ -53,7 +53,8 @@ test('a new blacksmith works the harbor in 3D', async ({ page }, info) => {
   await page.mouse.click(at!.x, at!.y)
   await expect(page.locator(id('panel-bag'))).toBeVisible()
   // 0.13.0: the quay keeps only your own work; the market, the guild hall, the news and the Duke moved up to the Palazzo.
-  for (const gone of ['mercato', 'stall', 'city', 'news', 'duke']) await expect(page.locator(id(`world-label-${gone}`))).toHaveCount(0)
+  // (the Duke's label exists for the Palazzo's lectern, hidden while you're on the quay)
+  for (const gone of ['mercato', 'stall', 'city', 'news', 'duke']) await expect(page.locator(id(`world-label-${gone}`))).toBeHidden()
   await expect(page.locator(id('dock-steps'))).toHaveText('Up to the Palazzo')
 
   // The station: collect from the mine.
