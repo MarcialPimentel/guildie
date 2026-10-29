@@ -482,6 +482,50 @@ if float(pz.get("favor_reward_multiplier", 0)) >= float(economy.get("market", {}
 if any(p["id"] == "palazzo" for p in professions):
     err("no guild may be called 'palazzo': that's the shared square's room")
 
+# Minigames (0.15.0, systems.md 5.5): every station game names a kind the server and client both know, a known
+# skin and its words; the numbers make sense. A kind needs server/app/lib/minigame_<kind>.php and
+# client/src/minigames/<Kind>.tsx, registered in minigames.php and client/src/minigames/registry.ts.
+mg = load("minigames.json")
+MG_SKINS = {"strike": {"pickaxe", "sickle", "snare"}}   # looks drawn in client/src/minigames/Strike.tsx
+MG_WORDS = ("title", "intro", "button", "perfect", "good", "miss", "zone")
+kinds = mg.get("kinds", {})
+for kind in kinds:
+    if kind not in MG_SKINS:
+        err(f"minigames: kind {kind!r} has no scorer/screen (known: {sorted(MG_SKINS)})")
+sp = kinds.get("strike", {}).get("params", {})
+if sp:
+    if not (0 < sp.get("perfect_width", 0) <= sp.get("good_width", 0) < 1):
+        err("minigames strike: need 0 < perfect_width <= good_width < 1")
+    if not (0 <= sp.get("center_min", -1) - sp.get("good_width", 0) / 2 and sp.get("center_max", 2) + sp.get("good_width", 0) / 2 <= 1):
+        err("minigames strike: the sweet spot (center ± good_width/2) must stay on the bar")
+    if not (0 < sp.get("speed_min", 0) <= sp.get("speed_max", 0)):
+        err("minigames strike: need 0 < speed_min <= speed_max")
+    if not (0 < sp.get("min_tap_ms", 0) < sp.get("swing_timeout_ms", 0) <= 10000) or not (1 <= sp.get("swings", 0) <= 20):
+        err("minigames strike: need 0 < min_tap_ms < swing_timeout_ms <= 10000 and 1-20 swings")
+    if not (0 <= sp.get("good_points", -1) <= sp.get("perfect_points", 0)):
+        err("minigames strike: need 0 <= good_points <= perfect_points")
+td = mg.get("tiredness", {})
+if not (0 < td.get("drop_per_round", 0) < 1 and 0 < td.get("floor", 0) <= 1 and td.get("recovery_half_life_hours", 0) > 0):
+    err("minigames: tiredness needs 0 < drop_per_round < 1, 0 < floor <= 1, recovery_half_life_hours > 0")
+st = mg.get("targets", {}).get("station", {})
+if not (st.get("reward_minutes", 0) > 0 and 0 < st.get("find_at_score", 0) <= 1 and st.get("find_units", -1) >= 0):
+    err("minigames: targets.station needs reward_minutes > 0, 0 < find_at_score <= 1, find_units >= 0")
+for p in professions:
+    g = p.get("station", {}).get("minigame")
+    if g is None:
+        continue
+    where = f"profession {p['id']} station.minigame"
+    if g.get("kind") not in kinds:
+        err(f"{where}: kind {g.get('kind')!r} is not in minigames.json")
+    elif g.get("skin") not in MG_SKINS.get(g["kind"], set()):
+        err(f"{where}: skin {g.get('skin')!r} isn't drawn by the {g['kind']} screen ({sorted(MG_SKINS.get(g['kind'], []))})")
+    for w in MG_WORDS:
+        if not isinstance(g.get(w), str) or not g.get(w):
+            err(f"{where}: needs the words {w!r}")
+    for k in (g.get("params") or {}):
+        if k not in kinds.get(g.get("kind"), {}).get("params", {}):
+            err(f"{where}: params.{k} isn't a {g.get('kind')} setting")
+
 if errors:
     print(f"Content INVALID ({len(errors)} problems):")
     for e in errors:

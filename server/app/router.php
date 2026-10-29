@@ -62,6 +62,9 @@ function guildie_actions(): array
         'guide_claim'       => [['POST'],        true,  'action_guide_claim'],
         'guide_skip'        => [['POST'],        true,  'action_guide_skip'],
         'guide_mark'        => [['POST'],        true,  'action_guide_mark'],
+        // 0.15.0: minigames (content/minigames.json)
+        'minigame_start'    => [['POST'],        true,  'action_minigame_start'],
+        'minigame_finish'   => [['POST'],        true,  'action_minigame_finish'],
         'npc_talk'          => [['POST'],        true,  'action_npc_talk'],
         'npc_favor'         => [['POST'],        true,  'action_npc_favor'],
         'wanted'            => [['GET'],         true,  'action_wanted'],
@@ -373,6 +376,17 @@ function action_guide_skip(array $body, ?int $playerId): array
 function action_guide_mark(array $body, ?int $playerId): array
 {
     return guide_mark($playerId, body_string($body, 'what'));
+}
+
+function action_minigame_start(array $body, ?int $playerId): array
+{
+    return minigame_start($playerId, isset($body['target']) ? body_string($body, 'target') : 'station');
+}
+
+function action_minigame_finish(array $body, ?int $playerId): array
+{
+    $result = minigame_finish($playerId, body_int($body, 'round_id', 0, 1, PHP_INT_MAX), $body['taps'] ?? null);
+    return $result + ['state' => player_state($playerId)];
 }
 
 function action_npc_talk(array $body, ?int $playerId): array

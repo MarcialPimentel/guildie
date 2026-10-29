@@ -25,7 +25,7 @@ function player_state(int $playerId): array
             'tagline' => $def['tagline'],
             'progress' => progression_status($row, game_now()),
             'workshop' => workshop_status($pdo, $playerId, $row, game_now()),
-            'station' => gathering_status($playerId, $professionId),
+            'station' => gathering_status($playerId, $professionId) + ['minigame' => minigame_station_status($pdo, $playerId, $def)],
             'recipes' => crafting_recipes($playerId, $professionId),
         ];
     }

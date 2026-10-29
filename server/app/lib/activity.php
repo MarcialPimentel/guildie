@@ -62,6 +62,8 @@ function activity_text(string $type, array $p): string
         'profession_chosen' => sprintf('You joined the %s guild.', $p['profession_name'] ?? ''),
         'gathered'          => 'Collected ' . implode(', ', array_map(
                                    fn($i) => $i['quantity'] . ' ' . item_name($i['item_id']), $p['items'] ?? [])) . '.',
+        'worked'            => sprintf('%s: ', $p['title'] ?? 'Worked') . ($p['items'] ?? [] ? implode(', ', array_map(
+                                   fn($i) => '+' . $i['quantity'] . ' ' . item_name($i['item_id']), $p['items'])) : 'nothing this time') . '.',
         'craft_started'     => sprintf('Started crafting %d %s.', $n('quantity'), $item()),
         'crafted'           => sprintf('Crafted %d %s.', $n('quantity'), $item()),
         'listed'            => sprintf('Listed %d %s at %s each (deposit %s, taken from the sale).', $n('quantity'), $item(), ducats($n('unit_price')), ducats($n('deposit'))),
