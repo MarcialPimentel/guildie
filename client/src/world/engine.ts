@@ -268,6 +268,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   const placeLabelPoint = (id: PickId) => (scene === 'harbor' ? harbor.labelPoint(id) : quarter?.labelPoint(id) ?? new THREE.Vector3(0, -100, 0))
   const harborLabels: Partial<Record<PickId, WorldLabel>> = {}
   let quarterLabels: Partial<Record<PickId, WorldLabel>> = {}
+  /** The scene those labels belong to: they may arrive during the fade, before the scene swaps. */
+  let quarterLabelsFor: Scene | null = null
   const applyPlaceLabels = () => {
     const src = scene === 'harbor' ? harborLabels : quarterLabels
     const ids = scenePicks()
@@ -1015,7 +1017,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       }
       harbor.root.visible = next === 'harbor'
       if (quarter) quarter.root.visible = next !== 'harbor'
-      quarterLabels = {}
+      if (quarterLabelsFor !== next) quarterLabels = {}   // keep labels already sent for the scene we're arriving in
       // you arrive at your bottega door or the top of the Steps
       applyMe(mine)
       me.pos.copy(next === 'harbor' ? HARBOR_SPAWN : ARRIVALS[Math.floor(Math.random() * ARRIVALS.length)])
@@ -1334,6 +1336,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     setStalls,
     setQuarterLabels(l) {
       quarterLabels = l
+      quarterLabelsFor = nextScene
       applyPlaceLabels()
     },
     walkTo(id) {
