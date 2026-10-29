@@ -554,11 +554,43 @@ check("lesson in activity", s == 200 and r["data"]["state"]["activity"][0]["type
 s, r = call("learn_recipe", {"recipe_id": "copper_lantern"}, token=tok_d)
 check("can't buy the same recipe twice", s == 409 and r["error"]["code"] == "already_known", r)
 
+def tool(*parts):
+    subprocess.run(" ".join([PLAYER_TOOL, *[str(x) for x in parts]]), shell=True, check=True, capture_output=True)
+
+
 if PLAYER_TOOL:
-    # Rank-up (#30): one XP short of 26, then a green lantern (2 XP) makes a Journeyman.
-    subprocess.run(f"{PLAYER_TOOL} skill {name_d} 25", shell=True, check=True, capture_output=True)
+    # The rank gate (0.11.0, #51): at 25 an Apprentice in the rundown shack is capped; crafts give no XP.
+    tool("skill", name_d, 25)
     s, r = craft_and_collect(tok_d, "copper_lantern", 1)
     pr = r["data"].get("progress", {}) if s == 200 else {}
+    check("at the shack's cap (25) a craft gives no XP and no skill", s == 200 and pr.get("skill_to") == 25 and pr.get("xp") == 0
+          and pr.get("capped") is True and pr.get("rank_up") is None, r)
+    st = r["data"]["state"]["profession"] if s == 200 else {}
+    check("state: capped at 25, the Bellows forge opens Journeyman", st.get("progress", {}).get("at_cap") is True and st["progress"]["cap"] == 25
+          and st["workshop"]["level"] == 1 and st["workshop"]["next"]["name"] == "Bellows forge" and st["workshop"]["next"]["opens_rank"] == "Journeyman"
+          and st["workshop"]["next"]["needs_skill"] == 25 and r["data"]["state"]["craft_slots"] == 2, st.get("workshop"))
+    s, r = call("workshop_open", {}, token=tok_d)
+    check("nothing to open before building", s == 409 and r["error"]["code"] == "nothing_building", r)
+    s, r = call("workshop_upgrade", {}, token=tok_d)
+    check("can't build without the ducats and goods", s in (400, 409) and r["error"]["code"] in ("not_enough_gold", "not_enough_items"), r)
+    s, r = call("get_state", token=tok_d)
+    check("a refused upgrade costs nothing", r["data"]["profession"]["workshop"]["building"] is None and r["data"]["player"]["gold"] == 100, r["data"]["player"])
+    for item, q in (("leather_grip", 10), ("smelting_flux", 4), ("brass_fittings", 10)):
+        tool("give", name_d, item, q)
+    tool("gold", name_d, 1000)
+    s, r = call("workshop_upgrade", {}, token=tok_d)
+    w = r["data"]["state"]["profession"]["workshop"] if s == 200 else {}
+    check("build the Bellows forge: ducats and goods taken, builders at work", s == 200 and r["data"]["state"]["player"]["gold"] == 850
+          and have(r["data"]["state"], "leather_grip") == 0 and w["building"]["name"] == "Bellows forge" and w["building"]["ready"] is False, r)
+    s, r = call("workshop_upgrade", {}, token=tok_d)
+    check("one build at a time", s == 409 and r["error"]["code"] == "already_building", r)
+    s, r = call("workshop_open", {}, token=tok_d)
+    check("can't open it before it's finished", s == 409 and r["error"]["code"] == "not_ready", r)
+    tool("build_ready", name_d)
+    s, r = call("workshop_open", {}, token=tok_d)
+    pr = (r["data"]["built"].get("progress") or {}) if s == 200 else {}
+    check("open the Bellows forge: level 2, a repaired workshop", s == 200 and r["data"]["built"]["level"] == 2
+          and r["data"]["built"]["look"] == "Repaired workshop", r)
     check("rank-up: Journeyman at 26", pr.get("skill_to") == 26 and pr.get("rank_up") == "Journeyman", r)
     check("rank-up teaches the Journeyman starter free (Iron Ingot)", pr.get("learned") == ["Iron Ingot"]
           and any(x["id"] == "iron_ingot" for x in r["data"]["state"]["profession"]["recipes"]), pr)
@@ -568,6 +600,11 @@ if PLAYER_TOOL:
     st = r["data"]["state"]["profession"]["progress"]
     check("header data: Blacksmith 26/100 · Journeyman, Expert next at 51", st["skill"] == 26 and st["rank"] == "Journeyman"
           and st["next_rank"] == {"name": "Expert", "at": 51}, st)
+    check("level 2: three craft slots, cap 50, the next upgrade listed", r["data"]["state"]["craft_slots"] == 3 and st["cap"] == 50
+          and r["data"]["state"]["profession"]["workshop"]["next"]["level"] == 3, r["data"]["state"]["profession"]["workshop"])
+    check("the build is in the activity log", any(a["type"] == "workshop_built" for a in r["data"]["state"]["activity"]), r["data"]["state"]["activity"][:4])
+    s, r = call("workshop_open", {}, token=tok_d)
+    check("opening twice does nothing", s == 409 and r["error"]["code"] == "nothing_building", r)
 
     # Players from before 0.8.0 (#30): skill replayed from past crafts, every guild recipe kept, both raws kept.
     subprocess.run(f"{PLAYER_TOOL} legacy {name_d}", shell=True, check=True, capture_output=True)
@@ -612,7 +649,7 @@ if pt.get("enabled"):
     claims = json.loads(base64.urlsafe_b64decode(body64 + "=" * (-len(body64) % 4)))
     check("presence pass carries name, guild and a 10-minute expiry", claims["pid"] == id_a and claims["n"] == name
           and claims["p"] == "alchemist" and 0 < claims["exp"] - time.time() <= 600, claims)
-    check("presence pass lists the quarters, one per guild in content (0.10.3)", claims.get("q") == [g["id"] for g in GUILDS], claims)
+    check("presence pass lists the rooms: one quarter per guild in content (0.10.3), then the Palazzo (0.11.0)", claims.get("q") == [g["id"] for g in GUILDS] + ["palazzo"], claims)
     check("presence pass has a realtime url", pt["url"].startswith(("ws://", "wss://")), pt)
 else:
     print("SKIP  presence pass signature (no realtime_url/realtime_secret in config.php)")
@@ -816,6 +853,131 @@ with ThreadPoolExecutor(max_workers=4) as pool:
     results = list(pool.map(lambda _: call("duke_order", token=tok_b), range(4)))
 check("4 board loads at once: one order, no errors", all(st == 200 for st, _ in results)
       and len({x["data"]["id"] for _, x in results}) == 1, [st for st, _ in results])
+
+# ---------------------------------------------------------------- the Palazzo (0.11.0, docs/palazzo.md)
+s, r = call("presence_token", token=tok_d)
+check("the presence pass opens the Palazzo room too", s == 200 and (r["data"].get("enabled") is False or "palazzo" in json.loads(
+    __import__("base64").urlsafe_b64decode(r["data"]["token"].split(".")[0] + "==").decode())["q"]), r)
+
+name_w, _, tok_w, _ = register("w")
+call("choose_profession", {"profession_id": "leatherworker"}, token=tok_w)
+name_x, _, tok_x, _ = register("x")
+call("choose_profession", {"profession_id": "blacksmith"}, token=tok_x)
+
+s, r = call("wanted", token=tok_w)
+band = r["data"]["bands"]["brass_fittings"] if s == 200 else {}
+check("the Wanted board lists a fair price band for every item", s == 200 and band["min"] < band["usual"] < band["max"]
+      and len(r["data"]["bands"]) == len(json.loads((CONTENT / "items.json").read_text(encoding="utf-8"))["items"]), r)
+s, r = call("wanted_post", {"item_id": "brass_fittings", "quantity": 4, "unit_price": band.get("max", 0) + 1}, token=tok_w)
+check("a price above the band is refused", s == 400 and r["error"]["code"] == "price_out_of_band", r)
+s, r = call("wanted_post", {"item_id": "brass_fittings", "quantity": 4, "unit_price": max(1, band.get("min", 1) - 1)}, token=tok_w)
+check("a price below the band is refused", s == 400 and r["error"]["code"] == "price_out_of_band", r)
+s, before = call("get_state", token=tok_w)
+price = band.get("usual", 10)
+s, r = call("wanted_post", {"item_id": "brass_fittings", "quantity": 4, "unit_price": price}, token=tok_w)
+post_id = r["data"]["posted"]["id"] if s == 200 else 0
+check("post 'Wanted: 4 Brass Fittings': the ducats are held", s == 200 and r["data"]["state"]["player"]["gold"] == before["data"]["player"]["gold"] - 4 * price
+      and r["data"]["board"]["mine"][0]["remaining"] == 4, r)
+s, r = call("wanted", token=tok_x)
+mine_view = next((p for p in r["data"]["posts"] if p["id"] == post_id), None) if s == 200 else None
+check("another crafter sees it on the board", mine_view is not None and mine_view["player"] == name_w and mine_view["mine"] is False, r)
+s, r = call("wanted_fill", {"post_id": post_id, "quantity": 1}, token=tok_w)
+check("you can't fill your own request", s == 400 and r["error"]["code"] == "own_post", r)
+s, r = call("wanted_fill", {"post_id": post_id, "quantity": 1}, token=tok_x)
+check("filling without the goods is refused", s == 400 and r["error"]["code"] == "not_enough_items", r)
+if PLAYER_TOOL:
+    tool("give", name_x, "brass_fittings", 10)
+    s, xb = call("get_state", token=tok_x)
+    s, r = call("wanted_fill", {"post_id": post_id, "quantity": 3}, token=tok_x)
+    f = r["data"]["filled"] if s == 200 else {}
+    cut = -(-3 * price * 5 // 100)   # the Mercato cut (5%), rounded up
+    check("fill 3 of 4: paid now, minus the Mercato cut", s == 200 and f["quantity"] == 3 and f["earned"] == 3 * price - cut
+          and r["data"]["state"]["player"]["gold"] == xb["data"]["player"]["gold"] + 3 * price - cut
+          and have(r["data"]["state"], "brass_fittings") == 7, r)
+    s, r = call("get_state", token=tok_w)
+    check("the poster receives the goods", have(r["data"], "brass_fittings") == 3
+          and any(a["type"] == "wanted_received" for a in r["data"]["activity"]), r["data"]["activity"][:3])
+    s, r = call("wanted_fill", {"post_id": post_id, "quantity": 5}, token=tok_x)
+    check("filling more than is left takes only what's left, and closes it", s == 200 and r["data"]["filled"]["quantity"] == 1
+          and r["data"]["filled"]["done"] is True, r)
+    s, r = call("wanted_fill", {"post_id": post_id, "quantity": 1}, token=tok_x)
+    check("a filled request is closed", s == 409 and r["error"]["code"] == "post_closed", r)
+
+    # cancel and expiry give back what's still held
+    s, before = call("get_state", token=tok_w)
+    s, r = call("wanted", token=tok_w)
+    lp = r["data"]["bands"]["copper_lantern"]["usual"]
+    s, r = call("wanted_post", {"item_id": "copper_lantern", "quantity": 2, "unit_price": lp}, token=tok_w)
+    lid = r["data"]["posted"]["id"] if s == 200 else 0
+    s, r = call("wanted_cancel", {"post_id": lid}, token=tok_x)
+    check("you can't cancel someone else's request", s == 403, r)
+    s, r = call("wanted_cancel", {"post_id": lid}, token=tok_w)
+    check("cancel: the held ducats come back", s == 200 and r["data"]["cancelled"]["refund"] == 2 * lp
+          and r["data"]["state"]["player"]["gold"] == before["data"]["player"]["gold"], r)
+    s, r = call("wanted", token=tok_w)
+    gp = r["data"]["bands"]["leather_grip"]["usual"]
+    s, before = call("get_state", token=tok_w)
+    codes = [call("wanted_post", {"item_id": "leather_grip", "quantity": 1, "unit_price": gp}, token=tok_w)[0] for _ in range(4)]
+    check("at most 3 requests on the board", codes == [200, 200, 200, 409], codes)
+    tool("expire_wanted", name_w)
+    if TICK:
+        subprocess.run(TICK, shell=True, check=True, capture_output=True)
+        s, r = call("get_state", token=tok_w)
+        check("expired requests are refunded by the market tick", r["data"]["player"]["gold"] == before["data"]["player"]["gold"]
+              and any(a["type"] == "wanted_expired" for a in r["data"]["activity"]), r["data"]["activity"][:4])
+
+    # two crafters filling the last unit at the same moment: only one gets it
+    s, r = call("wanted_post", {"item_id": "brass_fittings", "quantity": 1, "unit_price": price}, token=tok_w)
+    race_id = r["data"]["posted"]["id"] if s == 200 else 0
+    name_y, _, tok_y, _ = register("y")
+    call("choose_profession", {"profession_id": "blacksmith"}, token=tok_y)
+    tool("give", name_y, "brass_fittings", 2)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda t: call("wanted_fill", {"post_id": race_id, "quantity": 1}, token=t), [tok_x, tok_y]))
+    check("two fills at once: exactly one succeeds", sorted(st for st, _ in results) == [200, 409], [x for _, x in results])
+
+# Hall of honor
+s, r = call("honors", token=tok_w)
+boards = {b["id"]: b for b in r["data"]["boards"]} if s == 200 else {}
+check("the Hall of honor: Il Factotum and four boards", s == 200 and r["data"]["factotum"] and set(boards) == {"gold", "skill", "duke", "bottegas"}
+      and r["data"]["title"].startswith("Il Factotum"), r)
+check("the finest bottegas list the Bellows forge", any(row["name"] == name_d and "Bellows" in row["value"] for row in boards.get("bottegas", {}).get("rows", [])) or not PLAYER_TOOL, boards.get("bottegas"))
+
+# the three officials: rumors from real data, one favor a day each
+s, r = call("palazzo", token=tok_x)
+check("the Palazzo has three officials", s == 200 and [n["id"] for n in r["data"]["npcs"]] == ["notary", "crier", "steward"], r)
+for npc in ("notary", "crier", "steward"):
+    s, r = call("npc_talk", {"npc": npc}, token=tok_x)
+    check(f"{npc}: a line, a rumor and today's favor", s == 200 and r["data"]["line"] and r["data"]["rumor"] and r["data"]["favor"]
+          and r["data"]["favor"]["quantity"] > 0 and r["data"]["favor"]["done"] is False, r)
+s, r = call("npc_talk", {"npc": "steward"}, token=tok_x)
+fav = r["data"]["favor"]
+check("the steward asks for another guild's goods (pillar 5)", json.loads((CONTENT / "items.json").read_text(encoding="utf-8"))
+      and next(i for i in json.loads((CONTENT / "items.json").read_text(encoding="utf-8"))["items"] if i["id"] == fav["item_id"])["profession"] != "blacksmith", fav)
+check("a favor pays under the Guild Suppliers' price (1.5x usual)", fav["reward"] < 1.5 * fav["quantity"] * next(
+    i for i in json.loads((CONTENT / "items.json").read_text(encoding="utf-8"))["items"] if i["id"] == fav["item_id"])["reference_value"], fav)
+s, r2 = call("npc_talk", {"npc": "steward"}, token=tok_x)
+check("the same favor all day", r2["data"]["favor"]["item_id"] == fav["item_id"] and r2["data"]["favor"]["quantity"] == fav["quantity"], (fav, r2["data"]["favor"]))
+s, r = call("npc_talk", {"npc": "doge"}, token=tok_x)
+check("an unknown official is refused", s == 400, r)
+s, r = call("npc_favor", {"npc": "steward"}, token=tok_x)
+check("a favor without the goods is refused", s == 400 and r["error"]["code"] == "not_enough_items", r)
+if PLAYER_TOOL:
+    tool("give", name_x, fav["item_id"], fav["quantity"])
+    s, before = call("get_state", token=tok_x)
+    s, r = call("npc_favor", {"npc": "steward"}, token=tok_x)
+    check("do the steward's favor: goods given, ducats paid", s == 200 and r["data"]["state"]["player"]["gold"] == before["data"]["player"]["gold"] + fav["reward"]
+          and r["data"]["talk"]["favor"]["done"] is True and have(r["data"]["state"], fav["item_id"]) == have(before["data"], fav["item_id"]) - fav["quantity"], r)
+    s, r = call("npc_favor", {"npc": "steward"}, token=tok_x)
+    check("one favor per official per day", s == 409 and r["error"]["code"] == "favor_done", r)
+
+    # A rank kept from before 0.11.0: a Journeyman in the shack is capped at 50, not 25.
+    tool("kept_rank", name_x, 1)
+    tool("skill", name_x, 30)
+    s, r = call("get_state", token=tok_x)
+    pg = r["data"]["profession"]["progress"]
+    check("a kept Journeyman rank: cap 50 in the shack", pg["cap"] == 50 and pg["at_cap"] is False
+          and r["data"]["profession"]["workshop"]["kept_rank"] is True and r["data"]["profession"]["workshop"]["level"] == 1, r["data"]["profession"]["workshop"])
 
 s, r = call("logout", {}, token=tok_a)
 s, r = call("get_state", token=tok_a)

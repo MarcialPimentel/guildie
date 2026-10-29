@@ -54,6 +54,17 @@ function guildie_actions(): array
         'friend_remove'     => [['POST'],        true,  'action_friend_remove'],
         'duke_order'        => [['GET'],         true,  'action_duke_order'],
         'duke_contribute'   => [['POST'],        true,  'action_duke_contribute'],
+        // 0.11.0: the bottega upgrades (#51) and the Palazzo (docs/palazzo.md)
+        'workshop_upgrade'  => [['POST'],        true,  'action_workshop_upgrade'],
+        'workshop_open'     => [['POST'],        true,  'action_workshop_open'],
+        'palazzo'           => [['GET'],         true,  'action_palazzo'],
+        'honors'            => [['GET'],         true,  'action_honors'],
+        'npc_talk'          => [['POST'],        true,  'action_npc_talk'],
+        'npc_favor'         => [['POST'],        true,  'action_npc_favor'],
+        'wanted'            => [['GET'],         true,  'action_wanted'],
+        'wanted_post'       => [['POST'],        true,  'action_wanted_post'],
+        'wanted_fill'       => [['POST'],        true,  'action_wanted_fill'],
+        'wanted_cancel'     => [['POST'],        true,  'action_wanted_cancel'],
     ];
 }
 
@@ -329,6 +340,60 @@ function action_duke_contribute(array $body, ?int $playerId): array
 {
     $given = duke_contribute($playerId, body_string($body, 'item_id'), body_int($body, 'quantity', 1, 1, 10000));
     return ['given' => $given, 'board' => duke_board($playerId), 'state' => player_state($playerId)];
+}
+
+function action_workshop_upgrade(array $body, ?int $playerId): array
+{
+    return ['started' => workshop_start($playerId), 'state' => player_state($playerId)];
+}
+
+function action_workshop_open(array $body, ?int $playerId): array
+{
+    return ['built' => workshop_finish($playerId), 'state' => player_state($playerId)];
+}
+
+function action_palazzo(array $body, ?int $playerId): array
+{
+    return ['npcs' => palazzo_overview($playerId)];
+}
+
+function action_honors(array $body, ?int $playerId): array
+{
+    return palazzo_honors($playerId);
+}
+
+function action_npc_talk(array $body, ?int $playerId): array
+{
+    return palazzo_talk($playerId, body_string($body, 'npc'));
+}
+
+function action_npc_favor(array $body, ?int $playerId): array
+{
+    $done = palazzo_favor_do($playerId, body_string($body, 'npc'));
+    return ['done' => $done, 'talk' => palazzo_talk($playerId, body_string($body, 'npc')), 'state' => player_state($playerId)];
+}
+
+function action_wanted(array $body, ?int $playerId): array
+{
+    return wanted_board($playerId);
+}
+
+function action_wanted_post(array $body, ?int $playerId): array
+{
+    $posted = wanted_post($playerId, body_string($body, 'item_id'), body_int($body, 'quantity', 1, 1, 100000), body_int($body, 'unit_price', 0, 0, 10000000));
+    return ['posted' => $posted, 'board' => wanted_board($playerId), 'state' => player_state($playerId)];
+}
+
+function action_wanted_fill(array $body, ?int $playerId): array
+{
+    $filled = wanted_fill($playerId, body_int($body, 'post_id', 0, 1, PHP_INT_MAX), body_int($body, 'quantity', 1, 1, 100000));
+    return ['filled' => $filled, 'board' => wanted_board($playerId), 'state' => player_state($playerId)];
+}
+
+function action_wanted_cancel(array $body, ?int $playerId): array
+{
+    $cancelled = wanted_cancel($playerId, body_int($body, 'post_id', 0, 1, PHP_INT_MAX));
+    return ['cancelled' => $cancelled, 'board' => wanted_board($playerId), 'state' => player_state($playerId)];
 }
 
 /**

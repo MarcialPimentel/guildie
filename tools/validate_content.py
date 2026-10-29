@@ -407,6 +407,54 @@ for it in items:
     if it.get("type") != "raw" and it["id"] not in demanded:
         err(f"item {it['id']}: no NPC persona buys it (add it to a persona's demand_per_hour in economy.json, rule W7)")
 
+# Bottega upgrades (0.11.0, docs/palazzo.md §2): level L opens rank L-1, so its goods must come from both other
+# guilds and only from recipes crafters one rank lower can make (otherwise nobody can reach the first Journeyman).
+ranks = economy.get("progression", {}).get("ranks", [])
+levels = {int(l["level"]) for l in economy.get("workshop", {}).get("levels", [])}
+if levels and levels != set(range(1, len(ranks) + 1)):
+    err(f"economy.workshop.levels must be levels 1..{len(ranks)} (one per rank)")
+item_by_id = {it["id"]: it for it in items}
+made_at = {}
+for rc in recipes:
+    if not rc.get("rare"):
+        oid = rc["output"]["item_id"]
+        made_at[oid] = min(made_at.get(oid, 999), int(rc.get("skill", 1)))
+for p in professions:
+    path = p.get("workshop", [])
+    if sorted(int(u["level"]) for u in path) != list(range(2, len(ranks) + 1)):
+        err(f"profession {p['id']}: workshop must have one upgrade for each level 2..{len(ranks)}")
+    for u in path:
+        lv = int(u["level"])
+        where = f"profession {p['id']} workshop level {lv}"
+        if int(u.get("gold", 0)) <= 0 or float(u.get("hours", 0)) <= 0 or not u.get("name"):
+            err(f"{where}: needs a name, gold and hours")
+        guilds = set()
+        for it in u.get("items", []):
+            if it["item_id"] not in item_by_id:
+                err(f"{where}: unknown item {it['item_id']}")
+                continue
+            guilds.add(item_by_id[it["item_id"]]["profession"])
+            top = int(ranks[lv - 1]["from"]) - 1 if lv - 1 < len(ranks) else 100   # the top of the rank below the one this opens
+            need = made_at.get(it["item_id"], 1)
+            if need > top:
+                err(f"{where}: {it['item_id']} is made from skill {need}, above {top}; crafters who need this upgrade can't make it yet")
+        if len(guilds - {p["id"]}) < 2:
+            err(f"{where}: must ask for goods from both other guilds (Pillar 5)")
+
+# The Palazzo's officials (0.11.0): ids the client knows, a rumor and favor kind each.
+palazzo = load("palazzo.json")
+ids = [n.get("id") for n in palazzo.get("npcs", [])]
+if ids != ["notary", "crier", "steward"]:
+    err("palazzo.json: the officials must be notary, crier, steward (the 3D Palazzo has a spot and a look for each)")
+for n in palazzo.get("npcs", []):
+    if n.get("rumor") not in ("market", "week", "events") or n.get("favor") not in ("raws", "goods", "imports") or not n.get("lines") or "{items}" not in n.get("favor_line", ""):
+        err(f"palazzo.json {n.get('id')}: needs rumor (market|week|events), favor (raws|goods|imports), lines, and a favor_line with {{items}}")
+pz = economy.get("palazzo", {})
+if float(pz.get("favor_reward_multiplier", 0)) >= float(economy.get("market", {}).get("ceiling_multiplier", 1.5)):
+    err("economy.palazzo.favor_reward_multiplier must stay under market.ceiling_multiplier (the Guild Suppliers' price)")
+if any(p["id"] == "palazzo" for p in professions):
+    err("no guild may be called 'palazzo': that's the shared square's room")
+
 if errors:
     print(f"Content INVALID ({len(errors)} problems):")
     for e in errors:

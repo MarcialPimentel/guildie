@@ -1,5 +1,5 @@
 {
-  "_comment": "Professions (guilds) and their gathering stations (GDD 5.4, systems.md 5.1-5.2). This file is the one source of truth for a guild: the server, the realtime rooms and the client all read it. guild: how the guild shows up (kit = the art files client/src/world/kits/<kit>.ts and client/src/ui/portraits/<kit>.tsx; hall and piazza in the quarter; quarter = the short tab label; goods = the Mercato heading; workbench = the 3D workbench label; color and trim = quarter banners; hats = hat names, in the order the server stores them, one per hat in the kit). station.find_label: the rich-find surprise text (#48). Rates are units per hour and caps are the most a station holds; both are scaled by economy.pace.time_multiplier. unlock_skill (default 1): the skill at which a new player starts gathering that raw; players who already gathered it before 0.8.0 keep it.",
+  "_comment": "Professions (guilds) and their gathering stations (GDD 5.4, systems.md 5.1-5.2). This file is the one source of truth for a guild: the server, the realtime rooms and the client all read it. guild: how the guild shows up (kit = the art files client/src/world/kits/<kit>.ts and client/src/ui/portraits/<kit>.tsx; hall and piazza in the quarter; quarter = the short tab label; goods = the Mercato heading; workbench = the 3D workbench label; color and trim = quarter banners; hats = hat names, in the order the server stores them, one per hat in the kit). station.find_label: the rich-find surprise text (#48). Rates are units per hour and caps are the most a station holds; both are scaled by economy.pace.time_multiplier. unlock_skill (default 1): the skill at which a new player starts gathering that raw; players who already gathered it before 0.8.0 keep it. workshop (0.11.0, #51): the bottega upgrades that open each rank (level 2 opens Journeyman, 3 Expert, 4 Master); each costs ducats plus goods from both other guilds (only goods crafters one rank lower can make) and takes hours to build (x the pace); what a level gives is in economy.json workshop.",
   "professions": [
     {
       "id": "blacksmith",
@@ -22,7 +22,15 @@
           { "item_id": "copper_ore", "rate_per_hour": 30, "cap": 30 },
           { "item_id": "iron_ore",   "rate_per_hour": 12, "cap": 12, "unlock_skill": 15 }
         ]
-      }
+      },
+      "workshop": [
+        { "level": 2, "name": "Bellows forge", "gold": 150, "hours": 2,
+          "items": [{ "item_id": "leather_grip", "quantity": 10 }, { "item_id": "smelting_flux", "quantity": 4 }, { "item_id": "brass_fittings", "quantity": 10 }] },
+        { "level": 3, "name": "Water-wheel forge", "gold": 800, "hours": 6,
+          "items": [{ "item_id": "cured_leather", "quantity": 10 }, { "item_id": "steam_tonic", "quantity": 8 }, { "item_id": "iron_ingot", "quantity": 10 }] },
+        { "level": 4, "name": "Trip-hammer works", "gold": 3000, "hours": 12,
+          "items": [{ "item_id": "rugged_jerkin", "quantity": 12 }, { "item_id": "steam_tonic", "quantity": 25 }, { "item_id": "iron_sword", "quantity": 10 }] }
+      ]
     },
     {
       "id": "alchemist",
@@ -45,7 +53,15 @@
           { "item_id": "sunleaf",    "rate_per_hour": 30, "cap": 30 },
           { "item_id": "ember_moss", "rate_per_hour": 12, "cap": 12, "unlock_skill": 15 }
         ]
-      }
+      },
+      "workshop": [
+        { "level": 2, "name": "Copper still", "gold": 150, "hours": 2,
+          "items": [{ "item_id": "brass_fittings", "quantity": 10 }, { "item_id": "hide_satchel", "quantity": 4 }, { "item_id": "healing_draught", "quantity": 10 }] },
+        { "level": 3, "name": "Water-driven alembics", "gold": 800, "hours": 6,
+          "items": [{ "item_id": "iron_ingot", "quantity": 6 }, { "item_id": "cured_leather", "quantity": 8 }, { "item_id": "steam_tonic", "quantity": 10 }] },
+        { "level": 4, "name": "Clockwork distillery", "gold": 3000, "hours": 12,
+          "items": [{ "item_id": "iron_sword", "quantity": 8 }, { "item_id": "rugged_jerkin", "quantity": 8 }, { "item_id": "steam_tonic", "quantity": 30 }] }
+      ]
     },
     {
       "id": "leatherworker",
@@ -68,7 +84,15 @@
           { "item_id": "raw_hide",   "rate_per_hour": 30, "cap": 30 },
           { "item_id": "thick_hide", "rate_per_hour": 12, "cap": 12, "unlock_skill": 15 }
         ]
-      }
+      },
+      "workshop": [
+        { "level": 2, "name": "Tanning pits", "gold": 150, "hours": 2,
+          "items": [{ "item_id": "tanning_solution", "quantity": 6 }, { "item_id": "copper_lantern", "quantity": 4 }, { "item_id": "leather_grip", "quantity": 10 }] },
+        { "level": 3, "name": "Water-wheel tannery", "gold": 800, "hours": 6,
+          "items": [{ "item_id": "iron_ingot", "quantity": 8 }, { "item_id": "steam_tonic", "quantity": 8 }, { "item_id": "cured_leather", "quantity": 10 }] },
+        { "level": 4, "name": "Mechanical tannery", "gold": 3000, "hours": 12,
+          "items": [{ "item_id": "iron_sword", "quantity": 8 }, { "item_id": "steam_tonic", "quantity": 25 }, { "item_id": "rugged_jerkin", "quantity": 10 }] }
+      ]
     }
   ]
 }

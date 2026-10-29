@@ -140,5 +140,26 @@
       "name": "Guild Suppliers",
       "label": "the guild suppliers"
     }
+  },
+  "workshop": {
+    "_comment": "Bottega levels (0.11.0, #51, docs/palazzo.md). Your skill stops at the top of the rank your bottega allows (25 at level 1, 50 at 2, 75 at 3) and crafts give no XP there until you build the next level (content/professions.json workshop). Players who held a higher rank before 0.11.0 keep it. Per level: craft slots, how much faster crafts finish, and the station's cap and rate multipliers. Every number is [tune].",
+    "levels": [
+      { "level": 1, "name": "Rundown shack",      "slots": 2, "craft_speed": 0,    "station_cap": 1.0, "station_rate": 1.0 },
+      { "level": 2, "name": "Repaired workshop",  "slots": 3, "craft_speed": 0.10, "station_cap": 1.0, "station_rate": 1.0 },
+      { "level": 3, "name": "Two-storey bottega", "slots": 4, "craft_speed": 0.20, "station_cap": 1.5, "station_rate": 1.0 },
+      { "level": 4, "name": "Fine bottega",       "slots": 5, "craft_speed": 0.30, "station_cap": 1.5, "station_rate": 1.25 }
+    ]
+  },
+  "wanted": {
+    "_comment": "The Wanted board at the Palazzo (0.11.0): players post paid requests for goods. The price per unit must sit inside the market band (market.floor_multiplier .. ceiling_multiplier x usual value). The ducats are held when posted; whoever fills it is paid minus the Mercato cut (exchange.cut). Unfilled posts are refunded when they expire or are cancelled. [tune]",
+    "max_open": 3,
+    "hours": 48,
+    "max_quantity": 100
+  },
+  "palazzo": {
+    "_comment": "The Palazzo (0.11.0): each of its three officials gives one small favor per player per day (UTC). A favor asks for goods worth about favor_target_value ducats and pays favor_reward_multiplier x usual value (under the Guild Suppliers' 1.5x, like orders) plus order XP. honor_size: rows on each Hall of honor board. [tune]",
+    "favor_target_value": 60,
+    "favor_reward_multiplier": 1.2,
+    "honor_size": 5
   }
 }

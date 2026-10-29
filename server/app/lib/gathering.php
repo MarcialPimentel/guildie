@@ -69,7 +69,7 @@ function gathering_status(int $playerId, string $professionId): array
 
     $outputs = [];
     $locked = [];
-    foreach ($profession['station']['outputs'] as $output) {
+    foreach (workshop_station_outputs($profession, workshop_level(db(), $playerId)) as $output) {
         if (!isset($lastAt[$output['item_id']])) {
             $locked[] = ['item_id' => $output['item_id'], 'name' => item_name($output['item_id']), 'unlock_skill' => gathering_unlock_skill($output)];
             continue;
@@ -101,7 +101,7 @@ function gathering_collect(int $playerId): array
         $now = game_now();
 
         $collected = [];
-        foreach ($profession['station']['outputs'] as $output) {
+        foreach (workshop_station_outputs($profession, workshop_level($pdo, $playerId)) as $output) {
             $itemId = $output['item_id'];
             if (!isset($lastAt[$itemId])) {
                 continue;   // not unlocked yet

@@ -10,6 +10,7 @@ SQL files that build and change the database. From 0.2.1 the server applies them
 - `006_progression.sql`: XP and the daily bonus on `player_professions`, known recipes (`player_recipes`), rare recipes on orders (0.8.0). Players from before 0.8.0 are upgraded by the server code (`progression.php`), not the SQL
 - `007_living_city.sql`: friends, city preferences (slaps), the Duke's order (0.9.0)
 - `008_looks.sql`: a merchant's chosen look on `city_prefs` (`look_color`, `look_hat`; NULL = never chosen) (0.10.0)
+- `009_palazzo.sql`: the bottega upgrades on `player_professions` (`workshop_level`, `legacy_rank` = the rank kept from before 0.11.0, `upgrade_to`, `upgrade_ready_at`), the Wanted board (`wanted_posts`) and the officials' daily favors (`npc_favors`) (0.11.0)
 
 Rules:
 - Name files `NNN_short_name.sql`, numbered in order. Never edit a migration that has already been applied; add a new file instead.
