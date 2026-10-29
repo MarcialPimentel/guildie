@@ -102,16 +102,44 @@ function orders_pick_rare_recipe(PDO $pdo, int $playerId, string $professionId, 
     return $pool ? orders_pick($pool) : null;
 }
 
-/** Crafted goods other guilds make with no imports (what a bundle may ask for from another guild). */
-function orders_other_guild_items(string $professionId): array
+/**
+ * Crafted goods other guilds make with no imports (what a bundle may ask for from another guild), up to the
+ * top of the asking player's rank: a Journeyman's bundle never asks for another guild's Master goods.
+ */
+function orders_other_guild_items(string $professionId, int $skill): array
 {
+    $top = progression_rank_top($skill);
     $items = [];
     foreach (content_professions() as $id => $p) {
         if ($id !== $professionId) {
-            $items = array_merge($items, orders_own_items($id, true));
+            foreach (content_recipes_for($id) as $recipe) {
+                $imports = array_filter($recipe['inputs'], fn($in) => (content_item($in['item_id'])['profession'] ?? '') !== $id);
+                if (!$imports && !recipe_is_rare($recipe) && recipe_skill($recipe) <= $top) {
+                    $items[] = $recipe['output']['item_id'];
+                }
+            }
         }
     }
-    return $items;
+    return array_values(array_unique($items));
+}
+
+/**
+ * The rare material an order may pay, from another guild's station: the rarest raw (not the common one) that
+ * station unlocks at or below the player's skill, so an Apprentice isn't paid in skill-65 raws.
+ */
+function orders_rare_raw(array $profession, int $skill): ?string
+{
+    $outputs = array_slice($profession['station']['outputs'], 1);
+    if (!$outputs) {
+        return null;
+    }
+    $raw = $outputs[0]['item_id'];   // the second raw is always allowed (unlocked at 15)
+    foreach ($outputs as $o) {
+        if ((int) ($o['unlock_skill'] ?? 1) <= $skill) {
+            $raw = $o['item_id'];
+        }
+    }
+    return $raw;
 }
 
 function orders_pick(array $list): mixed
@@ -156,7 +184,7 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
         $items[$item] = mt_rand(1, 2);
     } elseif ($kind === 'bundle') {
         $own = orders_pick(orders_own_items($professionId, false, $skill, $known));
-        $other = orders_pick(orders_other_guild_items($professionId));
+        $other = orders_pick(orders_other_guild_items($professionId, $skill));
         $items[$own] = orders_quantity_for($own, $target * 0.65);
         $items[$other] = orders_quantity_for($other, $target * 0.35);
     } else {
@@ -180,13 +208,12 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
     if (rand_between(0, 1) < (float) ($s['rare_material_chance'][$kind] ?? 0)) {
         $raws = [];
         foreach (content_professions() as $id => $p) {
-            if ($id !== $professionId) {
-                $outputs = $p['station']['outputs'];
-                $raws[] = end($outputs)['item_id'];   // the station's rarer raw
+            if ($id !== $professionId && ($r = orders_rare_raw($p, $skill)) !== null) {
+                $raws[] = $r;
             }
         }
-        $raw = orders_pick($raws);
-        $affordable = (int) floor($budget * (float) $s['max_rare_share'] / orders_usual($raw));
+        $raw = $raws ? orders_pick($raws) : null;
+        $affordable = $raw === null ? 0 : (int) floor($budget * (float) $s['max_rare_share'] / orders_usual($raw));
         $qty = min(mt_rand(1, (int) $s['rare_material_max']), $affordable);
         if ($qty > 0) {
             $rewardItems[$raw] = $qty;

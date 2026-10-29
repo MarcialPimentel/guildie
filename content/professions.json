@@ -1,8 +1,14 @@
 {
-  "_comment": "Professions and their gathering stations (GDD 5.4, systems.md 5.1-5.2). Rates are units per hour and caps are the most a station holds; both are scaled by economy.pace.time_multiplier. unlock_skill (default 1): the skill at which a new player starts gathering that raw; players who already gathered it before 0.8.0 keep it.",
+  "_comment": "Professions (guilds) and their gathering stations (GDD 5.4, systems.md 5.1-5.2). This file is the one source of truth for a guild: the server, the realtime rooms and the client all read it. guild: how the guild shows up (kit = the art files client/src/world/kits/<kit>.ts and client/src/ui/portraits/<kit>.tsx; hall and piazza in the quarter; quarter = the short tab label; goods = the Mercato heading; workbench = the 3D workbench label; color and trim = quarter banners; hats = hat names, in the order the server stores them, one per hat in the kit). station.find_label: the rich-find surprise text (#48). Rates are units per hour and caps are the most a station holds; both are scaled by economy.pace.time_multiplier. unlock_skill (default 1): the skill at which a new player starts gathering that raw; players who already gathered it before 0.8.0 keep it.",
   "professions": [
     {
       "id": "blacksmith",
+      "guild": {
+        "kit": "smith", "hall": "Arte dei Fabbri", "piazza": "Piazza dei Fabbri",
+        "quarter": "Smiths'", "goods": "Blacksmith goods", "workbench": "Forge",
+        "color": "#B83A3A", "trim": "#4B3A2E",
+        "hats": ["Felt cap", "Leather coif", "Bandana"]
+      },
       "trainer": "Mastro Ferrante, forge master of the Arsenale",
       "name": "Blacksmith",
       "tagline": "Ore, fire and brass.",
@@ -10,6 +16,7 @@
       "needs_from_others": "Smelting Flux (Alchemist) and Leather Grips (Leatherworker) for the iron tier.",
       "station": {
         "id": "mine",
+        "find_label": "Rich vein!",
         "name": "The Mine",
         "outputs": [
           { "item_id": "copper_ore", "rate_per_hour": 30, "cap": 30 },
@@ -19,6 +26,12 @@
     },
     {
       "id": "alchemist",
+      "guild": {
+        "kit": "alchemy", "hall": "Arte degli Speziali", "piazza": "Piazza degli Speziali",
+        "quarter": "Alchemists'", "goods": "Alchemist goods", "workbench": "Alembic",
+        "color": "#2A4C9A", "trim": "#1F8A87",
+        "hats": ["Pointed hat", "Scholar's cap", "Hood"]
+      },
       "trainer": "Dottoressa Livia, keeper of the guild still",
       "name": "Alchemist",
       "tagline": "Herbs, flasks and fumes.",
@@ -26,6 +39,7 @@
       "needs_from_others": "Brass Fittings (Blacksmith) for Lemon Tonic.",
       "station": {
         "id": "herb_garden",
+        "find_label": "Bumper crop!",
         "name": "The Herb Garden",
         "outputs": [
           { "item_id": "sunleaf",    "rate_per_hour": 30, "cap": 30 },
@@ -35,6 +49,12 @@
     },
     {
       "id": "leatherworker",
+      "guild": {
+        "kit": "tanning", "hall": "Arte dei Conciatori", "piazza": "Piazza dei Conciatori",
+        "quarter": "Tanners'", "goods": "Leatherworker goods", "workbench": "Tanning bench",
+        "color": "#4E6F2C", "trim": "#E3C27A",
+        "hats": ["Straw hat", "Feathered beret", "Cloth cap"]
+      },
       "trainer": "Zio Tobia, the old master tanner",
       "name": "Leatherworker",
       "tagline": "Hides, stitches and buckles.",
@@ -42,6 +62,7 @@
       "needs_from_others": "Tanning Solution (Alchemist) and Brass Fittings (Blacksmith) for the higher tier.",
       "station": {
         "id": "trappers_lodge",
+        "find_label": "Prize pelt!",
         "name": "The Trapper's Lodge",
         "outputs": [
           { "item_id": "raw_hide",   "rate_per_hour": 30, "cap": 30 },

@@ -32,6 +32,14 @@ function progression_ranks(): array
     return prog('ranks', [['id' => 'apprentice', 'name' => 'Apprentice', 'from' => 1]]);
 }
 
+/** The highest skill in the rank a skill level is in (25 for an Apprentice, the max skill for a Master). */
+function progression_rank_top(int $skill): int
+{
+    $ranks = progression_ranks();
+    $next = $ranks[progression_rank_index($skill) + 1] ?? null;
+    return $next !== null ? (int) $next['from'] - 1 : progression_max_skill();
+}
+
 /** Index (0 = Apprentice) of the rank a skill level is in. */
 function progression_rank_index(int $skill): int
 {

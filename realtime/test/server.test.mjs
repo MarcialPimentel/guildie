@@ -10,8 +10,8 @@ const SECRET = 'a-test-secret-of-some-length'
 const PORT = 18700 + Math.floor(Math.random() * 200)
 const ORIGIN = 'https://marz.gg'
 const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-const pass = (pid) => {
-  const body = b64url(JSON.stringify({ pid, n: `p${pid}`, p: 'alchemist', l: 2, s: 1, exp: Math.floor(Date.now() / 1000) + 600 }))
+const pass = (pid, extra = {}) => {
+  const body = b64url(JSON.stringify({ pid, n: `p${pid}`, p: 'alchemist', l: 2, s: 1, exp: Math.floor(Date.now() / 1000) + 600, ...extra }))
   return `${body}.${b64url(createHmac('sha256', SECRET).update(body).digest())}`
 }
 const url = (token, quarter = 'alchemist') => `ws://127.0.0.1:${PORT}/q/${quarter}?token=${encodeURIComponent(token)}`
@@ -62,6 +62,15 @@ test('only the game\'s own website may connect', async () => {
 test('a forged pass or an unknown quarter is refused', async () => {
   assert.equal((await connect(url(pass(1).slice(0, -2) + 'xx'))).status, 401)
   assert.equal((await connect(url(pass(1), 'wizards'))).status, 404)
+})
+
+test('the quarters come from the pass, so a new guild needs no change here', async () => {
+  const q = ['blacksmith', 'alchemist', 'leatherworker', 'glassblower']
+  const a = await connect(url(pass(21, { q }), 'glassblower'))
+  assert.ok(a.ws, 'a quarter listed in the pass opens')
+  a.ws.close()
+  assert.equal((await connect(url(pass(22, { q }), 'wizards'))).status, 404)
+  assert.equal((await connect(url(pass(23), 'glassblower'))).status, 404, 'a pass without a list allows only the original three')
 })
 
 test('two players in one room see each other move', async () => {

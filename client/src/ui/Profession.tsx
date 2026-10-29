@@ -4,7 +4,6 @@ import { useEffect, useState } from 'preact/hooks'
 import { errorMessage } from '../api'
 import { session } from '../session'
 import type { ProfessionChoice as Choice } from '../types'
-import type { ProfessionId } from '../world/types'
 import { ColorPicker, HatPicker, Portrait } from './Look'
 
 export function ProfessionChoice() {
@@ -58,13 +57,13 @@ export function ProfessionChoice() {
         {list?.map((p) => (
           <section class="card" data-testid={`guild-${p.id}`}>
             <div class="guild-head">
-              <Portrait guild={p.id as ProfessionId} color={color} hat={hats[p.id] ?? 0} size={72} />
+              <Portrait guild={p.id} color={color} hat={hats[p.id] ?? 0} size={72} />
               <div>
                 <h2 style={{ fontSize: '26px' }}>{p.name}</h2>
                 <p class="muted">{p.tagline}</p>
               </div>
             </div>
-            <HatPicker guild={p.id as ProfessionId} hat={hats[p.id] ?? 0} onChange={(h) => setHats((x) => ({ ...x, [p.id]: h }))} testid={`hat-${p.id}`} />
+            <HatPicker guild={p.id} hat={hats[p.id] ?? 0} onChange={(h) => setHats((x) => ({ ...x, [p.id]: h }))} testid={`hat-${p.id}`} />
             <p>{p.description}</p>
             <p class="small">Gathers: {p.gathers.join(', ')} ({p.station})</p>
             <p class="small">Makes: {p.makes.join(', ')}</p>

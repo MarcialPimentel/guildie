@@ -3,15 +3,13 @@
 import type { ComponentChild } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
 import { ago, duration, gold } from '../format'
+import { GUILDS, guild } from '../guilds'
 import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
 import type { Listing, MarketRow, SellQuote } from '../types'
 import { ActionButton, Modes, Stepper, useGame, useLoad, type TabRequest } from './common'
 import { NewsBoard, Sparkline, Trend } from './Ticker'
 
-const PROFESSIONS: [string, string][] = [
-  ['blacksmith', 'Blacksmith goods'], ['alchemist', 'Alchemist goods'], ['leatherworker', 'Leatherworker goods'],
-]
 
 type View = { name: 'browse' } | { name: 'item'; itemId: string } | { name: 'sell' } | { name: 'sell_form'; itemId: string; qty: number } | { name: 'mine' }
 
@@ -51,9 +49,11 @@ function Browse({ open }: { open: (itemId: string) => void }) {
   const [data] = useLoad(() => session.market(), [], true)
   if (!data) return <p class="muted">Loading the Mercato…</p>
   const mine = s.state!.profession!.id
-  const order = [mine, ...PROFESSIONS.map(([p]) => p).filter((p) => p !== mine)]
   const groups: Record<string, MarketRow[]> = {}
   data.items.forEach((item) => (groups[item.profession] ??= []).push(item))
+  // your guild first, then the others in content order; any group this build doesn't know comes last
+  const known = GUILDS.map((g) => g.id)
+  const order = [mine, ...known, ...Object.keys(groups)].filter((p, i, a) => p && a.indexOf(p) === i && groups[p])
 
   return (
     <>
@@ -66,7 +66,7 @@ function Browse({ open }: { open: (itemId: string) => void }) {
       <div class="cols">
         {order.map((prof) => (
           <section class="stack tight" data-testid={`browse-${prof}`}>
-            <h2>{PROFESSIONS.find(([p]) => p === prof)?.[1]}{prof === mine ? ' (your guild)' : ''}</h2>
+            <h2>{guild(prof).goods}{prof === mine ? ' (your guild)' : ''}</h2>
             <div class="card tight">
               <div class="list-row list-head">
                 <span class="grow">Item</span>

@@ -101,7 +101,7 @@ function action_choose_profession(array $body, ?int $playerId): array
     // The look chosen on the same screen (0.10.0): optional, so older clients still join with the default look.
     $look = null;
     if (isset($body['look_color']) || isset($body['look_hat'])) {
-        $look = [body_int($body, 'look_color', 0, 0, CITY_LOOKS - 1), body_int($body, 'look_hat', 0, 0, CITY_HATS - 1)];
+        $look = [body_int($body, 'look_color', 0, 0, CITY_LOOKS - 1), body_int($body, 'look_hat', 0, 0, city_hat_count(null) - 1)];
     }
     choose_profession($playerId, body_string($body, 'profession_id'), $look);
     return player_state($playerId);
@@ -294,7 +294,7 @@ function action_city_prefs(array $body, ?int $playerId): array
 
 function action_city_look(array $body, ?int $playerId): array
 {
-    return city_set_look($playerId, body_int($body, 'color', 0, 0, CITY_LOOKS - 1), body_int($body, 'hat', 0, 0, CITY_HATS - 1));
+    return city_set_look($playerId, body_int($body, 'color', 0, 0, CITY_LOOKS - 1), body_int($body, 'hat', 0, 0, city_hat_count(null) - 1));
 }
 
 function action_quarter(array $body, ?int $playerId): array

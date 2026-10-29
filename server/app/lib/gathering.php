@@ -124,10 +124,11 @@ function gathering_collect(int $playerId): array
         }
         activity_log($pdo, $playerId, 'gathered', ['items' => $collected]);
 
-        // Small surprises (#48): a rich find adds extra of the common raw; a rare find adds the rarer raw.
+        // Small surprises (#48): a rich find adds extra of the common raw; a rare find adds the rarest raw
+        // this player has unlocked (not the station's last raw, which may still be locked: raws 3 and 4 come at 40 and 65).
         $surprises = [];
         $outputs = $profession['station']['outputs'];
-        $label = (string) econ('surprises.labels.' . $profession['station']['id'], 'A lucky find!');
+        $label = (string) ($profession['station']['find_label'] ?? 'A lucky find!');
         if (rand_between(0, 1) < (float) econ('surprises.rich_find_chance', 0.15)) {
             $common = $outputs[0]['item_id'];
             $got = 0;
@@ -138,8 +139,13 @@ function gathering_collect(int $playerId): array
             inventory_add($pdo, $playerId, $common, $bonus);
             $surprises[] = ['text' => sprintf('%s +%d %s', $label, $bonus, item_name($common)), 'item_id' => $common, 'quantity' => $bonus];
         }
-        $rare = end($outputs)['item_id'];
-        if (count($outputs) > 1 && isset($lastAt[$rare]) && rand_between(0, 1) < (float) econ('surprises.rare_find_chance', 0.08)) {
+        $rare = null;
+        foreach (array_slice($outputs, 1) as $o) {
+            if (isset($lastAt[$o['item_id']])) {
+                $rare = $o['item_id'];
+            }
+        }
+        if ($rare !== null && rand_between(0, 1) < (float) econ('surprises.rare_find_chance', 0.08)) {
             $bonus = mt_rand(1, (int) econ('surprises.rare_find_max', 2));
             inventory_add($pdo, $playerId, $rare, $bonus);
             $surprises[] = ['text' => sprintf('Rare find! +%d %s', $bonus, item_name($rare)), 'item_id' => $rare, 'quantity' => $bonus];

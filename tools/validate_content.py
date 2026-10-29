@@ -277,9 +277,143 @@ for o in duke.get("orders", []):
     if len({item_prof.get(ln.get("item_id")) for ln in lines}) < 2:
         err(f"duke: order {o.get('id')!r} must ask for goods from at least two guilds (it's a city-wide order)")
 
+# ---------------------------------------------------------------- guilds are content (0.10.3)
+# Each guild's names, colors and hats live in professions.json; its art is two files named after its kit.
+# A guild without them would draw as plain art in the game, so CI stops it here instead.
+repo = root.parent
+HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
+seen_labels = {}
+for p in professions:
+    pid, gd = p.get("id"), p.get("guild") or {}
+    for key in ("kit", "hall", "piazza", "quarter", "goods", "workbench", "color", "trim", "hats"):
+        if not gd.get(key):
+            err(f"profession {pid}: guild.{key} is missing (see the _comment in professions.json)")
+    for key in ("color", "trim"):
+        if gd.get(key) and not HEX.match(gd[key]):
+            err(f"profession {pid}: guild.{key} must be a color like #B83A3A")
+    hats = gd.get("hats") or []
+    if not (isinstance(hats, list) and all(isinstance(h, str) and h for h in hats)):
+        err(f"profession {pid}: guild.hats must be a list of hat names")
+    for key in ("hall", "piazza", "quarter"):
+        if gd.get(key) in seen_labels.get(key, set()):
+            err(f"profession {pid}: guild.{key} {gd[key]!r} is already another guild's")
+        seen_labels.setdefault(key, set()).add(gd.get(key))
+    if not p.get("station", {}).get("find_label"):
+        err(f"profession {pid}: station.find_label (the rich-find text) is missing")
+    kit = gd.get("kit", "")
+    if kit and not ID.match(kit):
+        err(f"profession {pid}: guild.kit {kit!r} must be lowercase_snake_case")
+    elif kit and (repo / "client").exists():
+        k3d, k2d = repo / f"client/src/world/kits/{kit}.ts", repo / f"client/src/ui/portraits/{kit}.tsx"
+        for path in (k3d, k2d):
+            if not path.exists():
+                err(f"profession {pid}: kit {kit!r} has no art file {path.relative_to(repo).as_posix()}")
+        # One hat in each kit per hat name. Kits list one hat per line inside "hats: [ ... ]":
+        # "{ parts: ..." in the 3D kit, "<g>..." in the portrait kit.
+        for path, start in ((k3d, "{ parts:"), (k2d, "<")):
+            if path.exists() and isinstance(hats, list):
+                body = re.search(r"\n  hats: \[\n(.*?)\n  \],", path.read_text(encoding="utf-8").replace("\r\n", "\n"), re.S)
+                n = len([ln for ln in body.group(1).split("\n") if ln.strip().startswith(start)]) if body else -1
+                if n != len(hats):
+                    err(f"profession {pid}: {path.relative_to(repo).as_posix()} has {n} hats but guild.hats names {len(hats)} "
+                        "(one hat per line inside 'hats: [ ... ]')")
+
+# Every item needs an icon (client/src/icons/<id>.svg), or it shows as a blank tile.
+icons = repo / "client/src/icons"
+if icons.exists():
+    for it in items:
+        if not (icons / f"{it['id']}.svg").exists():
+            err(f"item {it['id']}: no icon (client/src/icons/{it['id']}.svg)")
+
+# ---------------------------------------------------------------- the web rules W2, W3, W5, W6, W7 (professions.md §7)
+# W1 and W4 are checked above for every recipe. W2, W3 and W6 describe a whole rank or ladder, so they're
+# enforced once a guild's rank has its full ladder of trainer recipes (LADDER_PER_RANK); before that they
+# print as warnings. W5's value share is a [tune] target and stays a warning.
+LADDER_PER_RANK = 4
+warnings = []
+
+
+def warn(msg):
+    warnings.append(msg)
+
+
+def rule(complete, msg):
+    (err if complete else warn)(msg)
+
+
+def imports_of(r):
+    return [i for i in r.get("inputs", []) if item_by_id.get(i["item_id"], {}).get("profession") != r.get("profession")]
+
+
+trainer = [r for r in recipes if not r.get("rare") and isinstance(r.get("skill"), int)]
+complete_guild = {}
+for prof in sorted(prof_ids):
+    full = True
+    for ri in range(len(ranks)):
+        rs = [r for r in trainer if r.get("profession") == prof and rank_of(r["skill"]) == ri]
+        complete = len(rs) >= LADDER_PER_RANK
+        full = full and complete
+        name = ranks[ri].get("name", ri)
+        if not rs:
+            continue
+        # W3: every rank has a recipe with no imports, so anyone can skill up alone.
+        if not any(not imports_of(r) for r in rs):
+            rule(complete, f"{prof} {name}: every recipe imports; add one that doesn't (rule W3)")
+        # W2: imports grow with rank: some Journeyman and most Expert recipes import; Master needs 2+ other guilds.
+        importing = sum(1 for r in rs if imports_of(r))
+        if ri == 1 and importing < 1:
+            rule(complete, f"{prof} {name}: no recipe imports yet (rule W2: about half should)")
+        if ri == 2 and importing < len(rs) / 2:
+            rule(complete, f"{prof} {name}: only {importing} of {len(rs)} recipes import (rule W2: about three quarters)")
+        if ri >= 3 and not any(len({item_by_id[i["item_id"]]["profession"] for i in imports_of(r)}) >= 2 for r in rs):
+            rule(complete, f"{prof} {name}: no prestige recipe needs two other guilds (rule W2)")
+    complete_guild[prof] = full
+
+for r in trainer:
+    imp = imports_of(r)
+    if not imp:
+        continue
+    own = sum(i.get("quantity", 0) for i in r.get("inputs", []) if i not in imp)
+    # W5: imports are a small share: never more imported units than your own...
+    if sum(i.get("quantity", 0) for i in imp) > own:
+        err(f"recipe {r['id']}: more imported units than its own (rule W5)")
+    # ...and about 35% of the input value [tune].
+    total = sum(i.get("quantity", 0) * item_by_id[i["item_id"]]["reference_value"] for i in r.get("inputs", []))
+    share = sum(i.get("quantity", 0) * item_by_id[i["item_id"]]["reference_value"] for i in imp) / total if total else 0
+    if share > 0.35:
+        warn(f"recipe {r['id']}: imports are {share:.0%} of its input value (rule W5 aims for about 35%)")
+
+# W6: every guild's exports are used by every other guild, and no guild supplies more than half the import slots.
+all_full = bool(complete_guild) and all(complete_guild.values())
+slots = {}
+for r in trainer:
+    for i in imports_of(r):
+        slots.setdefault(item_by_id[i["item_id"]]["profession"], []).append(r.get("profession"))
+for prof in sorted(prof_ids):
+    users = set(slots.get(prof, []))
+    for other in sorted(prof_ids - {prof}):
+        if other not in users:
+            rule(all_full, f"{prof} goods aren't used by any {other} recipe (rule W6)")
+total_slots = sum(len(v) for v in slots.values())
+for prof, v in sorted(slots.items()):
+    if total_slots and len(v) > total_slots / 2:
+        rule(all_full, f"{prof} supplies {len(v)} of {total_slots} import slots, more than half (rule W6)")
+
+# W7: every component and finished good has an NPC buyer, or it can only be dumped on traders and the guild.
+demanded = set()
+for persona in economy.get("personas", {}).values():
+    demanded |= {k for k, v in persona.get("demand_per_hour", {}).items() if v > 0}
+for it in items:
+    if it.get("type") != "raw" and it["id"] not in demanded:
+        err(f"item {it['id']}: no NPC persona buys it (add it to a persona's demand_per_hour in economy.json, rule W7)")
+
 if errors:
     print(f"Content INVALID ({len(errors)} problems):")
     for e in errors:
         print("  - " + e)
     sys.exit(1)
 print(f"Content OK: {len(items)} items, {len(professions)} professions, {len(recipes)} recipes.")
+if warnings:
+    print(f"Web rules not enforced yet (a rank's ladder isn't complete, or a [tune] target): {len(warnings)}")
+    for w in warnings:
+        print("  - " + w)

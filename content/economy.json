@@ -48,13 +48,12 @@
     "max_price_multiple": 20
   },
   "surprises": {
-    "_comment": "Small surprises on collect (#48). rich_find: extra common raw (bonus = rich_find_bonus x what was collected, at least 2). rare_find: 1..rare_find_max of the station's rarer raw. bonus_craft: +1 item per finished batch.",
+    "_comment": "Small surprises on collect (#48). rich_find: extra common raw (bonus = rich_find_bonus x what was collected, at least 2). rare_find: 1..rare_find_max of the station's rarer raw. bonus_craft: +1 item per finished batch. The rich-find text is each station's find_label in professions.json.",
     "rich_find_chance": 0.15,
     "rich_find_bonus": 0.5,
     "rare_find_chance": 0.08,
     "rare_find_max": 2,
-    "bonus_craft_chance": 0.1,
-    "labels": { "mine": "Rich vein!", "herb_garden": "Bumper crop!", "trappers_lodge": "Prize pelt!" }
+    "bonus_craft_chance": 0.1
   },
   "guild_sale": {
     "_comment": "Sell to guild (#28): instant sale, no listing. Price per unit = reference x max(floor_multiplier, base_multiplier x (1 - drop_per_unit)^pressure). Pressure = units this player sold of this item recently; it halves every recovery_half_life_hours (scaled by pace). Hint shown when the price is below hint_below x base. Keep base_multiplier below market.trader_buy_below so listing pays better.",

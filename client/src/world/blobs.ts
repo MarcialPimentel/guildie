@@ -5,20 +5,25 @@
 // on squash, lean and hand positions: no skeleton, no physics engine. A new character is a few lines in
 // LOOKS (the hired hands of #51 are already here).
 import * as THREE from 'three'
+import { isGuildId } from '../guilds'
+import { kitFor } from './guildKits'
 import { BODY_COLORS, SASH_COLORS } from './looks'
-import type { ProfessionId } from './types'
+import { INK, P, apron, band, box, capsule, cone, cyl, dome, robe, sph, tor, type Part, type Prop } from './parts'
 
-export { BODY_COLORS, HAT_NAMES, RANK_NAMES } from './looks'
+export { BODY_COLORS, RANK_NAMES } from './looks'
 
-const INK = '#2B2A33'
 export const BLOB_SCALE = 1.4
 
 /**
  * Who a blob is. Players use their guild id; the rest are townsfolk, officials, the order customers
  * (content/orders.json ids), the market buyers (content/economy.json persona ids) and future hired hands.
  */
-export type Character = ProfessionId
-  | 'porter' | 'priest' | 'fishwife' | 'sailor' | 'herald' | `trainer:${ProfessionId}`
+export type Character = GuildMember | `trainer:${string}` | Npc
+/** A player: their guild id (content/professions.json). Dress and hats come from the guild's kit (kits/). */
+type GuildMember = string
+/** Everyone else, drawn from LOOKS below. */
+type Npc =
+  | 'porter' | 'priest' | 'fishwife' | 'sailor' | 'herald'
   | 'lady_ashworth' | 'squire_pell' | 'mother_hale' | 'foreman_grigg' | 'captain_vos' | 'brother_amon' | 'madame_orsini'
   | 'collector_quill' | 'collector_marchesa'
   | 'townsfolk' | 'adventurers' | 'workshops' | 'traders' | 'courier'
@@ -26,21 +31,6 @@ export type Character = ProfessionId
 
 export type Emote = 'wave' | 'bow' | 'cheer' | 'shrug' | 'handover' | 'trumpet' | 'nod' | 'look' | 'rock' | 'stretch'
 const EMOTE_TIME: Record<Emote, number> = { wave: 1.2, bow: 1.4, cheer: 1.3, shrug: 1.1, handover: 1.0, trumpet: 2.0, nod: 0.7, look: 2.6, rock: 2.2, stretch: 1.6 }
-
-// ------------------------------------------------------------------ building shapes
-type Part = { geo: THREE.BufferGeometry; c: string; x: number; y: number; z: number; rx?: number; ry?: number; rz?: number; sx?: number; sy?: number; sz?: number; order?: THREE.EulerOrder }
-const P = (geo: THREE.BufferGeometry, c: string, x = 0, y = 0, z = 0, o: Partial<Part> = {}): Part => ({ geo, c, x, y, z, ...o })
-// 0.10.1: people are smooth-shaded with 1.5x the curve segments of 0.10.0 (the town stays faceted).
-// Every rounded part goes through these helpers, so SEG sets how smooth the whole cast is.
-const SEG = 1.5
-const seg = (n: number, k = SEG) => Math.max(3, Math.round(n * k))
-const sph = (r: number, w = 8, h = 6, ...a: number[]) => new THREE.SphereGeometry(r, seg(w), seg(h), ...a)
-const cyl = (rt: number, rb: number, h: number, s = 10, open = false) => new THREE.CylinderGeometry(rt, rb, h, seg(s, 1.6), 1, open)
-const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d)
-const cone = (r: number, h: number, s = 8) => new THREE.ConeGeometry(r, h, seg(s, 1.6))
-const tor = (r: number, t: number, rs = 3, ts = 12, arc = Math.PI * 2) => new THREE.TorusGeometry(r, t, seg(rs), seg(ts), arc)
-const dome = (r: number, w = 8, h = 3) => new THREE.SphereGeometry(r, seg(w), seg(h), 0, Math.PI * 2, 0, Math.PI / 2)
-const capsule = (r: number, l: number, c = 2, s = 6) => new THREE.CapsuleGeometry(r, l, seg(c), seg(s))
 
 /** Paint each part one color, move it into place and merge them into one geometry. */
 function merge(parts: Part[]): THREE.BufferGeometry {
@@ -81,11 +71,6 @@ const base = (skin: string): Part[] => [
   P(sph(0.08, 4, 2), '#E98A86', -0.3, 0.93, 0.39, { sz: 0.4 }),
   P(sph(0.08, 4, 2), '#E98A86', 0.3, 0.93, 0.39, { sz: 0.4 }),
 ]
-const robe = (c: string, top: number, h: number, flare = 0.58) => P(cyl(0.51, flare, h, 11, true), c, 0, top - h / 2, 0)
-const band = (c: string, y: number, r = 0.54) => P(cyl(r, r, 0.08, 11, true), c, 0, y, 0)
-const apron = (c: string) => [P(box(0.62, 0.66, 0.08), c, 0, 0.55, 0.47, { rx: -0.08 }), P(box(0.06, 0.4, 0.06), c, -0.24, 0.98, 0.42, { rx: -0.3 }), P(box(0.06, 0.4, 0.06), c, 0.24, 0.98, 0.42, { rx: -0.3 })]
-const beard = () => P(sph(0.34, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), '#F5F2EA', 0, 0.98, 0.26, { sz: 0.75 })
-const chain = () => [P(tor(0.46, 0.035, 3, 14), '#E3B54A', 0, 0.98, 0.02, { rx: Math.PI / 2 + 0.25 }), P(sph(0.09, 6, 4), '#E3B54A', 0, 0.86, 0.5)]
 
 /** A sash across the body for each rank (#30): none for Apprentice, then sea-glass, majolica, lemon gold. */
 const sash = (rank: number): Part[] => {
@@ -96,31 +81,8 @@ const sash = (rank: number): Part[] => {
   return out
 }
 
-const HATS: Record<ProfessionId, (() => Part[])[]> = {
-  blacksmith: [
-    () => [P(cyl(0.33, 0.38, 0.24, 10), '#B83A3A', 0.02, 1.43, -0.02, { rz: 0.12 }), P(dome(0.33, 9, 3), '#B83A3A', 0.04, 1.53, -0.02, { sy: 0.55 })],
-    () => [P(dome(0.5, 9, 3), '#5A3A28', 0, 1.12, -0.03, { sy: 0.78 }), P(box(0.7, 0.08, 0.12), '#7A5233', 0, 1.2, 0.43, { rx: -0.25 })],
-    () => [P(dome(0.47, 9, 3), '#B83A3A', 0, 1.2, -0.02, { sy: 0.6 }), P(sph(0.11, 6, 4), '#B83A3A', 0, 1.25, -0.5), P(cone(0.08, 0.3, 5), '#B83A3A', 0.08, 1.1, -0.55, { rz: 0.5 })],
-  ],
-  alchemist: [
-    () => [P(cone(0.4, 0.8, 9), '#2A4C9A', 0, 1.73, -0.03, { rz: -0.08 }), P(cyl(0.46, 0.46, 0.06, 11), '#2A4C9A', 0, 1.36, 0), P(sph(0.09, 6, 4), '#F2C53D', 0.08, 2.12, -0.05)],
-    () => [P(cyl(0.36, 0.36, 0.16, 10), '#2A4C9A', 0, 1.42, 0), P(sph(0.4, 9, 5), '#2A4C9A', 0, 1.56, -0.03, { sy: 0.45 }), P(sph(0.07, 6, 4), '#F2C53D', 0, 1.74, -0.03)],
-    () => [P(dome(0.53, 9, 3), '#1F8A87', 0, 1.1, -0.06, { sy: 0.85 }), P(cone(0.12, 0.42, 6), '#1F8A87', 0, 1.25, -0.6, { rx: -1.9 }), P(sph(0.07, 6, 4), '#F2C53D', 0, 1.1, -0.82)],
-  ],
-  leatherworker: [
-    () => [P(cyl(0.66, 0.66, 0.05, 13), '#E3C27A', 0, 1.38, 0), P(cyl(0.3, 0.34, 0.26, 11), '#E3C27A', 0, 1.52, 0), P(cyl(0.345, 0.345, 0.07, 11), '#A9492A', 0, 1.44, 0)],
-    () => [P(sph(0.4, 9, 4), '#4E6F2C', 0.06, 1.42, 0, { sy: 0.35 }), P(cone(0.05, 0.75, 5), '#F3D27A', 0.3, 1.66, -0.08, { rz: -0.75 })],
-    () => [P(dome(0.45, 9, 3), '#A9492A', 0, 1.24, -0.02, { sy: 0.55 }), P(box(0.36, 0.03, 0.2), '#A9492A', 0, 1.27, 0.42)],
-  ],
-}
-const DRESS: Record<ProfessionId, () => Part[]> = {
-  blacksmith: () => apron('#4B3A2E'),
-  alchemist: () => [robe('#1F8A87', 0.75, 0.7)],
-  leatherworker: () => [robe('#4E6F2C', 0.95, 0.75)],
-}
 
 /** Props held in the right hand (positions relative to the hand). */
-export type Prop = 'oar' | 'fan' | 'loaf' | 'mallet' | 'spyglass' | 'jar' | 'basket' | 'magnifier' | 'parasol' | 'fish' | 'sack' | 'crate' | 'purse' | 'trumpet' | 'hammer' | 'note' | 'scroll'
 const PROPS: Record<Prop, () => Part[]> = {
   oar: () => [P(cyl(0.04, 0.04, 2.1, 5), '#8F4E2B', 0, 0.4, -0.05, { rz: 0.12 }), P(box(0.2, 0.55, 0.04), '#B5683A', -0.14, 1.35, -0.05, { rz: 0.12 })],
   fan: () => [P(new THREE.CylinderGeometry(0.28, 0.28, 0.03, 8, 1, false, 0, Math.PI), '#F6C9D8', 0, 0.14, 0.05, { rx: Math.PI / 2 })],
@@ -142,22 +104,14 @@ const PROPS: Record<Prop, () => Part[]> = {
 }
 
 interface LookDef { skin: string; prop?: Prop; loop?: 'carry' | 'hammer'; top?: number; parts: () => Part[] }
-const trainerParts: Record<ProfessionId, () => Part[]> = {
-  blacksmith: () => [robe('#4B3A2E', 1.0, 1.0, 0.62), ...apron('#6B4A35'), beard(), ...chain(), P(cyl(0.34, 0.4, 0.42, 10), '#B83A3A', 0.02, 1.58, -0.02, { rz: 0.1 }), P(dome(0.35, 9, 3), '#B83A3A', 0.04, 1.77, -0.02, { sy: 0.5 })],
-  alchemist: () => [robe('#1F8A87', 1.0, 1.0, 0.64), beard(), ...chain(), P(cone(0.46, 1.0, 9), '#2A4C9A', 0, 1.86, -0.03, { rz: -0.1 }), P(cyl(0.52, 0.52, 0.06, 11), '#2A4C9A', 0, 1.37, 0), P(sph(0.1, 6, 4), '#F2C53D', 0.1, 2.36, -0.05)],
-  leatherworker: () => [robe('#4E6F2C', 1.0, 1.0, 0.64), beard(), ...chain(), P(cyl(0.74, 0.74, 0.05, 13), '#E3C27A', 0, 1.38, 0), P(cyl(0.32, 0.36, 0.34, 11), '#E3C27A', 0, 1.56, 0), P(cyl(0.365, 0.365, 0.08, 11), '#A9492A', 0, 1.46, 0), P(cone(0.05, 0.75, 5), '#F6EEDC', 0.32, 1.78, -0.1, { rz: -0.6 })],
-}
 const striped = (): Part[] => [robe('#F5F0E4', 0.95, 0.7), band('#2A4C9A', 0.78, 0.535), band('#2A4C9A', 0.56, 0.555)]
-const LOOKS: Record<Exclude<Character, ProfessionId>, LookDef> = {
+const LOOKS: Record<Npc, LookDef> = {
   // the town and its officials
   porter: { skin: '#F6C9A2', prop: 'sack', parts: () => [robe('#F5F0E4', 0.85, 0.7), P(dome(0.42, 9, 3), '#C4623A', 0, 1.22, -0.02, { sy: 0.7 })] },
   priest: { skin: '#E9D5F0', parts: () => [robe('#2B2A33', 1.0, 1.0), P(box(0.12, 0.12, 0.04), '#F5F0E4', 0, 0.98, 0.5), P(cyl(0.3, 0.3, 0.12, 10), '#2B2A33', 0, 1.42, 0), P(cyl(0.5, 0.5, 0.04, 13), '#2B2A33', 0, 1.37, 0)] },
   fishwife: { skin: '#EFA9A0', prop: 'fish', parts: () => [robe('#2A4C9A', 0.8, 0.65), P(box(0.55, 0.5, 0.06), '#F6EEDC', 0, 0.5, 0.5), P(dome(0.44, 9, 3), '#F2C53D', 0, 1.2, -0.03, { sy: 0.75 })] },
   sailor: { skin: '#F2B98B', parts: () => [...striped(), P(dome(0.4, 9, 3), '#2A4C9A', 0, 1.25, -0.02, { sy: 0.55 }), P(cyl(0.41, 0.41, 0.07, 11), '#1E3557', 0, 1.27, -0.02)] },
   herald: { skin: '#BFE3D9', prop: 'trumpet', parts: () => [robe('#2A4C9A', 0.95, 0.8), P(box(0.5, 0.75, 0.06), '#F2C53D', 0, 0.62, 0.5), P(box(0.18, 0.18, 0.07), '#2A4C9A', 0, 0.7, 0.53), P(cyl(0.38, 0.4, 0.2, 11), '#A9492A', 0, 1.42, 0, { rz: -0.1 }), P(cone(0.06, 0.7, 5), '#F6EEDC', 0.28, 1.85, -0.1, { rz: -0.5 })] },
-  'trainer:blacksmith': { skin: '#F6C9A2', prop: 'hammer', top: 2.05, parts: trainerParts.blacksmith },
-  'trainer:alchemist': { skin: '#E9D5F0', prop: 'jar', top: 2.5, parts: trainerParts.alchemist },
-  'trainer:leatherworker': { skin: '#F3D27A', prop: 'scroll', top: 2.0, parts: trainerParts.leatherworker },
   // the order customers (content/orders.json)
   lady_ashworth: { skin: '#F6C9A2', prop: 'fan', parts: () => [robe('#A57BC4', 0.95, 0.95, 0.72), P(tor(0.36, 0.16, 4, 12), '#D4A23A', 0, 1.42, 0, { rx: Math.PI / 2 }), P(sph(0.3, 9, 5), '#D4A23A', 0, 1.5, 0, { sy: 0.6 }), P(sph(0.05, 5, 3), '#F6EEDC', 0, 0.98, 0.5)] },
   squire_pell: { skin: '#F2B98B', prop: 'oar', top: 2.2, parts: () => [...striped(), P(cone(0.32, 0.6, 8), '#B83A3A', 0.12, 1.55, -0.08, { rz: -0.75 }), P(sph(0.07, 5, 3), '#F6EEDC', 0.42, 1.68, -0.08)] },
@@ -178,15 +132,26 @@ const LOOKS: Record<Exclude<Character, ProfessionId>, LookDef> = {
   apprentice: { skin: '#F6C9A2', prop: 'sack', loop: 'carry', parts: () => [robe('#EDE3CC', 0.8, 0.6), P(dome(0.36, 9, 3), '#B83A3A', 0, 1.3, -0.02, { sy: 0.6 })] },
   mason: { skin: '#F3D27A', prop: 'mallet', loop: 'hammer', parts: () => [robe('#8A8F96', 0.85, 0.7), P(dome(0.44, 9, 3), '#F5F0E4', 0, 1.2, -0.02, { sy: 0.6 })] },
 }
-const isGuild = (c: Character): c is ProfessionId => c === 'blacksmith' || c === 'alchemist' || c === 'leatherworker'
+const isNpc = (c: string): c is Npc => c in LOOKS
+const isTrainer = (c: string) => c.startsWith('trainer:') && isGuildId(c.slice(8))
+/** A guild member or a guild trainer: drawn from the guild's kit. */
+const isGuild = (c: string) => isGuildId(c)
+/** Everyone but players: an NPC's look, or a guild trainer's (from the kit). */
+function lookOf(c: string): LookDef {
+  if (isTrainer(c)) {
+    const t = kitFor(c.slice(8)).trainer
+    return { skin: t.skin, prop: t.prop, top: t.top, parts: t.parts }
+  }
+  return isNpc(c) ? LOOKS[c] : LOOKS.porter   // an id this build doesn't know yet: a plain townsperson
+}
 /** Is there a look for this character? (Customer ids from the server may be new.) */
-export const knownCharacter = (c: string): c is Character => isGuild(c as Character) || c in LOOKS
+export const knownCharacter = (c: string): c is Character => isGuild(c) || isTrainer(c) || isNpc(c)
 
 export interface BlobOptions {
   character: Character
   /** Body color (players): an index into BODY_COLORS. */
   look?: number
-  /** Hat (players): 0-2, see HAT_NAMES. */
+  /** Hat (players): an index into the guild's hats (content/professions.json guild.hats). */
   hat?: number
   /** Rank (players): 0 Apprentice .. 3 Master, shown as a sash. */
   rank?: number
@@ -195,8 +160,8 @@ export interface BlobOptions {
 }
 
 const mod = (n: number, m: number) => ((n % m) + m) % m
-const skinOf = (o: BlobOptions) => (isGuild(o.character) ? BODY_COLORS[mod(o.look ?? 0, BODY_COLORS.length)] : LOOKS[o.character].skin)
-const propOf = (o: BlobOptions): Prop | undefined => (isGuild(o.character) ? undefined : LOOKS[o.character].prop)
+const skinOf = (o: BlobOptions) => (isGuild(o.character) ? BODY_COLORS[mod(o.look ?? 0, BODY_COLORS.length)] : lookOf(o.character).skin)
+const propOf = (o: BlobOptions): Prop | undefined => (isGuild(o.character) ? undefined : lookOf(o.character).prop)
 
 const geoCache = new Map<string, THREE.BufferGeometry>()
 function cached(key: string, make: () => THREE.BufferGeometry) {
@@ -207,11 +172,11 @@ function cached(key: string, make: () => THREE.BufferGeometry) {
 function bodyGeometry(o: BlobOptions): THREE.BufferGeometry {
   const skin = skinOf(o)
   if (isGuild(o.character)) {
-    const g = o.character
-    const hat = mod(o.hat ?? 0, 3), rank = THREE.MathUtils.clamp(o.rank ?? 0, 0, 3)
-    return cached(`${g}|${skin}|${hat}|${rank}`, () => merge([...base(skin), ...DRESS[g](), ...HATS[g][hat](), ...sash(rank)]))
+    const g = o.character, kit = kitFor(g)
+    const hat = mod(o.hat ?? 0, kit.hats.length), rank = THREE.MathUtils.clamp(o.rank ?? 0, 0, 3)
+    return cached(`${g}|${skin}|${hat}|${rank}`, () => merge([...base(skin), ...kit.dress(), ...kit.hats[hat].parts(), ...sash(rank)]))
   }
-  const def = LOOKS[o.character]
+  const def = lookOf(o.character)
   return cached(o.character, () => merge([...base(skin), ...def.parts()]))
 }
 function handGeometry(skin: string, prop?: Prop): THREE.BufferGeometry {
@@ -307,8 +272,11 @@ export class Blob {
 
   private topOf(): number {
     const c = this.opts.character
-    if (isGuild(c)) return (c === 'alchemist' && (this.opts.hat ?? 0) === 0 ? 2.3 : 1.9) * BLOB_SCALE
-    return (LOOKS[c].top ?? 1.9) * BLOB_SCALE
+    if (isGuild(c)) {
+      const hats = kitFor(c).hats
+      return (hats[mod(this.opts.hat ?? 0, hats.length)].top ?? 1.9) * BLOB_SCALE
+    }
+    return (lookOf(c).top ?? 1.9) * BLOB_SCALE
   }
 
   /** Change a player's color, hat or rank (a cached body; no new draw calls). */
@@ -364,7 +332,7 @@ export class Blob {
     const moving = speed > 0.2
     if (this.wasMoving && !moving && !calm) this.bounce(2.5)
     this.wasMoving = moving
-    const loop = isGuild(this.opts.character) ? undefined : LOOKS[this.opts.character].loop
+    const loop = isGuild(this.opts.character) ? undefined : lookOf(this.opts.character).loop
 
     // idle: after a while standing still, look around, rock or stretch
     if (!moving && !this.emote && !loop) {

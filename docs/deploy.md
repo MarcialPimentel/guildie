@@ -260,6 +260,14 @@ Fully automatic, with no database changes and no SiteGround steps. The deploy re
 
 ---
 
+## Deploying 0.10.3 (guilds as data)
+
+Fully automatic, with no database change. The ping URL shows `"build":"0.10.3 (build …)"` and `"schema":8`. The realtime rooms restart on the droplet as usual (the deploy does it).
+
+Players notice nothing new: the game should look and play exactly as 0.10.2. Behind the scenes every guild's names, colors and hats now come from `content/professions.json`, and the art for each guild lives in its own kit file, so a new guild (the Glassblower) is mostly content. Two small fixes ride along: rare finds keep working once raws 3 and 4 arrive, and a bundle order never asks for another guild's goods above your rank.
+
+---
+
 ## Deploying 0.9.0 (the living city)
 
 Automatic. Migration **007** (friends, slap settings, the Duke's order) applies itself; the ping URL shows `"build":"0.9.0 (build …)"` and `"schema":7`. It needs 0.8.0 (migration 006) merged first.

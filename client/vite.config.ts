@@ -18,6 +18,8 @@ export default defineConfig({
   // so the usual 500 KB warning doesn't apply to it.
   build: { outDir: 'dist', emptyOutDir: true, sourcemap: false, chunkSizeWarningLimit: 700 },
   server: {
+    // the guild list comes from ../content/professions.json (src/guilds.ts), outside this folder
+    fs: { allow: ['..'] },
     proxy: {
       '/api': { target: apiTarget, changeOrigin: true, rewrite: (p) => '/games/guildie' + p },
     },

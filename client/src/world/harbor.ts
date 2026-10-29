@@ -4,15 +4,10 @@
 // pier 9.5 · storehouse 13 · guild hall 21. The sea is +z, the cliff and town are -z.
 import * as THREE from 'three'
 import { bake, box, cyl, flat, hipRoof, instanced, rng, signTexture, solid, stripes, vertexColorMaterial } from './kit'
+import { kitFor } from './guildKits'
+import { C } from './palette'
 import type { PickId, ProfessionId } from './types'
 
-const C = {
-  stone: '#E7D7B9', stoneDark: '#D2BD98', rock: '#D9C29A', rock2: '#C9AE86', grass: '#9DBB6A', pine: '#4F7A3A',
-  leaf: '#6E9B48', roof: '#C4623A', roofDark: '#A9492A', wood: '#A9784A', woodDark: '#6E4A2C', teal: '#1F8A87',
-  lemon: '#F2C53D', copper: '#C7733E', iron: '#4B5257', ironLight: '#8A9196', cream: '#F6EEDC', white: '#F7F3EA',
-  hide: '#C99A6B', hideDark: '#8F5A35',
-  plaster: ['#F2B98B', '#F3D27A', '#EFA9A0', '#F5F0E4', '#BFE3D9', '#F6C9A2', '#F5F0E4', '#E9D5F0'],
-}
 
 export interface Harbor {
   root: THREE.Group
@@ -206,59 +201,13 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   pierLight.position.set(10.6, 3.4, 16.4)
   root.add(pierLight)
 
-  // the gathering station (one per profession)
+  // the gathering station and the workbench come from the guild's kit (kits/<kit>.ts, picked in content)
   const station = place('station')
   const stationSets: THREE.InstancedMesh[] = []
   const stationCaps: number[] = []
   const whiteMat = new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.9, flatShading: true })
-  if (profession === 'blacksmith') {
-    box(station, 2.8, 2.8, 0.2, '#2A2420', STATION_X, 1, -5.95, false)
-    box(station, 0.35, 3.1, 0.4, C.woodDark, STATION_X - 1.5, 1, -5.8)
-    box(station, 0.35, 3.1, 0.4, C.woodDark, STATION_X + 1.5, 1, -5.8)
-    box(station, 3.5, 0.4, 0.5, C.woodDark, STATION_X, 4, -5.8)
-    for (const dx of [-0.45, 0.45]) box(station, 0.1, 0.08, 4.4, C.iron, STATION_X + dx, 1, -3.6, false)
-    for (let i = 0; i < 6; i++) box(station, 1.4, 0.06, 0.2, C.woodDark, STATION_X, 0.99, -5.4 + i * 0.75, false)
-    const g = new THREE.CylinderGeometry(0.95, 0.7, 0.9, 4, 1)
-    g.rotateY(Math.PI / 4)
-    const cart = solid(station, g, '#7A6A5C', STATION_X, 1.75, -3.2)
-    cart.scale.set(1.25, 1, 1.5)
-    for (const [x, z] of [[-0.6, -0.7], [0.6, -0.7], [-0.6, 0.7], [0.6, 0.7]]) {
-      const w = solid(station, new THREE.CylinderGeometry(0.22, 0.22, 0.12, 10), C.iron, STATION_X + x, 1.22, -3.2 + z)
-      w.rotation.z = Math.PI / 2
-    }
-    const spots = (n: number, y0: number) => Array.from({ length: n }, (_, i) => new THREE.Vector3(STATION_X + rr(-0.6, 0.6), y0 + Math.floor(i / 5) * 0.22 + rr(0, 0.1), -3.2 + rr(-0.8, 0.8)))
-    stationSets.push(instanced(station, new THREE.IcosahedronGeometry(0.26, 0), flat(C.copper), spots(10, 2.25), { rotY: (i) => i }))
-    stationSets.push(instanced(station, new THREE.IcosahedronGeometry(0.24, 0), flat(C.ironLight), spots(6, 2.55), { rotY: (i) => i * 2 }))
-  } else if (profession === 'alchemist') {
-    for (const dx of [-1.4, 1.4]) {
-      box(station, 2.4, 0.7, 2.2, '#B9A27E', STATION_X + dx, 1, -3.4)
-      box(station, 2.1, 0.12, 1.9, '#6B4A2E', STATION_X + dx, 1.7, -3.4, false)
-    }
-    // a lemon-tree arch over the beds
-    for (const dx of [-2.9, 2.9]) box(station, 0.2, 3.4, 0.2, C.woodDark, STATION_X + dx, 1, -4.6)
-    box(station, 6.2, 0.2, 0.3, C.woodDark, STATION_X, 4.4, -4.6)
-    for (let i = 0; i < 6; i++) solid(station, new THREE.IcosahedronGeometry(0.5, 0), C.leaf, STATION_X - 2.5 + i, 4.6, -4.6)
-    for (let i = 0; i < 5; i++) solid(station, new THREE.IcosahedronGeometry(0.14, 0), C.lemon, STATION_X - 2 + i, 4.25, -4.4, false)
-    const bed = (dx: number, n: number) => Array.from({ length: n }, (_, i) => new THREE.Vector3(STATION_X + dx - 0.75 + (i % 4) * 0.5, 1.82, -3.4 - 0.6 + Math.floor(i / 4) * 0.55))
-    const leaf = new THREE.ConeGeometry(0.22, 0.7, 5)
-    leaf.translate(0, 0.35, 0)
-    stationSets.push(instanced(station, leaf, whiteMat, bed(-1.4, 12), { colors: (i) => (i % 3 ? '#6E9B48' : '#F2C53D'), scale: (i) => new THREE.Vector3(1, 0.8 + (i % 3) * 0.2, 1) }))
-    const moss = new THREE.IcosahedronGeometry(0.3, 0)
-    moss.scale(1, 0.5, 1)
-    stationSets.push(instanced(station, moss, flat('#D9663A'), bed(1.4, 8), { rotY: (i) => i }))
-  } else {
-    for (const dx of [-1.6, 1.6]) {
-      box(station, 0.2, 3.2, 0.2, C.woodDark, STATION_X + dx - 1.1, 1, -3.4)
-      box(station, 0.2, 3.2, 0.2, C.woodDark, STATION_X + dx + 1.1, 1, -3.4)
-      box(station, 2.5, 0.16, 0.16, C.woodDark, STATION_X + dx, 4.1, -3.4)
-    }
-    box(station, 6, 0.25, 2.6, C.roofDark, STATION_X, 4.6, -4.4)   // a little shelter roof
-    for (const dx of [-2.9, 2.9]) box(station, 0.2, 3.6, 0.2, C.woodDark, STATION_X + dx, 1, -5.5)
-    const rack = (dx: number, n: number) => Array.from({ length: n }, (_, i) => new THREE.Vector3(STATION_X + dx - 0.8 + i * (1.6 / Math.max(1, n - 1)), 3.1, -3.4 + (i % 2) * 0.12))
-    const hide = new THREE.BoxGeometry(0.55, 1.8, 0.06)
-    stationSets.push(instanced(station, hide, flat(C.hide), rack(-1.6, 5), { rotY: (i) => (i % 2 ? 0.15 : -0.15) }))
-    stationSets.push(instanced(station, new THREE.BoxGeometry(0.7, 1.9, 0.08), flat(C.hideDark), rack(1.6, 4), { rotY: (i) => (i % 2 ? -0.12 : 0.12) }))
-  }
+  const kit = kitFor(profession)
+  stationSets.push(...kit.station({ grp: station, x: STATION_X, rr, whiteMat }))
   stationCaps.push(...stationSets.map((s) => s.instanceMatrix.count))
   const stationMarker = marker(root, new THREE.Vector3(STATION_X, 5.8, -3.6), '#E07A5F')
   finish('station', station)
@@ -267,56 +216,8 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   const work = place('workbench')
   box(work, 4.2, 0.25, 3.4, C.roof, WORK_X + 0.2, 5.1, -2.5)
   for (const [x, z] of [[WORK_X - 1.7, -1.0], [WORK_X + 2.1, -1.0], [WORK_X + 2.1, -4.0]]) box(work, 0.25, 4.1, 0.25, C.woodDark, x, 1, z)
-  let workGlow: THREE.MeshStandardMaterial | null = null
-  let workAnim: THREE.Object3D | null = null
-  let lightColor = '#FF8A3D'
-  let particleKind: 'sparks' | 'bubbles' | 'dust' = 'sparks'
-  if (profession === 'blacksmith') {
-    box(work, 2.4, 1.3, 2, '#8E8378', WORK_X, 1, -2.6)
-    workGlow = new THREE.MeshStandardMaterial({ color: '#3A1A0A', emissive: '#FF6A1A', emissiveIntensity: 0.4, flatShading: true })
-    box(work, 1.9, 0.14, 1.5, workGlow, WORK_X, 2.3, -2.6, false)
-    box(work, 1, 5.6, 1, '#7C7167', WORK_X, 2.3, -3.4)
-    box(work, 1.9, 0.6, 1.7, '#6E655C', WORK_X, 3.9, -2.9)
-    box(work, 0.9, 0.5, 1.2, '#7A4E2D', WORK_X - 1.45, 1.3, -2.6)
-    cyl(work, 0.38, 0.42, 0.8, C.woodDark, WORK_X + 2, 1, -0.5, 8)
-    box(work, 1.1, 0.35, 0.5, C.iron, WORK_X + 2, 1.8, -0.5)
-    const horn = solid(work, new THREE.ConeGeometry(0.2, 0.55, 6), C.iron, WORK_X + 2.8, 1.98, -0.5)
-    horn.rotation.z = -Math.PI / 2
-  } else if (profession === 'alchemist') {
-    lightColor = '#7FE0C8'
-    particleKind = 'bubbles'
-    box(work, 3, 1.1, 1.5, C.wood, WORK_X, 1, -2.6)                 // table
-    cyl(work, 0.45, 0.55, 0.5, '#3B3633', WORK_X - 0.8, 2.1, -2.6, 8)  // brazier
-    workGlow = new THREE.MeshStandardMaterial({ color: '#5A2A0A', emissive: '#FF8A2A', emissiveIntensity: 0.4, flatShading: true })
-    const flame = solid(work, new THREE.ConeGeometry(0.3, 0.7, 6), workGlow, WORK_X - 0.8, 2.95, -2.6, false)
-    flame.userData.keep = true
-    workAnim = flame
-    cyl(work, 0.5, 0.42, 0.8, C.copper, WORK_X - 0.8, 2.6, -2.6, 10)   // copper still
-    cyl(work, 0.12, 0.3, 0.6, C.copper, WORK_X - 0.8, 3.4, -2.6, 8)
-    const tube = solid(work, new THREE.CylinderGeometry(0.06, 0.06, 1.6, 6), C.copper, WORK_X, 3.5, -2.6)
-    tube.rotation.z = Math.PI / 2.6
-    const glass = new THREE.MeshStandardMaterial({ color: '#9FE6DA', roughness: 0.15, transparent: true, opacity: 0.65 })
-    solid(work, new THREE.SphereGeometry(0.42, 12, 10), glass, WORK_X + 0.85, 2.55, -2.6, false)
-    box(work, 3.2, 0.12, 0.6, C.woodDark, WORK_X, 3.6, -3.9)        // shelf of jars
-    for (let i = 0; i < 5; i++) cyl(work, 0.16, 0.16, 0.42, ['#2FB59D', '#F2C53D', '#D9663A', '#2A4C9A', '#8F5A2B'][i], WORK_X - 1.2 + i * 0.6, 3.72, -3.9, 8)
-  } else {
-    lightColor = '#FFC27A'
-    particleKind = 'dust'
-    box(work, 3, 1.1, 1.4, C.wood, WORK_X, 1, -2.6)                 // bench
-    box(work, 1.6, 0.08, 1, C.hide, WORK_X - 0.4, 2.1, -2.6, false)  // leather on the bench
-    for (const dx of [-1.4, 1.4]) box(work, 0.12, 2.6, 0.12, C.woodDark, WORK_X + dx, 2.1, -3.6)
-    box(work, 2.9, 0.12, 0.12, C.woodDark, WORK_X, 4.6, -3.6)
-    box(work, 2.4, 2, 0.06, C.hideDark, WORK_X, 2.4, -3.6)          // a hide stretched on a frame
-    cyl(work, 0.75, 0.65, 1.1, C.woodDark, WORK_X + 2.2, 1, -1.6, 10) // tanning vat
-    cyl(work, 0.68, 0.68, 0.05, '#5A3A1E', WORK_X + 2.2, 2.08, -1.6, 10)
-    const mallet = new THREE.Group()
-    mallet.userData.keep = true
-    mallet.position.set(WORK_X + 0.7, 2.2, -2.3)
-    box(mallet, 0.08, 0.7, 0.08, C.woodDark, 0, 0, 0)
-    box(mallet, 0.35, 0.22, 0.22, '#B07A4A', 0, 0.62, 0)
-    work.add(mallet)
-    workAnim = mallet
-  }
+  const bench = kit.workbench({ grp: work, x: WORK_X })
+  const { glow: workGlow, anim: workAnim, light: lightColor, particles: particleKind } = bench
   const workLight = new THREE.PointLight(lightColor, 3, 10, 2)
   workLight.position.set(WORK_X, 3, -1.6)
   root.add(workLight)
@@ -568,7 +469,7 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   }
   const labels: Partial<Record<PickId, THREE.Vector3>> = {
     duke: new THREE.Vector3(17.6, 5.4, 0.2), steps: new THREE.Vector3(27, 7.3, -1.4),
-    station: new THREE.Vector3(STATION_X, profession === 'blacksmith' ? 4.9 : 5.4, -3.8), workbench: new THREE.Vector3(WORK_X, 5.9, -2.2),
+    station: new THREE.Vector3(STATION_X, kit.stationLabelY, -3.8), workbench: new THREE.Vector3(WORK_X, 5.9, -2.2),
     orders: new THREE.Vector3(-2.6, 3.7, 1.2), ledger: new THREE.Vector3(-3, 8.7, -3.6), bag: new THREE.Vector3(13, 7.4, -3.6),
     stall: new THREE.Vector3(-8.2, 4.4, 1.9), mercato: new THREE.Vector3(MX, 9, -3), city: new THREE.Vector3(HX, 13.6, -3.6),
     news: new THREE.Vector3(),

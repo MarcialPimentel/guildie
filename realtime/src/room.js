@@ -198,7 +198,18 @@ export class Room {
   }
 }
 
-/** The quarters a room can be for (one per guild). */
+/**
+ * The quarters a room can be for, when a pass doesn't list them. Passes from the PHP server carry the list
+ * ("q", one per guild in content/professions.json), so a new guild needs no change here.
+ */
 export const QUARTERS = ['blacksmith', 'alchemist', 'leatherworker']
+/** At most this many quarters are accepted from a pass (rooms are created on demand, so the list is bounded). */
+export const MAX_QUARTERS = 16
+
+/** The quarters a pass allows: its own list ("q") if it has a sensible one, else QUARTERS. */
+export function quartersFor(claims) {
+  const q = claims && Array.isArray(claims.q) ? claims.q.filter((x) => typeof x === 'string' && /^[a-z_]{1,32}$/.test(x)) : []
+  return q.length ? q.slice(0, MAX_QUARTERS) : QUARTERS
+}
 /** Copies of a quarter tried before giving up. */
 export const MAX_INSTANCES = 20
