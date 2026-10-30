@@ -159,22 +159,12 @@ async function goPalazzo(page: Page) {
  * First A must see B where B really is: right after a slap, B's step back may still be on its way to A, and
  * A would walk to where B used to stand.
  */
-const DIAG_LOG: string[] = []
 async function walkUpTo(a: Page, b: Page, idA: number, idB: number) {
-  try {
-    await expect.poll(async () => {
-      const seen = await a.evaluate((pid) => window.__guildieWorld!.peer(pid), idB)
-      const real = await b.evaluate(() => window.__guildieWorld!.me())
-      return seen ? Math.hypot(seen.x - real.x, seen.z - real.z) : 99
-    }, { timeout: 10_000 }).toBeLessThan(0.2)
-  } catch (e) {
-    // DIAG: what each side thinks (temporary)
-    const sa = await a.evaluate((pid) => ({ s: window.__guildieWorld!.stats(), me: window.__guildieWorld!.me(), peer: window.__guildieWorld!.peer(pid) }), idB)
-    const sb = await b.evaluate((pid) => ({ s: window.__guildieWorld!.stats(), me: window.__guildieWorld!.me(), peer: window.__guildieWorld!.peer(pid) }), idA)
-    await b.waitForTimeout(3000)
-    const sb2 = await b.evaluate(() => ({ s: window.__guildieWorld!.stats(), me: window.__guildieWorld!.me() }))
-    throw new Error(`DIAG A=${JSON.stringify(sa)} B=${JSON.stringify(sb)} B+3s=${JSON.stringify(sb2)} logs=${JSON.stringify(DIAG_LOG.slice(-15))} :: ${(e as Error).message.slice(0, 200)}`)
-  }
+  await expect.poll(async () => {
+    const seen = await a.evaluate((pid) => window.__guildieWorld!.peer(pid), idB)
+    const real = await b.evaluate(() => window.__guildieWorld!.me())
+    return seen ? Math.hypot(seen.x - real.x, seen.z - real.z) : 99
+  }, { timeout: 10_000 }).toBeLessThan(0.2)
   await a.click(id(`world-peer-${idB}`))
   await expect(a.locator(id('panel-visit'))).toBeVisible()
   await a.keyboard.press('Escape')
@@ -204,10 +194,6 @@ test('the living city: walk, the Palazzo, a second player live, and a slap', asy
   const ctxB = await browser.newContext(opts)
   const a = await ctxA.newPage()
   const b = await ctxB.newPage()
-  for (const [who, page] of [['A', a], ['B', b]] as const) {
-    page.on('pageerror', (e) => DIAG_LOG.push(`[${who} pageerror] ${e.message} ${e.stack?.split(String.fromCharCode(10)).slice(0, 4).join(' | ')}`))
-    page.on('console', (m) => { if (m.type() === 'error') DIAG_LOG.push(`[${who} console] ${m.text().slice(0, 300)}`) })
-  }
 
   // Walk: WASD moves your merchant on the quay.
   await joinAs(a, nameA, 'blacksmith')
