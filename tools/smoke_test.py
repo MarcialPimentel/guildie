@@ -631,19 +631,19 @@ if PLAYER_TOOL:
     check("level 3: the machines need lamp oil and wages", w.get("level") == 3 and run.get("fuel_item_id") == "lamp_oil"
           and run.get("wages_per_day", 0) > 0 and run.get("fuel_have") == 0 and run.get("wages_paid_today") is False, w)
     gold0 = st.get("player", {}).get("gold")
-    lantern = next((x for x in st.get("profession", {}).get("recipes", []) if x["id"] == "copper_lantern"), {})
-    check("recipe cards show the lamp oil and the time by hand", lantern.get("lamp_oil_each", 0) > 0
-          and lantern.get("seconds_each_by_hand", 0) >= lantern.get("seconds_each", 1), lantern)
-    s, r = call("start_craft", {"recipe_id": "copper_lantern", "quantity": 1}, token=tok_m)
+    fittings = next((x for x in st.get("profession", {}).get("recipes", []) if x["id"] == "brass_fittings"), {})
+    check("recipe cards show the lamp oil and the time by hand", fittings.get("lamp_oil_each", 0) > 0
+          and fittings.get("seconds_each_by_hand", 0) >= fittings.get("seconds_each", 1), fittings)
+    s, r = call("start_craft", {"recipe_id": "brass_fittings", "quantity": 1}, token=tok_m)
     check("no lamp oil: made by hand, nothing taken", s == 200 and r["data"]["player"]["gold"] == gold0
           and "by hand" in r["data"]["activity"][0]["text"], r["data"]["activity"][:2] if s == 200 else r)
     tool("give", name_m, "lamp_oil", 3)
-    s, r = call("start_craft", {"recipe_id": "copper_lantern", "quantity": 1}, token=tok_m)
+    s, r = call("start_craft", {"recipe_id": "brass_fittings", "quantity": 1}, token=tok_m)
     wages = run.get("wages_per_day", 0)
     check("with lamp oil: the machines burn 1 and today's wages are paid", s == 200 and r["data"]["player"]["gold"] == gold0 - wages
           and have(r["data"], "lamp_oil") == 2 and "Machines: burned 1 Lamp Oil" in r["data"]["activity"][0]["text"]
           and r["data"]["profession"]["workshop"]["running"]["wages_paid_today"] is True, r["data"]["activity"][:2] if s == 200 else r)
-    s, r = call("start_craft", {"recipe_id": "copper_lantern", "quantity": 1}, token=tok_m)
+    s, r = call("start_craft", {"recipe_id": "brass_fittings", "quantity": 1}, token=tok_m)
     check("wages once a day: the next craft only burns oil", s == 200 and r["data"]["player"]["gold"] == gold0 - wages
           and have(r["data"], "lamp_oil") == 1, r["data"]["activity"][:2] if s == 200 else r)
 
