@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guildie cast sheet</title>
+  <style>html, body { margin: 0; height: 100%; background: #BFE6EA; } #cast { width: 100%; height: 100%; }</style>
+</head>
+<body>
+  <!-- Dev only (npm run dev, then /cast.html): every person in Portovela, drawn by the game's own code.
+       ?code=1 shows the old code body instead of the Blender model; ?near=1 moves the camera close; ?players=1 shows only players and trainers. -->
+  <div id="cast"></div>
+  <script type="module" src="/src/dev/cast.ts"></script>
+</body>
+</html>

@@ -143,7 +143,8 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
   useEffect(() => {
     let alive = true
     import('../world/engine')
-      .then((m) => {
+      .then(async (m) => {
+        await m.preloadBlobModel()
         if (!alive || !box.current) return
         engine.current = m.createWorld(box.current, state.profession!.id, state.player.name, {
           onPick: (id) => cbs.current.onPick(id),
