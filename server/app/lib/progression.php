@@ -156,13 +156,30 @@ function recipe_colour(array $recipe, int $skill): array
 {
     $diff = $skill - recipe_skill($recipe);
     $colours = prog('colours', []);
+    $pick = end($colours) ?: [];
     foreach ($colours as $c) {
         if ($diff < (int) $c['below']) {
-            return ['id' => $c['id'], 'factor' => (float) $c['factor']];
+            $pick = $c;
+            break;
         }
     }
-    $last = end($colours);
-    return ['id' => $last['id'] ?? 'grey', 'factor' => (float) ($last['factor'] ?? 0)];
+    return [
+        'id'      => $pick['id'] ?? 'grey',
+        'factor'  => (float) ($pick['factor'] ?? 0),
+        // quality (0.18.0, #79): the more XP, the worse the goods
+        'quality_floor' => (int) ($pick['quality_floor'] ?? QUALITY_COMMON),
+        'quality_up'    => (float) ($pick['quality_up'] ?? 0),
+    ];
+}
+
+/** Roll the quality of one crafted unit: the colour's floor, with a chance of one tier better (Inspiration). */
+function recipe_roll_quality(array $colour): int
+{
+    $q = $colour['quality_floor'];
+    if ($q < QUALITY_MASTERWORK && rand_between(0, 1) < $colour['quality_up']) {
+        $q++;
+    }
+    return $q;
 }
 
 /** XP one craft of the recipe gives at this skill (for display; collection rounds per batch). */

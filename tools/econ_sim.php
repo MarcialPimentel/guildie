@@ -354,7 +354,10 @@ function bot_checkin(array $bot, array &$log): void
         $keepFor[workshop_fuel_item()] = max($keepFor[workshop_fuel_item()] ?? 0, 30);
     }
     // Fill other players' buy offers first: they pay the top of the band.
-    $have = array_column($state['inventory'], 'quantity', 'item_id');
+    $have = [];
+    foreach ($state['inventory'] as $row) {   // every quality counts (0.18.0)
+        $have[$row['item_id']] = ($have[$row['item_id']] ?? 0) + $row['quantity'];
+    }
     foreach (attempt(fn() => wanted_board($id))['posts'] ?? [] as $post) {
         $spare = ($have[$post['item_id']] ?? 0) - ($keepFor[$post['item_id']] ?? 0);
         $qty = min($post['remaining'], $spare);
@@ -364,22 +367,27 @@ function bot_checkin(array $bot, array &$log): void
         }
     }
     $state = player_state($id);
-    foreach ($state['inventory'] as $item) {
+    $keepLeft = [];
+    foreach ($state['inventory'] as $item) {   // one row per quality, lowest first: what's kept comes from Common
         $itemId = $item['item_id'];
+        $quality = (int) $item['quality'];
         $type = content_item($itemId)['type'];
-        $keep = max(isset($needs[$itemId]) ? ($type === 'raw' ? 20 : 4) : 0, $keepFor[$itemId] ?? 0);
-        $qty = $item['quantity'] - $keep;
+        $keepLeft[$itemId] ??= max(isset($needs[$itemId]) ? ($type === 'raw' ? 20 : 4) : 0, $keepFor[$itemId] ?? 0);
+        $kept = min($item['quantity'], $keepLeft[$itemId]);
+        $keepLeft[$itemId] -= $kept;
+        $qty = $item['quantity'] - $kept;
         if ($qty <= 0) {
             continue;
         }
-        $ref = market_reference_value($itemId);
-        $lowest = $market[$itemId]['from_players'] > 0 ? $market[$itemId]['lowest'] : null;
+        $ref = market_reference_value($itemId) * quality_multiplier($quality);
+        $lowest = $quality === QUALITY_COMMON && $market[$itemId]['from_players'] > 0 ? $market[$itemId]['lowest'] : null;
         $price = (int) round($ref * rand_between(0.95, 1.15));
         if ($lowest !== null && $lowest < $price) {
             $price = max((int) ceil($ref * 0.9), $lowest - 1);
         }
-        if (attempt(fn() => exchange_list($id, $itemId, $qty, max(1, $price), 24)) !== false) {
+        if (attempt(fn() => exchange_list($id, $itemId, $qty, max(1, $price), 24, $quality)) !== false) {
             $log['listed'][$itemId] = ($log['listed'][$itemId] ?? 0) + $qty;
+            $log['listed_quality'][$quality] = ($log['listed_quality'][$quality] ?? 0) + $qty;
         }
     }
 }
@@ -519,5 +527,6 @@ foreach ($log['gold'] as $k => $v) {
 echo 'Buy offers filled: ' . json_encode($log['buy_offer_units'] ?? []) . "
 ";
 echo 'Machines: ' . json_encode($log['machines']) . "\nMinigame rounds: " . ($log['minigame_rounds'] ?? 0) . ' ' . json_encode($log['minigame_raws'] ?? []) . "\nFavors done: " . ($log['favors_done'] ?? 0) . "\n";
+echo 'Listed by quality (1 Common, 2 Fine, 3 Masterwork): ' . json_encode($log['listed_quality'] ?? []) . "\n";
 echo "\nOrders filled: " . json_encode($log['orders_filled']) . "\nRecipes learned: " . json_encode($log['learned']) . "\n";
 printf("\nGold in circulation: start %d -> end %d\n", $daily[0]['gold_total'] ?? 0, (int) db()->query('SELECT SUM(gold) FROM players')->fetchColumn());

@@ -167,6 +167,21 @@ if not cols or [c.get("below", 0) for c in cols] != sorted(c.get("below", 0) for
     err("economy: progression.colours need rising 'below' values and falling factors between 0 and 1")
 if not (pr.get("trade_bonus", -1) >= 0 and pr.get("first_craft_of_day", 0) >= 1 and pr.get("xp_base", 0) > 0 and pr.get("xp_scale", 0) > 0):
     err("economy: progression needs trade_bonus >= 0, first_craft_of_day >= 1, xp_base > 0 and xp_scale > 0")
+# quality tiers (0.18.0, #79): rising value per tier; each colour gives a floor and a chance of one tier better,
+# and easier colours never make worse goods than harder ones (the more XP, the worse the quality)
+q = economy.get("quality", {})
+qm = q.get("value_multiplier", [])
+if len(q.get("names", [])) != 3 or len(qm) != 3 or qm[0] != 1 or not all(qm[i] < qm[i + 1] for i in range(2)):
+    err("economy: quality needs 3 names and 3 rising value_multipliers starting at 1 (Common, Fine, Masterwork)")
+last = 0.0
+for c in cols:
+    fl, up = c.get("quality_floor"), c.get("quality_up")
+    if fl not in (1, 2, 3) or not isinstance(up, (int, float)) or not 0 <= up <= 1:
+        err(f"economy: colour {c.get('id')!r} needs quality_floor 1-3 and quality_up between 0 and 1")
+        continue
+    if fl + up < last:   # the average tier
+        err(f"economy: colour {c.get('id')!r} makes worse goods than the harder colour before it")
+    last = fl + up
 rank_ids = [r.get("id") for r in ranks]
 if pr.get("bundle_orders_rank") not in rank_ids:
     err("economy: progression.bundle_orders_rank must be one of the rank ids")

@@ -62,6 +62,7 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   await expect(draught).toBeVisible()
   await expect(page.locator(`${id('recipes')} [data-testid^="recipe-"]`)).toHaveCount(1)   // only the free starter is known (#49)
   await expect(draught.locator(id('xp-chip'))).toHaveText('+10 XP')
+  await expect(draught.locator(id('quality-odds-healing_draught'))).toContainText('Makes Common')   // a new recipe makes Common goods (0.18.0)
   await expect(page.locator(id('double-xp'))).toBeVisible()
   await draught.getByRole('button', { name: 'plus 1' }).click()
   await page.click(id('craft-healing_draught'))

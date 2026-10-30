@@ -356,7 +356,7 @@ function orders_fill(int $playerId, int $orderId): array
         $order = orders_lock($pdo, $playerId, $orderId, $now);
         $items = order_items_from_json($order['items']);
         foreach ($items as $id => $q) {
-            $have = inventory_count($pdo, $playerId, (string) $id, QUALITY_COMMON, true);
+            $have = inventory_count($pdo, $playerId, (string) $id, null, true);
             if ($have < $q) {
                 throw new ApiError('not_enough_items', sprintf('You need %d %s for this order but have %d.', $q, item_name((string) $id), $have));
             }

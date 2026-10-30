@@ -5,12 +5,13 @@ import { useState } from 'preact/hooks'
 import { ago, CLIENT_BUILD, duration, trimNumber } from '../format'
 import { Coins, ItemIcon } from './art'
 import { session, useSession } from '../session'
-import type { GameState, ProgressGain, Recipe } from '../types'
+import type { Collected, GameState, ProgressGain, Recipe } from '../types'
 import type { ApiResult } from '../api'
 import { ActionButton, Stepper, useGame, useNow } from './common'
 import { Orders } from './Orders'
 import { celebrate, gainText, XpChip } from './Progress'
 import { Trainer } from './Trainer'
+import { betterText, qualityOdds } from './Quality'
 import { MinigamePanel } from '../minigames/MinigamePanel'
 
 export function Workshop() {
@@ -58,8 +59,10 @@ function useSurpriseMessage() {
   const game = useGame()
   return (ok: boolean, r: ApiResult<unknown>) => {
     if (!ok || !r.ok) return
-    const data = r.data as { surprises?: { text: string }[]; progress?: ProgressGain | null }
-    const parts = [...(data.surprises ?? []).map((x) => x.text), gainText(data.progress)].filter(Boolean)
+    const data = r.data as { collected?: Collected[]; surprises?: { text: string }[]; progress?: ProgressGain | null }
+    // Quality (0.18.0): "Fine and better: 3 Fine Iron Sword, 1 Masterwork Iron Sword"
+    const better = (data.collected ?? []).map((c) => betterText(c.qualities) && `${betterText(c.qualities)} ${c.name}`).filter(Boolean)
+    const parts = [better.length ? `Fine work! ${better.join(' · ')}` : '', ...(data.surprises ?? []).map((x) => x.text), gainText(data.progress)].filter(Boolean)
     if (parts.length) game.say(parts.join(' · '))
     celebrate(data.progress)
   }
@@ -157,6 +160,7 @@ export function Recipes({ state }: { state: GameState }) {
         <p class="npc small">Blue inputs come from other guilds: buy them at the Mercato. Recipes that use them give +25% XP (⇄).</p>
         <p class="muted small">
           Easy recipes give less XP as your skill grows: orange full, yellow 60%, green 20%, grey none.
+          But the easier a recipe is for you, the better you make it: green and grey recipes make Fine and Masterwork goods.
           Learn new ones from the <button class="link inline" onClick={() => setTrainer(true)}>guild trainer</button>.
         </p>
       </>}
@@ -183,6 +187,11 @@ function RecipeCard({ recipe, slotFree, maxBatch }: { recipe: Recipe; slotFree: 
         <XpChip colour={recipe.colour} xp={recipe.xp_each} trade={recipe.trade_bonus} />
       </div>
       <p class="muted small">value ~<Coins n={recipe.value} /> · skill {recipe.skill}</p>
+      {recipe.quality && (
+        <p class={`small quality-odds q${recipe.quality.floor}`} data-testid={`quality-odds-${recipe.id}`}>
+          {qualityOdds(recipe.quality.floor, recipe.quality.up)}
+        </p>
+      )}
       {recipe.inputs.map((input) => (
         <div class="row">
           <span class={`grow ${input.from_other_profession ? 'npc' : ''}`}>{input.quantity} × {input.name}</span>

@@ -167,7 +167,7 @@ function workshop_power_craft(PDO $pdo, int $playerId, int $level, array $recipe
     $wages = $wagesDay >= $today ? 0 : (int) ($r['wages_per_day'] ?? 0);
 
     $fuel = workshop_fuel_item();
-    if (inventory_count($pdo, $playerId, $fuel, QUALITY_COMMON, true) < $oil || gold_get($pdo, $playerId) < $wages) {
+    if (inventory_count($pdo, $playerId, $fuel, null, true) < $oil || gold_get($pdo, $playerId) < $wages) {
         return ['powered' => false, 'oil' => 0, 'wages' => 0, 'oil_needed' => $oil, 'wages_needed' => $wages];
     }
     if ($oil > 0) {

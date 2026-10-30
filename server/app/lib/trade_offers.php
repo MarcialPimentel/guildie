@@ -59,13 +59,24 @@ function offer_summary(array $items, int $gold): string
     return $parts ? implode(' + ', $parts) : 'nothing';
 }
 
-function offer_items_json(array $items): string
+/** $held (item => quality => quantity, from offer_take) records the quality of what's held (0.18.0). */
+function offer_items_json(array $items, array $held = []): string
 {
     $list = [];
     foreach ($items as $id => $qty) {
-        $list[] = ['item_id' => $id, 'quantity' => $qty];
+        $list[] = ['item_id' => $id, 'quantity' => $qty] + (isset($held[$id]) ? ['qualities' => $held[$id]] : []);
     }
     return json_encode($list);
+}
+
+/** Held items with their quality (item => quality => quantity); rows from before 0.18.0 were all Common. */
+function offer_held_from_row(string $json): array
+{
+    $held = [];
+    foreach (json_decode($json, true) ?: [] as $e) {
+        $held[$e['item_id']] = isset($e['qualities']) ? array_map('intval', $e['qualities']) : [QUALITY_COMMON => (int) $e['quantity']];
+    }
+    return $held;
 }
 
 function offer_items_from_row(string $json): array
@@ -77,19 +88,24 @@ function offer_items_from_row(string $json): array
     return $items;
 }
 
-/** Move a bundle of items + gold from one player to another (inside the caller's transaction). */
-function offer_take(PDO $pdo, int $playerId, array $items, int $gold, string $what): void
+/**
+ * Move a bundle of items + gold from one player to another (inside the caller's transaction). Any quality
+ * counts, lowest first; returns what was taken (item => quality => quantity) so offer_give keeps the quality.
+ */
+function offer_take(PDO $pdo, int $playerId, array $items, int $gold, string $what): array
 {
+    $taken = [];
     foreach ($items as $id => $qty) {
-        inventory_remove($pdo, $playerId, (string) $id, $qty);
+        $taken[$id] = inventory_remove($pdo, $playerId, (string) $id, $qty);
     }
     gold_spend($pdo, $playerId, $gold, $what);
+    return $taken;
 }
 
-function offer_give(PDO $pdo, int $playerId, array $items, int $gold): void
+function offer_give(PDO $pdo, int $playerId, array $held, int $gold): void
 {
-    foreach ($items as $id => $qty) {
-        inventory_add($pdo, $playerId, (string) $id, $qty);
+    foreach ($held as $id => $byQuality) {
+        inventory_add_each($pdo, $playerId, (string) $id, $byQuality);
     }
     gold_add($pdo, $playerId, $gold);
 }
@@ -126,12 +142,12 @@ function offer_create(int $fromId, int $toId, mixed $giveList, int $giveGold, mi
             throw new ApiError('too_many_offers', sprintf('You can have at most %d open offers. Cancel one first.', $s['max_open']));
         }
 
-        offer_take($pdo, $fromId, $give, $giveGold, 'this offer');
+        $held = offer_take($pdo, $fromId, $give, $giveGold, 'this offer');
         $now = game_now();
         $pdo->prepare(
             'INSERT INTO trade_offers (from_player_id, to_player_id, give_items, give_gold, ask_items, ask_gold, note, created_at, expires_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        )->execute([$fromId, $toId, offer_items_json($give), $giveGold, offer_items_json($ask), $askGold, $note, $now, $now + $s['hours'] * 3600]);
+        )->execute([$fromId, $toId, offer_items_json($give, $held), $giveGold, offer_items_json($ask), $askGold, $note, $now, $now + $s['hours'] * 3600]);
         $offerId = (int) $pdo->lastInsertId();
 
         $names = player_names($pdo, [$fromId, $toId]);
@@ -164,7 +180,7 @@ function offer_lock(PDO $pdo, int $offerId, int $playerId, string $role): array
 /** Return the held side to the sender and close the offer. */
 function offer_close(PDO $pdo, array $offer, string $status): void
 {
-    offer_give($pdo, (int) $offer['from_player_id'], offer_items_from_row($offer['give_items']), (int) $offer['give_gold']);
+    offer_give($pdo, (int) $offer['from_player_id'], offer_held_from_row($offer['give_items']), (int) $offer['give_gold']);
     $pdo->prepare('UPDATE trade_offers SET status = ?, resolved_at = ? WHERE id = ?')->execute([$status, game_now(), $offer['id']]);
 }
 
@@ -176,9 +192,9 @@ function offer_accept(int $playerId, int $offerId): array
         $give = offer_items_from_row($offer['give_items']);
         $ask = offer_items_from_row($offer['ask_items']);
 
-        offer_take($pdo, $playerId, $ask, (int) $offer['ask_gold'], 'this trade');   // throws if they lack it: nothing changes
-        offer_give($pdo, $fromId, $ask, (int) $offer['ask_gold']);
-        offer_give($pdo, $playerId, $give, (int) $offer['give_gold']);
+        $paid = offer_take($pdo, $playerId, $ask, (int) $offer['ask_gold'], 'this trade');   // throws if they lack it: nothing changes
+        offer_give($pdo, $fromId, $paid, (int) $offer['ask_gold']);
+        offer_give($pdo, $playerId, offer_held_from_row($offer['give_items']), (int) $offer['give_gold']);
         $pdo->prepare("UPDATE trade_offers SET status = 'accepted', resolved_at = ? WHERE id = ?")->execute([game_now(), $offerId]);
 
         $names = player_names($pdo, [$fromId, $playerId]);

@@ -73,10 +73,24 @@ function activity_power_text(array $p): string
     return $parts ? ' Machines: ' . implode(', ', $parts) . '.' : '';
 }
 
+/** " (7 Common, 3 Fine)" for a crafted batch (0.18.0); nothing when it's all one quality or older entries. */
+function activity_quality_text(array $byQuality): string
+{
+    if (count($byQuality) < 2) {
+        return count($byQuality) === 1 && (int) array_key_first($byQuality) > QUALITY_COMMON
+            ? ', all ' . quality_name((int) array_key_first($byQuality)) : '';
+    }
+    $parts = [];
+    foreach ($byQuality as $q => $n) {
+        $parts[] = $n . ' ' . quality_name((int) $q);
+    }
+    return ' (' . implode(', ', $parts) . ')';
+}
+
 function activity_text(string $type, array $p): string
 {
     $n = fn($key) => (int) ($p[$key] ?? 0);
-    $item = fn() => item_name((string) ($p['item_id'] ?? ''));
+    $item = fn() => item_name_q((string) ($p['item_id'] ?? ''), (int) ($p['quality'] ?? QUALITY_COMMON));
     return match ($type) {
         'profession_chosen' => sprintf('You joined the %s guild.', $p['profession_name'] ?? ''),
         'gathered'          => 'Collected ' . implode(', ', array_map(
@@ -84,7 +98,7 @@ function activity_text(string $type, array $p): string
         'worked'            => sprintf('%s: ', $p['title'] ?? 'Worked') . ($p['items'] ?? [] ? implode(', ', array_map(
                                    fn($i) => '+' . $i['quantity'] . ' ' . item_name($i['item_id']), $p['items'])) : 'nothing this time') . '.',
         'craft_started'     => sprintf('Started crafting %d %s.', $n('quantity'), $item()) . activity_power_text($p),
-        'crafted'           => sprintf('Crafted %d %s.', $n('quantity'), $item()),
+        'crafted'           => sprintf('Crafted %d %s', $n('quantity'), $item()) . activity_quality_text($p['qualities'] ?? []) . '.',
         'listed'            => sprintf('Listed %d %s at %s each (deposit %s, taken from the sale).', $n('quantity'), $item(), ducats($n('unit_price')), ducats($n('deposit'))),
         'sold'              => sprintf('Sold %d %s to %s for %s (after %s cut%s).', $n('quantity'), $item(), $p['buyer'] ?? 'someone', ducats($n('earned')), ducats($n('cut')),
                                    $n('deposit') > 0 ? ' and ' . ducats($n('deposit')) . ' deposit' : ''),

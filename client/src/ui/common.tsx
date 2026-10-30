@@ -17,7 +17,7 @@ export interface Game {
 
 export type TabName = 'workshop' | 'market' | 'bag' | 'city'
 /** market: which Mercato view; guild (0.13.0): a guild vendor's stall shows only that guild's goods. */
-export type TabRequest = { sellItem?: string; sellQty?: number; market?: 'browse' | 'sell' | 'mine' | 'offers'; guild?: string }
+export type TabRequest = { sellItem?: string; sellQty?: number; sellQuality?: number; market?: 'browse' | 'sell' | 'mine' | 'offers'; guild?: string }
 
 export const GameContext = createContext<Game>({
   say: () => {},
