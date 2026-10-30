@@ -24,7 +24,7 @@
       { "id": "master", "name": "Master", "from": 76 }
     ],
     "recipe_xp_by_rank": [10, 20, 40, 80],
-    "trainer_price_by_rank": [50, 200, 800, 3000],
+    "trainer_price_by_rank": [50, 500, 2000, 7500],
     "colours": [
       { "id": "orange", "below": 5, "factor": 1.0 },
       { "id": "yellow", "below": 12, "factor": 0.6 },

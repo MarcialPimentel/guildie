@@ -12,6 +12,8 @@ Thanks for testing! This test is about one question: **do I want to come back to
   - Each recipe card says how much oil a batch burns and how long it would take by hand.
   - The activity log says what the machines used on each craft.
 
+- **Recipes and upgrades cost more from Journeyman on** (about 2.5x): Journeyman recipes 500 ducats, Expert 2,000, Master 7,500; bottega upgrades 200 / 2,000 / 7,500. Gold piled up with nothing to spend it on; now saving up is a real choice.
+
 ## A day in Portovela (what to try)
 
 Every check-in:

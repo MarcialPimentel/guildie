@@ -62,9 +62,9 @@ Decided with Marz on 2026-10-29: the loop is **gather and craft on your quay, th
 
 | Guild | Level 2 (2 h) | Level 3 (6 h) | Level 4 (12 h) |
 |---|---|---|---|
-| Blacksmith | **Bellows forge**: 150 ducats, Leather Grip ×10, Smelting Flux ×4, Brass Fittings ×10 | **Water-wheel forge**: 800, Cured Leather ×10, Lemon Tonic ×8, Iron Ingot ×10 | **Trip-hammer works**: 3,000, Drive Belt ×10, Machine Oil ×12, Gears ×12 |
-| Alchemist | **Copper still**: 150, Brass Fittings ×10, Hide Satchel ×4, Healing Draught ×10 | **Water-driven alembics**: 800, Iron Ingot ×6, Cured Leather ×8, Lemon Tonic ×10 | **Clockwork distillery**: 3,000, Gears ×10, Drive Belt ×8, Machine Oil ×14 |
-| Leatherworker | **Tanning pits**: 150, Tanning Solution ×6, Copper Lantern ×4, Leather Grip ×10 | **Water-wheel tannery**: 800, Iron Ingot ×8, Lemon Tonic ×8, Cured Leather ×10 | **Mechanical tannery**: 3,000, Gears ×10, Machine Oil ×10, Drive Belt ×12 |
+| Blacksmith | **Bellows forge**: 200 ducats, Leather Grip ×10, Smelting Flux ×4, Brass Fittings ×10 | **Water-wheel forge**: 2,000, Cured Leather ×10, Lemon Tonic ×8, Iron Ingot ×10 | **Trip-hammer works**: 7,500, Drive Belt ×10, Machine Oil ×12, Gears ×12 |
+| Alchemist | **Copper still**: 200, Brass Fittings ×10, Hide Satchel ×4, Healing Draught ×10 | **Water-driven alembics**: 2,000, Iron Ingot ×6, Cured Leather ×8, Lemon Tonic ×10 | **Clockwork distillery**: 7,500, Gears ×10, Drive Belt ×8, Machine Oil ×14 |
+| Leatherworker | **Tanning pits**: 200, Tanning Solution ×6, Copper Lantern ×4, Leather Grip ×10 | **Water-wheel tannery**: 2,000, Iron Ingot ×8, Lemon Tonic ×8, Cured Leather ×10 | **Mechanical tannery**: 7,500, Gears ×10, Machine Oil ×10, Drive Belt ×12 |
 
 Level 3 uses Journeyman goods. Since 0.12.0 (the ladder, #50) level 4 uses the Expert parts: Gears, Drive Belts and Machine Oil.
 

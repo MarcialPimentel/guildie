@@ -523,7 +523,7 @@ check(f"trainer lists all {n_bs} blacksmith recipes", s == 200 and len(tr) == n_
 check("trainer: Brass Fittings known (free starter)", tr.get("brass_fittings", {}).get("status") == "known" and tr["brass_fittings"]["starter"], tr.get("brass_fittings"))
 check("trainer: Copper Lantern at skill 6 for 50 ducats", tr.get("copper_lantern", {}).get("status") == "locked"
       and tr["copper_lantern"]["skill"] == 6 and tr["copper_lantern"]["price"] == 50, tr.get("copper_lantern"))
-check("trainer: Iron Sword is Journeyman, 200 ducats", tr.get("iron_sword", {}).get("rank") == "Journeyman" and tr["iron_sword"]["price"] == 200, tr.get("iron_sword"))
+check("trainer: Iron Sword is Journeyman, 500 ducats", tr.get("iron_sword", {}).get("rank") == "Journeyman" and tr["iron_sword"]["price"] == 500, tr.get("iron_sword"))
 check("trainer shows other guilds' goods and the +25% trade bonus", tr.get("iron_ingot", {}).get("imports_from") == ["Alchemist"]
       and next(i for i in tr["iron_ingot"]["inputs"] if i["item_id"] == "smelting_flux")["guild"] == "Alchemist"
       and tr["iron_ingot"]["xp_each"] == 25 and tr["iron_ingot"]["colour"] == "orange", tr.get("iron_ingot"))
@@ -587,7 +587,7 @@ if PLAYER_TOOL:
     tool("gold", name_d, 1000)
     s, r = call("workshop_upgrade", {}, token=tok_d)
     w = r["data"]["state"]["profession"]["workshop"] if s == 200 else {}
-    check("build the Bellows forge: ducats and goods taken, builders at work", s == 200 and r["data"]["state"]["player"]["gold"] == 850
+    check("build the Bellows forge: ducats and goods taken, builders at work", s == 200 and r["data"]["state"]["player"]["gold"] == 800
           and have(r["data"]["state"], "leather_grip") == 0 and w["building"]["name"] == "Bellows forge" and w["building"]["ready"] is False, r)
     s, r = call("workshop_upgrade", {}, token=tok_d)
     check("one build at a time", s == 409 and r["error"]["code"] == "already_building", r)
@@ -620,7 +620,7 @@ if PLAYER_TOOL:
     for item, q in (("leather_grip", 10), ("smelting_flux", 4), ("brass_fittings", 10), ("cured_leather", 10),
                     ("steam_tonic", 8), ("iron_ingot", 10), ("copper_ore", 12)):
         tool("give", name_m, item, q)
-    tool("gold", name_m, 1150)
+    tool("gold", name_m, 2400)
     for _ in (2, 3):
         call("workshop_upgrade", {}, token=tok_m)
         tool("build_ready", name_m)
