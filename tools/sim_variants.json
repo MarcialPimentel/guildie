@@ -1,0 +1,9 @@
+{
+  "_comment": "Economy simulator variants (.github/workflows/econ-sim.yml): each overrides parts of the content files, 'file.json' -> {'dotted.path': value}. The workflow runs every variant side by side. 'as is' runs the content unchanged.",
+  "variants": {
+    "as is": {},
+    "gentle 1-2-5-10": { "economy.json": { "pace.craft_by_rank": [1, 2, 5, 10] } },
+    "middle 1-3-8-16": { "economy.json": { "pace.craft_by_rank": [1, 3, 8, 16] } },
+    "slow 1-4-12-24": { "economy.json": { "pace.craft_by_rank": [1, 4, 12, 24] } }
+  }
+}

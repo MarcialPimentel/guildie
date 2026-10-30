@@ -613,6 +613,40 @@ if PLAYER_TOOL:
     s, r = call("workshop_open", {}, token=tok_d)
     check("opening twice does nothing", s == 409 and r["error"]["code"] == "nothing_building", r)
 
+    # Machine running costs (0.16.0, #52): the two-storey bottega burns lamp oil and pays daily wages, or crafts by hand.
+    name_m, _, tok_m, _ = register("m")
+    call("choose_profession", {"profession_id": "blacksmith"}, token=tok_m)
+    tool("skill", name_m, 50)
+    for item, q in (("leather_grip", 10), ("smelting_flux", 4), ("brass_fittings", 10), ("cured_leather", 10),
+                    ("steam_tonic", 8), ("iron_ingot", 10), ("copper_ore", 12)):
+        tool("give", name_m, item, q)
+    tool("gold", name_m, 1150)
+    for _ in (2, 3):
+        call("workshop_upgrade", {}, token=tok_m)
+        tool("build_ready", name_m)
+        s, r = call("workshop_open", {}, token=tok_m)
+    st = r["data"]["state"] if s == 200 else {}
+    w = st.get("profession", {}).get("workshop", {})
+    run = w.get("running") or {}
+    check("level 3: the machines need lamp oil and wages", w.get("level") == 3 and run.get("fuel_item_id") == "lamp_oil"
+          and run.get("wages_per_day", 0) > 0 and run.get("fuel_have") == 0 and run.get("wages_paid_today") is False, w)
+    gold0 = st.get("player", {}).get("gold")
+    lantern = next((x for x in st.get("profession", {}).get("recipes", []) if x["id"] == "copper_lantern"), {})
+    check("recipe cards show the lamp oil and the time by hand", lantern.get("lamp_oil_each", 0) > 0
+          and lantern.get("seconds_each_by_hand", 0) >= lantern.get("seconds_each", 1), lantern)
+    s, r = call("start_craft", {"recipe_id": "copper_lantern", "quantity": 1}, token=tok_m)
+    check("no lamp oil: made by hand, nothing taken", s == 200 and r["data"]["player"]["gold"] == gold0
+          and "by hand" in r["data"]["activity"][0]["text"], r["data"]["activity"][:2] if s == 200 else r)
+    tool("give", name_m, "lamp_oil", 3)
+    s, r = call("start_craft", {"recipe_id": "copper_lantern", "quantity": 1}, token=tok_m)
+    wages = run.get("wages_per_day", 0)
+    check("with lamp oil: the machines burn 1 and today's wages are paid", s == 200 and r["data"]["player"]["gold"] == gold0 - wages
+          and have(r["data"], "lamp_oil") == 2 and "Machines: burned 1 Lamp Oil" in r["data"]["activity"][0]["text"]
+          and r["data"]["profession"]["workshop"]["running"]["wages_paid_today"] is True, r["data"]["activity"][:2] if s == 200 else r)
+    s, r = call("start_craft", {"recipe_id": "copper_lantern", "quantity": 1}, token=tok_m)
+    check("wages once a day: the next craft only burns oil", s == 200 and r["data"]["player"]["gold"] == gold0 - wages
+          and have(r["data"], "lamp_oil") == 1, r["data"]["activity"][:2] if s == 200 else r)
+
     # Players from before 0.8.0 (#30): skill replayed from past crafts, every guild recipe kept, both raws kept.
     subprocess.run(f"{PLAYER_TOOL} legacy {name_d}", shell=True, check=True, capture_output=True)
     s, r = call("get_state", token=tok_d)

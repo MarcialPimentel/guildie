@@ -1,10 +1,11 @@
-# Runs the economy simulator (tools/econ_sim.php, systems.md 8.1) on a throwaway MySQL database and puts the
-# report on the run's summary page (and as a downloadable file). Use it when tuning content/economy.json.
+# Runs the economy simulator (tools/econ_sim.php, systems.md 8.1) on throwaway MySQL databases and puts each report
+# on the run's summary page (and as downloadable files). Use it when tuning content/economy.json.
 #
 #   - automatically on pushes to non-main branches that touch the economy (content, the simulator, game logic);
 #   - by hand: Actions -> "Economy simulator" -> Run workflow (pick days, players and seed).
 #
-# It never touches the live game.
+# tools/sim_variants.json lists the variants to compare side by side: each one overrides parts of economy.json
+# ("as is" = no overrides). It never touches the live game.
 name: Economy simulator
 
 on:
@@ -13,13 +14,14 @@ on:
     paths:
       - "content/**"
       - "tools/econ_sim.php"
+      - "tools/sim_variants.json"
       - "server/app/lib/**"
       - ".github/workflows/econ-sim.yml"
   workflow_dispatch:
     inputs:
       days:
         description: "Days to simulate"
-        default: "21"
+        default: "16"
       players:
         description: "Bots (3 guilds x 3 play styles = 9)"
         default: "9"
@@ -32,9 +34,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  simulate:
+  variants:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    outputs:
+      names: ${{ steps.list.outputs.names }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: echo "names=$(python3 -c 'import json; print(json.dumps(list(json.load(open("tools/sim_variants.json"))["variants"])))')" >> "$GITHUB_OUTPUT"
+
+  simulate:
+    needs: variants
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJson(needs.variants.outputs.names) }}
     services:
       mysql:
         image: mysql:8.0
@@ -55,16 +71,42 @@ jobs:
           php-version: "8.2"
           extensions: pdo_mysql, mbstring, json
 
-      - name: Simulate
+      - name: Content for this variant
+        env:
+          VARIANT: ${{ matrix.variant }}
         run: |
-          php tools/econ_sim.php --db-name=guildie_sim --db-user=guildie --db-pass=simpw \
-            --days=${{ github.event.inputs.days || '21' }} --players=${{ github.event.inputs.players || '9' }} \
+          mkdir sim-content && cp content/*.json sim-content/
+          python3 - <<'EOF'
+          import json, os
+          over = json.load(open('tools/sim_variants.json'))['variants'][os.environ['VARIANT']]
+          for file, changes in over.items():
+              p = f'sim-content/{file}'; d = json.load(open(p))
+              for path, value in changes.items():
+                  node = d
+                  keys = path.split('.')
+                  for k in keys[:-1]:
+                      node = node[int(k)] if isinstance(node, list) else node[k]
+                  last = keys[-1]
+                  if isinstance(node, list):
+                      node[int(last)] = value
+                  else:
+                      node[last] = value
+              json.dump(d, open(p, 'w'), indent=1)
+          print(json.dumps(over, indent=1))
+          EOF
+
+      - name: Simulate
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          php tools/econ_sim.php --db-name=guildie_sim --db-user=guildie --db-pass=simpw --content=sim-content --tick=900 \
+            --days=${{ github.event.inputs.days || '16' }} --players=${{ github.event.inputs.players || '9' }} \
             --seed=${{ github.event.inputs.seed || '1' }} --report=sim-report.json --quiet | tee sim-report.txt
-          { echo '## Economy simulator'; echo '```'; cat sim-report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "## Economy simulator: $VARIANT"; echo '```'; cat sim-report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: econ-sim-report
+          name: econ-sim-${{ strategy.job-index }}
           path: |
             sim-report.txt
             sim-report.json

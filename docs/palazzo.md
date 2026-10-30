@@ -62,15 +62,22 @@ Decided with Marz on 2026-10-29: the loop is **gather and craft on your quay, th
 
 | Guild | Level 2 (2 h) | Level 3 (6 h) | Level 4 (12 h) |
 |---|---|---|---|
-| Blacksmith | **Bellows forge**: 150 ducats, Leather Grip ×10, Smelting Flux ×4, Brass Fittings ×10 | **Water-wheel forge**: 800, Cured Leather ×10, Lemon Tonic ×8, Iron Ingot ×10 | **Trip-hammer works**: 3,000, Rugged Jerkin ×12, Lemon Tonic ×25, Iron Sword ×10 |
-| Alchemist | **Copper still**: 150, Brass Fittings ×10, Hide Satchel ×4, Healing Draught ×10 | **Water-driven alembics**: 800, Iron Ingot ×6, Cured Leather ×8, Lemon Tonic ×10 | **Clockwork distillery**: 3,000, Iron Sword ×8, Rugged Jerkin ×8, Lemon Tonic ×30 |
-| Leatherworker | **Tanning pits**: 150, Tanning Solution ×6, Copper Lantern ×4, Leather Grip ×10 | **Water-wheel tannery**: 800, Iron Ingot ×8, Lemon Tonic ×8, Cured Leather ×10 | **Mechanical tannery**: 3,000, Iron Sword ×8, Lemon Tonic ×25, Rugged Jerkin ×10 |
+| Blacksmith | **Bellows forge**: 150 ducats, Leather Grip ×10, Smelting Flux ×4, Brass Fittings ×10 | **Water-wheel forge**: 800, Cured Leather ×10, Lemon Tonic ×8, Iron Ingot ×10 | **Trip-hammer works**: 3,000, Drive Belt ×10, Machine Oil ×12, Gears ×12 |
+| Alchemist | **Copper still**: 150, Brass Fittings ×10, Hide Satchel ×4, Healing Draught ×10 | **Water-driven alembics**: 800, Iron Ingot ×6, Cured Leather ×8, Lemon Tonic ×10 | **Clockwork distillery**: 3,000, Gears ×10, Drive Belt ×8, Machine Oil ×14 |
+| Leatherworker | **Tanning pits**: 150, Tanning Solution ×6, Copper Lantern ×4, Leather Grip ×10 | **Water-wheel tannery**: 800, Iron Ingot ×8, Lemon Tonic ×8, Cured Leather ×10 | **Mechanical tannery**: 3,000, Gears ×10, Machine Oil ×10, Drive Belt ×12 |
 
-Levels 3 and 4 use today's Journeyman goods for now; the ladder (#50) brings Gears, Drive Belts, Machine Oil and Steel Bars, which replace them.
+Level 3 uses Journeyman goods. Since 0.12.0 (the ladder, #50) level 4 uses the Expert parts: Gears, Drive Belts and Machine Oil.
 
 **Players from before 0.11.0 (Marz: "keep rank, build to get the look"):** they keep the rank they hold (migration 009 saves it as `legacy_rank`) and can keep levelling inside it, but their bottega starts as a shack. Building gives them the look and the bonuses.
 
-**Not in this build:** machine running costs (lamp oil and wages for Expert+ machines, decided 2026-10-28). They need the ladder's Lamp Oil supply and a balance pass, so they come with #50/#52.
+**Machine running costs (0.16.0, #52; Marz, 2026-10-30: "lamp oil and wages, soft"):** the two-storey bottega and the fine bottega (levels 3 and 4) run water wheels and clockwork, which need **Lamp Oil** and **hired hands**.
+
+- Each craft burns Lamp Oil for each minute of the recipe's listed craft time (the time in `recipes.json`, before the pace settings, so slowing the game doesn't make oil cost more per item).
+- The hands are paid once a day (UTC), on that day's first craft with the machines. Days you don't craft cost nothing.
+- **Soft:** if you're short of oil or of ducats for the wages, nothing is taken and the craft is **made by hand**: it gets the repaired workshop's speed (10% faster) instead of 20% or 30%. Nothing is lost, and the activity log says so.
+- Alchemists craft Lamp Oil (skill 6); the Guild Suppliers always sell a little at their usual premium, so nobody gets stuck.
+- The Bottega card shows the costs (and how much oil you have); each recipe card says how much oil a batch burns and how long it takes by hand.
+- Numbers: `economy.json` → `workshop.levels[].running` (`lamp_oil_per_minute`, `wages_per_day`) [tune]. The wages day is `player_professions.wages_day` (migration 012).
 
 **In 3D:** your bottega on the quay shows its level (four buildings, one shown); while builders work, scaffolding goes up and a mason hammers at the door. In the quarters, a shack's stall has a weathered plank sign and a fine bottega's sign is gilded.
 

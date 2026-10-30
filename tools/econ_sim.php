@@ -14,13 +14,13 @@
  * and 'daily' (the GDD's regular player: a morning and an evening check-in, a third at weekends).
  *
  *   php tools/econ_sim.php --db-name=guildie_sim --db-user=guildie --db-pass=... \
- *       [--players=6] [--days=7] [--seed=1] [--content=content] [--report=out.json]
+ *       [--players=6] [--days=7] [--seed=1] [--content=content] [--report=out.json] [--tick=300]
  *
  * WARNING: wipes and rebuilds the database you point it at. Never point it at the live database.
  */
 declare(strict_types=1);
 
-$opt = getopt('', ['db-name:', 'db-user:', 'db-pass:', 'db-host::', 'players::', 'days::', 'seed::', 'content::', 'report::', 'quiet']);
+$opt = getopt('', ['db-name:', 'db-user:', 'db-pass:', 'db-host::', 'players::', 'days::', 'seed::', 'content::', 'report::', 'tick::', 'quiet']);
 foreach (['db-name', 'db-user', 'db-pass'] as $k) {
     if (!isset($opt[$k])) {
         fwrite(STDERR, "Missing --$k\n");
@@ -128,7 +128,10 @@ function bot_buy(int $id, string $itemId, int $need, float $maxMultiple, array &
         if ($need <= 0) {
             break;
         }
-        if ($l['mine'] || $l['unit_price'] > $detail['reference'] * $maxMultiple) {
+        // Compare with the higher of today's price and the item's usual value: the Guild Suppliers never sell below
+        // 1.5x usual, so a dip in today's price mustn't stop a bot that needs the goods.
+        $usual = max((float) $detail['reference'], (float) (content_item($itemId)['reference_value'] ?? 0));
+        if ($l['mine'] || $l['unit_price'] > $usual * $maxMultiple) {
             continue;
         }
         $qty = min($need, $l['quantity'], intdiv(gold_get(db(), $id), max(1, (int) $l['unit_price'])));
@@ -241,9 +244,13 @@ function bot_checkin(array $bot, array &$log): void
         return $out - $in + $scarce + rand_between(0, 3);
     };
     $recipes = $state['profession']['recipes'];
+    $wanted = [];   // own-guild goods the next bottega upgrade still needs (#51): craft those first
+    foreach ($state['profession']['workshop']['next']['cost']['items'] ?? [] as $it) {
+        $wanted[$it['item_id']] = $it['have'] < $it['quantity'];
+    }
     $scores = [];
     foreach ($recipes as $r) {
-        $scores[$r['id']] = $score($r);
+        $scores[$r['id']] = $score($r) + (!empty($wanted[$r['output']['item_id']]) ? 1000 : 0);
     }
     usort($recipes, fn($a, $b) => $scores[$b['id']] <=> $scores[$a['id']]);
     $free = $state['craft_slots'] - count($state['crafts']);
@@ -353,7 +360,7 @@ function bot_checkin(array $bot, array &$log): void
 
 // ---- Run ----------------------------------------------------------------------------------------
 $end = $start + (int) ($days * 86400);
-$tickEvery = 300;
+$tickEvery = max(60, (int) ($opt['tick'] ?? 300));   // seconds between market ticks (longer = faster run, coarser market)
 $nextTick = $start + $tickEvery;
 $log = ['crafted' => [], 'listed' => [], 'bought_inputs' => [], 'orders_filled' => [], 'learned' => [], 'gold' => []];
 $rankAt = [];
