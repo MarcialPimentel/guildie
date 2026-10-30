@@ -54,13 +54,16 @@ function guild_sale_unit_prices(float $reference, float $pressure, int $quantity
     return $prices;
 }
 
-/** What the guild would pay right now for $quantity of an item (shown in the sell form). */
-function guild_sale_quote(int $playerId, string $itemId, int $quantity): array
+/**
+ * What the guild would pay right now for $quantity of an item at a quality (shown in the sell form). Fine and
+ * Masterwork pay their quality's multiple (0.18.0); pressure is shared by every quality of an item.
+ */
+function guild_sale_quote(int $playerId, string $itemId, int $quantity, int $quality = QUALITY_COMMON): array
 {
     $quantity = max(1, $quantity);
     $pdo = db();
     $pressure = guild_sale_pressure($pdo, $playerId, $itemId);
-    $prices = guild_sale_unit_prices(market_reference_value($itemId), $pressure, $quantity);
+    $prices = guild_sale_unit_prices(market_reference_value($itemId) * quality_multiplier($quality), $pressure, $quantity);
     return [
         'quantity'   => $quantity,
         'total'      => array_sum($prices),
@@ -84,15 +87,18 @@ function guild_sale_hint(string $itemId, float $pressure): ?string
  * Sell to the guild. If the client passes the total it showed ($expectedTotal) and the price has since
  * dropped, the sale is refused so a player never gets less than they were shown.
  */
-function guild_sell(int $playerId, string $itemId, int $quantity, ?int $expectedTotal): array
+function guild_sell(int $playerId, string $itemId, int $quantity, ?int $expectedTotal, int $quality = QUALITY_COMMON): array
 {
     if (content_item($itemId) === null) {
         throw new ApiError('unknown_item', 'That item does not exist.');
     }
+    if (!quality_valid($quality)) {
+        throw new ApiError('bad_request', 'Unknown quality.');
+    }
     if ($quantity < 1 || $quantity > 10000) {
         throw new ApiError('bad_request', 'Quantity must be at least 1.');
     }
-    return tx(function (PDO $pdo) use ($playerId, $itemId, $quantity, $expectedTotal) {
+    return tx(function (PDO $pdo) use ($playerId, $itemId, $quantity, $expectedTotal, $quality) {
         require_profession($pdo, $playerId);
         $now = game_now();
         // Make sure the row exists so it can be locked: two sales at once can't both get the higher price.
@@ -100,16 +106,16 @@ function guild_sell(int $playerId, string $itemId, int $quantity, ?int $expected
             ->execute([$playerId, $itemId, $now]);
         $pressure = guild_sale_pressure($pdo, $playerId, $itemId, true);
 
-        $total = array_sum(guild_sale_unit_prices(market_reference_value($itemId), $pressure, $quantity));
+        $total = array_sum(guild_sale_unit_prices(market_reference_value($itemId) * quality_multiplier($quality), $pressure, $quantity));
         if ($expectedTotal !== null && $total < $expectedTotal) {
             throw new ApiError('price_changed', sprintf("The guild's offer changed to %s. Check it and try again.", ducats($total)), 409);
         }
 
-        inventory_remove($pdo, $playerId, $itemId, $quantity);
+        inventory_remove($pdo, $playerId, $itemId, $quantity, $quality);
         gold_add($pdo, $playerId, $total);
         $pdo->prepare('UPDATE guild_sales SET pressure = ?, updated_at = ? WHERE player_id = ? AND item_id = ?')
             ->execute([round($pressure + $quantity, 4), $now, $playerId, $itemId]);
-        activity_log($pdo, $playerId, 'sold_to_guild', ['item_id' => $itemId, 'quantity' => $quantity, 'earned' => $total]);
-        return ['item_id' => $itemId, 'quantity' => $quantity, 'total' => $total];
+        activity_log($pdo, $playerId, 'sold_to_guild', ['item_id' => $itemId, 'quality' => $quality, 'quantity' => $quantity, 'earned' => $total]);
+        return ['item_id' => $itemId, 'quality' => $quality, 'quantity' => $quantity, 'total' => $total];
     });
 }

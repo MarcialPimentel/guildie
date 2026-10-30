@@ -102,8 +102,8 @@ function wanted_fill(int $playerId, int $postId, int $quantity): array
             throw new ApiError('post_closed', 'That request has closed.', 409);
         }
         $qty = min($quantity, $post['quantity'] - $post['filled']);
-        inventory_remove($pdo, $playerId, $post['item_id'], $qty);
-        inventory_add($pdo, $posterId, $post['item_id'], $qty);
+        // lowest quality first; the buyer gets exactly what was handed over (0.18.0)
+        inventory_add_each($pdo, $posterId, $post['item_id'], inventory_remove($pdo, $playerId, $post['item_id'], $qty));
         $pay = $qty * $post['unit_price'];
         $cut = exchange_cut($pay);
         gold_add($pdo, $playerId, $pay - $cut);
@@ -210,9 +210,7 @@ function wanted_board(int $playerId): array
     }
     $have = [];
     foreach (inventory_list($playerId) as $row) {
-        if ($row['quality'] === QUALITY_COMMON) {
-            $have[$row['item_id']] = $row['quantity'];
-        }
+        $have[$row['item_id']] = ($have[$row['item_id']] ?? 0) + $row['quantity'];   // any quality fills (0.18.0)
     }
     $bands = [];
     foreach (array_keys(content_items()) as $itemId) {

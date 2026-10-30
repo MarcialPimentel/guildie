@@ -87,6 +87,8 @@ jobs:
           # Deterministic tests: no random surprises (#48) and no random price movement (#45).
           for k in ('rich_find_chance', 'rare_find_chance', 'bonus_craft_chance'):
               d['surprises'][k] = 0
+          for c in d['progression']['colours']:   # quality (0.18.0): each colour makes exactly its minimum
+              c['quality_up'] = 0
           d['market']['noise_per_hour'] = 0
           d['market']['reversion_per_hour'] = 0   # Guild Week / event prices don't move items during tests
           json.dump(d, open(p, 'w'), indent=1)

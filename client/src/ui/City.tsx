@@ -182,8 +182,13 @@ function Compose({ to, playerName, back, sent }: { to: number; playerName: strin
   const [askGold, setAskGold] = useState(0)
   const [note, setNote] = useState('')
   const state = s.state!
+  // One row per item, every quality added up (0.18.0): a trade hands over your lowest quality first.
+  const bag = Object.values(state.inventory.reduce<Record<string, { item_id: string; name: string; quantity: number }>>((acc, i) => {
+    acc[i.item_id] = { item_id: i.item_id, name: i.name, quantity: (acc[i.item_id]?.quantity ?? 0) + i.quantity }
+    return acc
+  }, {}))
 
-  const nameOf = (id: string) => catalog?.items.find((i) => i.item_id === id)?.name ?? id
+  const nameOf =(id: string) => catalog?.items.find((i) => i.item_id === id)?.name ?? id
   const bundleText = (b: Record<string, number>, g: number) => {
     const parts = Object.entries(b).map(([id, n]) => `${n} ${nameOf(id)}`)
     if (g > 0) parts.push(gold(g))
@@ -210,8 +215,8 @@ function Compose({ to, playerName, back, sent }: { to: number; playerName: strin
         <section class="stack">
           <h2>You give</h2>
           <div class="card tight">
-            {state.inventory.length === 0 && <p class="muted">Your bag is empty.</p>}
-            {state.inventory.map((item) => (
+            {bag.length === 0 && <p class="muted">Your bag is empty.</p>}
+            {bag.map((item) => (
               <QtyRow label={`${item.name} (have ${item.quantity})`} value={give[item.item_id] ?? 0} max={item.quantity}
                 onChange={(n) => setIn(setGive, item.item_id, n)} />
             ))}
