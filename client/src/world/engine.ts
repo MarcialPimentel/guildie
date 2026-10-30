@@ -1498,6 +1498,11 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     },
     slap,
     slapNpc,
+    resendPosition() {
+      // a move made before the room's welcome was dropped by the socket; send where we really are
+      lastSent = { at: 0, x: NaN, z: NaN }
+      reportMove(true)
+    },
     setSlaps(id, on) {
       if (id === myId) { mySlaps = on; me.blob.setSlapsOff(!on) }
       const w = peers.get(id)

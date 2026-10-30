@@ -170,6 +170,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
           peerIds.current.clear()
           roomPlayers.current.clear()
           for (const p of m.players) if (p.id !== myId) { e.peerUpsert(toPeerRef.current(p)); peerIds.current.add(p.id); roomPlayers.current.set(p.id, p) }
+          e.resendPosition()   // the arrival step may have happened while the room was still connecting
           break
         case 'join':
           if (m.p.id !== myId) { e.peerUpsert(toPeerRef.current(m.p)); peerIds.current.add(m.p.id); roomPlayers.current.set(m.p.id, m.p) }
