@@ -1,8 +1,12 @@
 # Checks every pull request, and on every merge to main deploys Guildie to marz.gg over FTPS.
 #
-#   checks  (PRs and main): PHP syntax, content validator, API smoke test against a throwaway
-#           MySQL, web client build (TypeScript), realtime room tests, browser test (Playwright,
+#   checks  (PRs, and "Run workflow" by hand): PHP syntax, content validator, API smoke test against a
+#           throwaway MySQL, web client build (TypeScript), realtime room tests, browser test (Playwright,
 #           phone + desktop, with a local realtime room server) -> downloadable packages (Artifacts)
+#   build   (merges to main): PHP syntax, content validator, client build (type check) -> packages.
+#           The full checks already passed on the PR, so a merge doesn't run them again (about 6 minutes
+#           saved). The "branch must be up to date" rule on main (docs/deploy.md) makes sure the PR tested
+#           exactly what gets merged. To deploy with every test, use Actions -> Deploy -> Run workflow.
 #   deploy  (main only):    uploads the server code into guildie-private/, then the game into
 #           public_html/games/guildie/. The server applies new migrations itself.
 #   realtime (main only):   builds the living city's realtime rooms (realtime/) as a Docker image on GitHub
@@ -40,6 +44,7 @@ env:
 
 jobs:
   checks:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -169,9 +174,44 @@ jobs:
           path: dist/guildie-*.zip
           retention-days: 14
 
+  # Merges to main: the PR already passed the full checks, so only build the packages (about 1 minute).
+  build:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+
+      - name: PHP syntax
+        run: |
+          for f in $(find server tools -name '*.php'); do php -l "$f" > /dev/null || exit 1; done
+          echo "All PHP files OK"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      # package.sh runs the content validator and the client build (type check + Vite).
+      - name: Build the upload packages
+        run: BUILD_NUMBER=${{ github.run_number }} tools/package.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guildie-packages
+          path: dist/guildie-*.zip
+          retention-days: 14
+
   deploy:
-    needs: checks
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    # Runs after "build" (a merge) or "checks" (Run workflow by hand); the other one is skipped.
+    needs: [checks, build]
+    if: >-
+      always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' &&
+      contains(needs.*.result, 'success') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     steps:
       - name: Check FTP settings
@@ -239,6 +279,8 @@ jobs:
 
       # Fail the run unless the live site really is the new build: the server reports the new build and
       # database version (the ping also applies any new migrations), and the game page serves the new client.
+      # If SiteGround's bot captcha answers instead (it sometimes blocks GitHub), stop at once with a warning
+      # rather than retrying for 5 minutes: the upload worked, the check just can't see the site.
       - name: Live check (ping + game page)
         if: steps.check.outputs.ready == 'true'
         run: |
@@ -249,8 +291,13 @@ jobs:
           ASSET=$(grep -o 'assets/index-[^"]*\.js' upload/public/index.html | head -1)
           echo "Expecting build '$BUILD', schema $SCHEMA, client $ASSET"
           ok=""
+          blocked() {
+            echo "::warning title=Live check blocked by captcha::SiteGround's captcha answered instead of the game, so GitHub can't confirm the new build. The upload finished; check the ping URL from a browser (expect build '$BUILD', schema $SCHEMA)."
+            exit 0
+          }
           for i in $(seq 20); do
             out=$(curl -s --max-time 20 "$GAME/api/index.php?action=ping&v=$RANDOM" || true)
+            if echo "$out" | grep -q sgcaptcha; then blocked; fi
             if echo "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('ok') and d['data']['build']=='$BUILD' and int(d['data']['schema'])==$SCHEMA else 1)" 2>/dev/null; then
               ok=1; break
             fi
@@ -260,7 +307,9 @@ jobs:
             echo "::error title=Live check failed::The server never reported build '$BUILD' with schema $SCHEMA. Last answer: $(echo "$out" | head -c 300)"
             exit 1
           fi
-          fresh=$(curl -s --max-time 20 "$GAME/?v=$RANDOM" | grep -o 'assets/index-[^"]*\.js' | head -1)
+          page=$(curl -s --max-time 20 "$GAME/?v=$RANDOM" || true)
+          if echo "$page" | grep -q sgcaptcha; then blocked; fi
+          fresh=$(echo "$page" | grep -o 'assets/index-[^"]*\.js' | head -1)
           if [ "$fresh" != "$ASSET" ]; then
             echo "::error title=Live check failed::The game page serves '$fresh', expected '$ASSET'."
             exit 1
@@ -275,8 +324,10 @@ jobs:
   # next to Hormigas, behind its Caddy (HTTPS). Cosmetic only (positions, waves, slaps), so a failure here
   # never blocks the game deploy; the game works without it.
   realtime:
-    needs: checks
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [checks, build]
+    if: >-
+      always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' &&
+      contains(needs.*.result, 'success') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     permissions:
       contents: read
