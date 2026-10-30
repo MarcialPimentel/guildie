@@ -99,7 +99,7 @@ With a handful of players, the NPC market has to **author** these swings; there 
 
 **Rules** (decided: no specialization branches for now; maybe later) [tune]
 - **One starter recipe per rank is free:** you learn it when you reach the rank, so progression is never blocked. Today's starter recipes stay known.
-- **The rest are bought at the guild trainer** for gold. The price rises by rank (e.g. A 50g, J 200g, E 800g, M 3,000g each [tune]). A recipe can be learned once you reach its skill level.
+- **The rest are bought at the guild trainer** for gold. The price rises by rank (A 50g, J 500g, E 2,000g, M 7,500g each since 0.16.0; was 50/200/800/3,000 [tune]). A recipe can be learned once you reach its skill level.
 - **Rare recipes** come only from orders (§2) or rare finds: one or two per rank per guild. They're trophies, and better than trainer recipes (more value, or more XP).
 - The trainer shows what each recipe needs, including **which other guild's goods**, so a player can build around their trade partners: a Leatherworker with Blacksmith friends picks the recipes that use Brass Fittings and Gears.
 

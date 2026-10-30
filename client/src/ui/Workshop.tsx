@@ -194,6 +194,12 @@ function RecipeCard({ recipe, slotFree, maxBatch }: { recipe: Recipe; slotFree: 
         <button class="secondary small" disabled={recipe.can_make <= 1} onClick={() => setChosen(limit)}>Max</button>
         <span class="grow right muted small">{duration(recipe.seconds_each * qty)}</span>
       </div>
+      {recipe.lamp_oil_each > 0 && (
+        <p class="muted small" data-testid={`recipe-oil-${recipe.id}`}>
+          Machines burn {Math.ceil(recipe.lamp_oil_each * qty - 1e-9)} Lamp Oil
+          {recipe.seconds_each_by_hand !== null && ` · by hand: ${duration(recipe.seconds_each_by_hand * qty)}`}
+        </p>
+      )}
       <ActionButton
         action={() => session.startCraft(recipe.id, qty)}
         success={`Started ${qty} × ${recipe.name}.`}

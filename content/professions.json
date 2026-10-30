@@ -27,11 +27,11 @@
         ]
       },
       "workshop": [
-        { "level": 2, "name": "Bellows forge", "gold": 150, "hours": 2,
+        { "level": 2, "name": "Bellows forge", "gold": 200, "hours": 2,
           "items": [{ "item_id": "leather_grip", "quantity": 10 }, { "item_id": "smelting_flux", "quantity": 4 }, { "item_id": "brass_fittings", "quantity": 10 }] },
-        { "level": 3, "name": "Water-wheel forge", "gold": 800, "hours": 6,
+        { "level": 3, "name": "Water-wheel forge", "gold": 2000, "hours": 6,
           "items": [{ "item_id": "cured_leather", "quantity": 10 }, { "item_id": "steam_tonic", "quantity": 8 }, { "item_id": "iron_ingot", "quantity": 10 }] },
-        { "level": 4, "name": "Trip-hammer works", "gold": 3000, "hours": 12,
+        { "level": 4, "name": "Trip-hammer works", "gold": 7500, "hours": 12,
           "items": [ { "item_id": "drive_belt", "quantity": 10 }, { "item_id": "machine_oil", "quantity": 12 }, { "item_id": "gears", "quantity": 12 } ] }
       ]
     },
@@ -61,11 +61,11 @@
         ]
       },
       "workshop": [
-        { "level": 2, "name": "Copper still", "gold": 150, "hours": 2,
+        { "level": 2, "name": "Copper still", "gold": 200, "hours": 2,
           "items": [{ "item_id": "brass_fittings", "quantity": 10 }, { "item_id": "hide_satchel", "quantity": 4 }, { "item_id": "healing_draught", "quantity": 10 }] },
-        { "level": 3, "name": "Water-driven alembics", "gold": 800, "hours": 6,
+        { "level": 3, "name": "Water-driven alembics", "gold": 2000, "hours": 6,
           "items": [{ "item_id": "iron_ingot", "quantity": 6 }, { "item_id": "cured_leather", "quantity": 8 }, { "item_id": "steam_tonic", "quantity": 10 }] },
-        { "level": 4, "name": "Clockwork distillery", "gold": 3000, "hours": 12,
+        { "level": 4, "name": "Clockwork distillery", "gold": 7500, "hours": 12,
           "items": [ { "item_id": "gears", "quantity": 10 }, { "item_id": "drive_belt", "quantity": 8 }, { "item_id": "machine_oil", "quantity": 14 } ] }
       ]
     },
@@ -95,11 +95,11 @@
         ]
       },
       "workshop": [
-        { "level": 2, "name": "Tanning pits", "gold": 150, "hours": 2,
+        { "level": 2, "name": "Tanning pits", "gold": 200, "hours": 2,
           "items": [{ "item_id": "tanning_solution", "quantity": 6 }, { "item_id": "copper_lantern", "quantity": 4 }, { "item_id": "leather_grip", "quantity": 10 }] },
-        { "level": 3, "name": "Water-wheel tannery", "gold": 800, "hours": 6,
+        { "level": 3, "name": "Water-wheel tannery", "gold": 2000, "hours": 6,
           "items": [{ "item_id": "iron_ingot", "quantity": 8 }, { "item_id": "steam_tonic", "quantity": 8 }, { "item_id": "cured_leather", "quantity": 10 }] },
-        { "level": 4, "name": "Mechanical tannery", "gold": 3000, "hours": 12,
+        { "level": 4, "name": "Mechanical tannery", "gold": 7500, "hours": 12,
           "items": [ { "item_id": "gears", "quantity": 10 }, { "item_id": "machine_oil", "quantity": 10 }, { "item_id": "drive_belt", "quantity": 12 } ] }
       ]
     }

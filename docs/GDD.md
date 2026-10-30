@@ -647,7 +647,7 @@ Each milestone ends with a playtest and a clear exit question.
 2. **Exact skill curve and craft timers** to hit the pacing targets in [Section 3](#target-pacing). Tune in M1–M2 playtests.
 3. **Active bonus size:** how much more should active play reward than idle without making idle feel bad?
 4. **Second profession carryover:** what transfers from the first profession, if anything?
-5. **Gold sinks before slowing the pace:** players accumulate gold quickly in M1 with little to spend it on. Which M2 sinks come first?
+5. ~~**Gold sinks before slowing the pace**~~ **Decided 2026-10-30 (#52):** recipes, bottega upgrades and machine running costs are the sinks; their prices were raised with the simulator before slowing the pace.
 6. ~~**City name**~~ **Decided 2026-10-28: Portovela** ("port of sails"), replacing the working name Brassmere.
 7. **Skill source (#30):** replace random skill-ups with crafting XP plus a first-craft bonus? How big should the bonus be, and should gathering give XP? The current 12 recipes can't fill the 100-point curve, so more recipes are needed in M2.
 8. ~~**Player interaction beyond the Exchange**~~ **Decided 2026-10-27:** a player directory and direct trade offers ship in 0.3.0 (6.8, 6.9). Gifts and a trade fee are not decided yet.
@@ -767,6 +767,12 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-29 | Minigames **tire you**: each round pays less, recovering over a few hours; never a hard wall | Marz's pick. Unlimited full pay would flood the shared market with raws and crash prices for everyone (Pillar 2) |
 | 2026-10-29 | **Modular minigames:** kinds (rules) and targets (what a round pays) are registries; each guild picks a kind, look and words in content, so a new profession needs no code | Marz asked for a system future professions can adapt |
 | 2026-10-29 | Built as **0.15.0, after the guide and before the balance pass (#52)** | So #52 tunes the economy with minigame income included |
+| 2026-10-30 | **M2 playtest pace: about half the GDD targets** (Journeyman in ~2–3 days, Expert in ~a week, Master in ~two weeks for a daily player) | Marz's pick. Slow enough that overnight crafts matter, short enough to see every rank during the playtest |
+| 2026-10-30 | **Later ranks slow down more than early ones:** craft times x1 / x3 / x10 / x20 by the recipe's rank (`pace.craft_by_rank`); `time_multiplier` stays 1.0 | Marz's pick. Matches Target pacing: early ranks reward volume, late ranks reward planning. Apprentice crafts stay seconds to minutes; Expert crafts ~half an hour; Master crafts 2–3 hours |
+| 2026-10-30 | **Machine running costs are soft:** Expert and Master bottegas burn Lamp Oil per minute of a recipe's listed time and pay a daily wage on the first powered craft of the day; short of either, the craft is made by hand at the repaired workshop's speed, and nothing is lost | Marz's pick. A small sink that grows with automation and a steady reason to buy from Alchemists, without ever blocking anyone (the Guild Suppliers always sell some Lamp Oil) |
+| 2026-10-30 | **No account reset for the M2 playtest** | Marz's pick. Players keep their skill, gold and bottega |
+| 2026-10-30 | **Gold: raise what players spend on** (recipes and bottega upgrades), not what the city pays | Marz's pick. The simulator showed income ~10x the sinks (bots ended with 10,000–45,000 ducats); keeping income keeps trading rewarding. Recipes now cost 50 / 500 / 2,000 / 7,500 by rank (were 50 / 200 / 800 / 3,000) and bottega upgrades 200 / 2,000 / 7,500 (were 150 / 800 / 3,000), about 2.5x on the later ranks. Resolves Open Question 5 |
+| 2026-10-30 | Simulator finding: **craft time doesn't limit progress; other guilds' goods do.** At every pace tried, Blacksmith and Leatherworker bots stalled at skill 50 because Alchemists sold all their Lemon Tonic to the city | The simulator now uses buy offers the way players are told to; watch Lemon Tonic supply in the playtest |
 
 ---
 

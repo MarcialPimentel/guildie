@@ -523,7 +523,7 @@ check(f"trainer lists all {n_bs} blacksmith recipes", s == 200 and len(tr) == n_
 check("trainer: Brass Fittings known (free starter)", tr.get("brass_fittings", {}).get("status") == "known" and tr["brass_fittings"]["starter"], tr.get("brass_fittings"))
 check("trainer: Copper Lantern at skill 6 for 50 ducats", tr.get("copper_lantern", {}).get("status") == "locked"
       and tr["copper_lantern"]["skill"] == 6 and tr["copper_lantern"]["price"] == 50, tr.get("copper_lantern"))
-check("trainer: Iron Sword is Journeyman, 200 ducats", tr.get("iron_sword", {}).get("rank") == "Journeyman" and tr["iron_sword"]["price"] == 200, tr.get("iron_sword"))
+check("trainer: Iron Sword is Journeyman, 500 ducats", tr.get("iron_sword", {}).get("rank") == "Journeyman" and tr["iron_sword"]["price"] == 500, tr.get("iron_sword"))
 check("trainer shows other guilds' goods and the +25% trade bonus", tr.get("iron_ingot", {}).get("imports_from") == ["Alchemist"]
       and next(i for i in tr["iron_ingot"]["inputs"] if i["item_id"] == "smelting_flux")["guild"] == "Alchemist"
       and tr["iron_ingot"]["xp_each"] == 25 and tr["iron_ingot"]["colour"] == "orange", tr.get("iron_ingot"))
@@ -587,7 +587,7 @@ if PLAYER_TOOL:
     tool("gold", name_d, 1000)
     s, r = call("workshop_upgrade", {}, token=tok_d)
     w = r["data"]["state"]["profession"]["workshop"] if s == 200 else {}
-    check("build the Bellows forge: ducats and goods taken, builders at work", s == 200 and r["data"]["state"]["player"]["gold"] == 850
+    check("build the Bellows forge: ducats and goods taken, builders at work", s == 200 and r["data"]["state"]["player"]["gold"] == 800
           and have(r["data"]["state"], "leather_grip") == 0 and w["building"]["name"] == "Bellows forge" and w["building"]["ready"] is False, r)
     s, r = call("workshop_upgrade", {}, token=tok_d)
     check("one build at a time", s == 409 and r["error"]["code"] == "already_building", r)
@@ -612,6 +612,40 @@ if PLAYER_TOOL:
     check("the build is in the activity log", any(a["type"] == "workshop_built" for a in r["data"]["state"]["activity"]), r["data"]["state"]["activity"][:4])
     s, r = call("workshop_open", {}, token=tok_d)
     check("opening twice does nothing", s == 409 and r["error"]["code"] == "nothing_building", r)
+
+    # Machine running costs (0.16.0, #52): the two-storey bottega burns lamp oil and pays daily wages, or crafts by hand.
+    name_m, _, tok_m, _ = register("m")
+    call("choose_profession", {"profession_id": "blacksmith"}, token=tok_m)
+    tool("skill", name_m, 50)
+    for item, q in (("leather_grip", 10), ("smelting_flux", 4), ("brass_fittings", 10), ("cured_leather", 10),
+                    ("steam_tonic", 8), ("iron_ingot", 10), ("copper_ore", 12)):
+        tool("give", name_m, item, q)
+    tool("gold", name_m, 2400)
+    for _ in (2, 3):
+        call("workshop_upgrade", {}, token=tok_m)
+        tool("build_ready", name_m)
+        s, r = call("workshop_open", {}, token=tok_m)
+    st = r["data"]["state"] if s == 200 else {}
+    w = st.get("profession", {}).get("workshop", {})
+    run = w.get("running") or {}
+    check("level 3: the machines need lamp oil and wages", w.get("level") == 3 and run.get("fuel_item_id") == "lamp_oil"
+          and run.get("wages_per_day", 0) > 0 and run.get("fuel_have") == 0 and run.get("wages_paid_today") is False, w)
+    gold0 = st.get("player", {}).get("gold")
+    fittings = next((x for x in st.get("profession", {}).get("recipes", []) if x["id"] == "brass_fittings"), {})
+    check("recipe cards show the lamp oil and the time by hand", fittings.get("lamp_oil_each", 0) > 0
+          and fittings.get("seconds_each_by_hand", 0) >= fittings.get("seconds_each", 1), fittings)
+    s, r = call("start_craft", {"recipe_id": "brass_fittings", "quantity": 1}, token=tok_m)
+    check("no lamp oil: made by hand, nothing taken", s == 200 and r["data"]["player"]["gold"] == gold0
+          and "by hand" in r["data"]["activity"][0]["text"], r["data"]["activity"][:2] if s == 200 else r)
+    tool("give", name_m, "lamp_oil", 3)
+    s, r = call("start_craft", {"recipe_id": "brass_fittings", "quantity": 1}, token=tok_m)
+    wages = run.get("wages_per_day", 0)
+    check("with lamp oil: the machines burn 1 and today's wages are paid", s == 200 and r["data"]["player"]["gold"] == gold0 - wages
+          and have(r["data"], "lamp_oil") == 2 and "Machines: burned 1 Lamp Oil" in r["data"]["activity"][0]["text"]
+          and r["data"]["profession"]["workshop"]["running"]["wages_paid_today"] is True, r["data"]["activity"][:2] if s == 200 else r)
+    s, r = call("start_craft", {"recipe_id": "brass_fittings", "quantity": 1}, token=tok_m)
+    check("wages once a day: the next craft only burns oil", s == 200 and r["data"]["player"]["gold"] == gold0 - wages
+          and have(r["data"], "lamp_oil") == 1, r["data"]["activity"][:2] if s == 200 else r)
 
     # Players from before 0.8.0 (#30): skill replayed from past crafts, every guild recipe kept, both raws kept.
     subprocess.run(f"{PLAYER_TOOL} legacy {name_d}", shell=True, check=True, capture_output=True)
