@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guildie town view</title>
+  <style>html, body { margin: 0; height: 100%; background: #BFE6EA; } #town { width: 100%; height: 100%; }</style>
+</head>
+<body>
+  <!-- Dev only (npm run dev, then /town.html): the harbor or the Piazza built by the game's own code, no login.
+       ?scene=piazza shows the Piazza; ?code=1 shows the older code buildings instead of the Blender town kit;
+       ?yaw=, ?pitch=, ?dist=, ?tx=, ?ty=, ?tz= move the camera; ?night=1 lights the windows. -->
+  <div id="town"></div>
+  <script type="module" src="/src/dev/town.ts"></script>
+</body>
+</html>

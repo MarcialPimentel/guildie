@@ -12,6 +12,7 @@
 import * as THREE from 'three'
 import { Blob, Glove, Shadows, blobMaterial, knownCharacter, parcelGeometry, type Character, type Emote } from './blobs'
 export { preloadBlobModel } from './blobs'
+export { preloadTownKit } from './townKit'
 import { buildHarbor, type Harbor } from './harbor'
 import { QUARTER_BOUNDS, QUARTER_SPAWN, type Quarter } from './square'
 import { GUILDS } from '../guilds'

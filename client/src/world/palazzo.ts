@@ -7,8 +7,9 @@
 // Walkable area and arrival point: realtime/src/room.js.
 import * as THREE from 'three'
 import { GUILDS } from '../guilds'
-import { bake, box, cyl, hipRoof, rng, solid, stripes, vertexColorMaterial } from './kit'
+import { bake, box, cyl, flat, hipRoof, rng, solid, stripes, vertexColorMaterial } from './kit'
 import type { Quarter } from './square'
+import { HOUSE_WIDTH, townPiece } from './townKit'
 import type { PickId } from './types'
 
 export function buildPalazzo(): Quarter {
@@ -16,6 +17,7 @@ export function buildPalazzo(): Quarter {
   root.visible = false
   const r = rng(1499)
   const vc = vertexColorMaterial()
+  const flatGlass = flat('#27444C')
   const town = new THREE.Group()
   root.add(town)
 
@@ -48,6 +50,11 @@ export function buildPalazzo(): Quarter {
   const hall = new THREE.Group()
   root.add(hall)
   const HZ = -18.5
+  // since 0.17.0 the Palazzo and its tower are the Blender town kit (townKit.ts): a Renaissance palazzo with a
+  // Brunelleschi loggia and a rusticated ground floor, and a brick campanile; the code below is the fallback
+  const TX = 14
+  const kit = townPiece(hall, 'palazzo', 0, 1, HZ, { glassMat: flatGlass }) && townPiece(hall, 'campanile', TX, 1, HZ - 0.5, { glassMat: flatGlass })
+  if (!kit) {
   box(hall, 22, 12, 7, '#EBC79A', 0, 1, HZ)                       // the body
   box(hall, 22.6, 0.5, 7.6, '#F4EBD8', 0, 5.4, HZ)                // string course between the floors
   for (let i = 0; i < 11; i++) box(hall, 1.1, 1.1, 7.6, '#D9A877', -10.4 + i * 2.08, 13, HZ)   // merlons
@@ -72,21 +79,25 @@ export function buildPalazzo(): Quarter {
     tip.position.set(wx, 10.2, HZ + 3.52)
     hall.add(tip)
   }
-  // banners of every guild on poles along the façade (from content: a new guild gets its banner)
+  }
+  // banners of every guild on poles along the façade (from content: a new guild gets its banner); with the
+  // kit's deep cornice they fly from poles on top of it
   GUILDS.forEach((g, i) => {
     const x = (i - (GUILDS.length - 1) / 2) * 6
-    cyl(hall, 0.06, 0.06, 4, '#4B5257', x, 11.8, HZ + 3.7, 5)
-    box(hall, 1.4, 2.4, 0.06, g.color, x + 0.74, 13.0, HZ + 3.7, false)
-    box(hall, 1.4, 0.3, 0.07, g.trim, x + 0.74, 15.1, HZ + 3.7, false)
+    const [y, z] = kit ? [13.3, HZ + 4.55] : [11.8, HZ + 3.7]
+    cyl(hall, 0.06, 0.06, 4, '#4B5257', x, y, z, 5)
+    box(hall, 1.4, 2.4, 0.06, g.color, x + 0.74, y + 1.2, z, false)
+    box(hall, 1.4, 0.3, 0.07, g.trim, x + 0.74, y + 3.3, z, false)
   })
   // the bell tower (campanile) with a clock
-  const TX = 14
+  if (!kit) {
   box(hall, 4.4, 20, 4.4, '#E2B987', TX, 1, HZ - 0.5)
   box(hall, 5.0, 0.4, 5.0, '#F4EBD8', TX, 21, HZ - 0.5)
   for (const [dx, dz] of [[-1.7, -1.7], [1.7, -1.7], [-1.7, 1.7], [1.7, 1.7]]) box(hall, 0.6, 3.2, 0.6, '#F4EBD8', TX + dx, 21.4, HZ - 0.5 + dz)
   solid(hall, new THREE.SphereGeometry(0.9, 8, 6), '#C79A3A', TX, 22.9, HZ - 0.5)        // the bell
   box(hall, 5.0, 0.4, 5.0, '#D9A877', TX, 24.6, HZ - 0.5)
   hipRoof(hall, 5.0, 5.0, 3.6, '#A9492A', TX, 25, HZ - 0.5)
+  }
   cyl(hall, 1.3, 1.3, 0.12, '#F6EEDC', TX, 15.4, HZ + 1.75, 16).rotation.x = Math.PI / 2
   box(hall, 0.1, 1.0, 0.06, '#2B2A33', TX, 15.5, HZ + 1.85, false)
   box(hall, 0.7, 0.1, 0.06, '#2B2A33', TX + 0.3, 15.9, HZ + 1.85, false)
@@ -166,9 +177,13 @@ export function buildPalazzo(): Quarter {
   box(statue, 1.6, 0.5, 0.06, '#C79A3A', 0, 1.6, 1.32, false)   // the name plate
 
   // background houses beyond the square, and cypresses
+  const houses = ['house_c', 'house_b', 'house_d', 'house_a'] as const
   for (let i = 0; i < 14; i++) {
     const x = -27 + i * 4.1 + (r() - 0.5)
     if (Math.abs(x) < 12) continue
+    const id = houses[i % 4]
+    const tint = ['#E9B872', '#E39B6B', '#EAA796', '#F1DCB0', '#F3CF78', '#D98C5F'][i % 6]
+    if (townPiece(town, id, x, 1, -27, { plaster: tint, scale: Math.min(1, 4.1 / HOUSE_WIDTH[id]), glassMat: flatGlass })) continue
     const h = 6 + r() * 7
     box(town, 3.6, h, 4, ['#F2B98B', '#F3D27A', '#EFA9A0', '#F5F0E4', '#BFE3D9'][i % 5], x, 1, -26 - r() * 2)
     hipRoof(town, 3.9, 4.3, 1.2, i % 2 ? '#C4623A' : '#A9492A', x, 1 + h, -27)

@@ -138,10 +138,12 @@ export function bake(root: THREE.Object3D, flatMaterial: THREE.MeshStandardMater
     if (mat.map || mat.transparent) return
     const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()
     g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(toLocal, m.matrixWorld))
-    for (const name of Object.keys(g.attributes)) if (name !== 'position' && name !== 'normal') g.deleteAttribute(name)
+    // a model with its own vertex colors (the Blender town kit, townKit.ts) keeps them
+    const ownColors = !!mat.vertexColors && !!g.attributes.color
+    for (const name of Object.keys(g.attributes)) if (name !== 'position' && name !== 'normal' && !(ownColors && name === 'color')) g.deleteAttribute(name)
     if (!g.attributes.normal) g.computeVertexNormals()
     const isFlat = !!mat.userData.flat
-    if (isFlat) {
+    if (isFlat && !ownColors) {
       const n = g.attributes.position.count
       const c = new Float32Array(n * 3)
       for (let i = 0; i < n; i++) {
