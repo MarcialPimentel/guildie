@@ -14,6 +14,7 @@ import { Blob, Glove, Shadows, blobMaterial, knownCharacter, parcelGeometry, typ
 export { preloadBlobModel } from './blobs'
 export { preloadTownKit } from './townKit'
 import { buildHarbor, type Harbor } from './harbor'
+import { addHitBox, pickFirst } from './hitBoxes'
 import { QUARTER_BOUNDS, QUARTER_SPAWN, type Quarter } from './square'
 import { GUILDS } from '../guilds'
 import { buildPalazzo } from './palazzo'
@@ -457,28 +458,10 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   const ray = new THREE.Raycaster()
   const ndc = new THREE.Vector2()
   const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1)
-  // Every place gets an invisible hover box around its whole shape (0.10.2), so thin things (the trapper's
-  // lodge, the Duke's notice board, a door) are as easy to point at as a solid building.
-  // ?debug=hits draws them as wireframes, to check their size.
+  // Every place gets an invisible hover box (hitBoxes.ts). ?debug=hits draws them as wireframes, to check their size.
   const showHits = new URLSearchParams(location.search).get('debug') === 'hits'
   const hitMat = showHits ? new THREE.MeshBasicMaterial({ color: '#E0306A', wireframe: true }) : new THREE.MeshBasicMaterial({ visible: false })
-  const hitBox = (obj: THREE.Object3D, pad = 0.35) => {
-    obj.updateWorldMatrix(true, true)
-    const box = new THREE.Box3()
-    obj.traverse((o) => {
-      const m = o as THREE.Mesh
-      if (!m.isMesh || o.userData.hitBox || !m.geometry) return
-      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox()
-      box.union(m.geometry.boundingBox!.clone().applyMatrix4(m.matrixWorld))
-    })
-    if (box.isEmpty()) return
-    box.expandByScalar(pad)
-    const size = box.getSize(new THREE.Vector3())
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), hitMat)
-    box.getCenter(mesh.position)
-    mesh.userData.hitBox = true
-    obj.attach(mesh)   // keeps the world position; moves with the place from now on
-  }
+  const hitBox = (obj: THREE.Object3D) => addHitBox(obj, hitMat)
   for (const [id, objs] of harbor.picks) {
     for (const obj of objs) {
       hitBox(obj)
@@ -506,7 +489,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   }
   const pickAt = (e: { clientX: number; clientY: number }): Hit | null => {
     setRay(e)
-    const hit = ray.intersectObjects(pickRoots(), true).find((h) => h.object.visible && h.object.userData.hit)
+    const hit = pickFirst(ray, pickRoots())
     return (hit?.object.userData.hit as Hit) ?? null
   }
   const groundAt = (e: { clientX: number; clientY: number }): THREE.Vector3 | null => {
