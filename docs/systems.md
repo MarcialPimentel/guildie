@@ -570,6 +570,7 @@ Social layer: guild orders needing several professions, a shared guild hall, gui
 - **Looks (0.10.0):** a body color 0–5 and a hat 0–2, checked by the server; players who never chose keep the 0.9.0 look (a color from their player number, the first hat). The rank sash comes from skill. Looks travel only in the signed pass, so nobody can show someone else's.
 - **Only logged-in players join:** the room checks the pass's HMAC-SHA256 signature (secret shared with `config.php` → `realtime_secret`) and expiry, and takes identity from the pass, never from the client.
 - **Rooms:** since 0.13.0 only the Palazzo (`palazzo-1`, `palazzo-2`, …), at most `30` players per copy [tune]; a full room sends the join to the next copy. (0.9.0–0.12.0 also had one per guild quarter.)
+- **Slapping townsfolk (0.19.0)** happens only in your browser (they are client-side people); the room is not involved and nothing is saved.
 - **Fair play:** positions clamped to the piazza; at most 10 messages a second per client (more are dropped); a slap needs both players' slaps on, distance ≤ 2.5 m and 1.5 s since the slapper's last slap.
 - **Optional:** with no `realtime_url` configured, or the service unreachable, quarters still show stalls, townsfolk and **echoes** (crafters of that guild who acted in the last 30 minutes, from `activity`).
 - Players aren't solid, and clicking a place opens it from anywhere, so nobody can block a door.

@@ -116,6 +116,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   container.appendChild(fade)
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
+  let frameN = 0, contextLost = 0
+  canvas.addEventListener('webglcontextlost', () => { contextLost++; console.error('Guildie 3D: WebGL context lost') })
   const maxDpr = Math.min(window.devicePixelRatio || 1, 2)
   let dpr = Math.min(maxDpr, 1.5)
   renderer.setPixelRatio(dpr)
@@ -717,7 +719,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     const victim = to === myId ? me : peers.get(to)
     if (!victim) return
     setTimeout(() => {
-      victim.blob.slapped()
+      victim.blob.slapped(dir)
       const start = victim.pos.clone()
       const end = clampWalk(start.clone().addScaledVector(dir, 0.9))
       victim.target = null
@@ -728,6 +730,63 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       say(to, 'Challenge!')
     }, reduceMotion ? 0 : 160)
     wake(1500)
+  }
+
+  // Anyone else can be slapped too (0.19.0): townsfolk, customers, buyers, the herald, the mason, the officials,
+  // vendors and trainers. They live in your browser, so only you see it, and it changes nothing in the game.
+  const OUCH = ['Ow!', 'How rude!', 'Mamma mia!', "I'll tell the Duke!", 'Was that a challenge?', 'Ahia!', 'My hat!', 'Per carità!']
+  let ouchN = 0
+  let lastNpcSlap = 0
+  const shown = (o: THREE.Object3D | null) => { for (; o; o = o.parent) if (!o.visible) return false; return true }
+  const slapNpc = (reach: number): boolean => {
+    let best: { blob: Blob; walker?: Walker; at: THREE.Vector3 } | null = null
+    let bestD = reach
+    const consider = (blob: Blob | null, walker?: Walker) => {
+      if (!blob || blob.ghost || !shown(blob.root)) return
+      const at = walker ? walker.pos.clone() : blob.root.getWorldPosition(new THREE.Vector3())
+      const d = Math.hypot(at.x - me.pos.x, at.z - me.pos.z)
+      if (d <= bestD) { bestD = d; best = { blob, walker, at } }
+    }
+    for (const n of npcs) consider(n.blob, n)
+    for (const c of customers.values()) consider(c.blob, c)
+    for (const b of buyers) consider(b.blob, b)
+    if (scene === 'harbor') { consider(herald); consider(builder) } else for (const o of officials) consider(o)
+    if (!best) return false
+    if (performance.now() - lastNpcSlap < 800) return true   // catch your breath (the room allows one per 1.5 s between players)
+    lastNpcSlap = performance.now()
+    const { blob, walker, at } = best as { blob: Blob; walker?: Walker; at: THREE.Vector3 }
+    const glove = gloves.find((g) => !g.busy) ?? gloves[0]
+    glove.swing(me.pos, at)
+    const dir = new THREE.Vector3().subVectors(at, me.pos).setY(0)
+    if (dir.lengthSq() < 0.0001) dir.set(0, 0, 1)
+    dir.normalize()
+    lastSlap = { from: myId, to: -1 }
+    setTimeout(() => {
+      blob.slapped(dir)
+      const line = OUCH[ouchN++ % OUCH.length]
+      if (walker) {
+        // knocked back a step; townsfolk stop, turn to glare at you, then go on wandering
+        const start = walker.pos.clone()
+        const end = clampWalk(start.clone().addScaledVector(dir, 0.7))
+        if ('pause' in walker) { walker.target = null; (walker as Npc).pause = 2.5 }
+        tween(0.3, (k) => {
+          walker.pos.lerpVectors(start, end, 1 - (1 - k) * (1 - k))
+          walker.blob.root.position.copy(walker.pos)
+        }, () => { if ('pause' in walker) walker.heading = facing(walker.pos, me.pos) })
+        sayOver(`npc:${ouchN % 4}`, walker, line)
+      } else {
+        // people who stay put (the herald, officials, vendors, trainers) rock back and return to their spot
+        const home = blob.root.position.clone()
+        const away = blob.root.parent ? blob.root.parent.worldToLocal(at.clone().addScaledVector(dir, 0.5)).setY(home.y) : home
+        tween(0.9, (k) => {
+          const out = k < 0.3 ? 1 - (1 - k / 0.3) ** 2 : 1 - ease((k - 0.3) / 0.7)
+          blob.root.position.lerpVectors(home, away, out)
+        })
+        sayOver(`npc:${ouchN % 4}`, { pos: at, blob }, line)
+      }
+    }, reduceMotion ? 0 : 160)
+    wake(1500)
+    return true
   }
 
   // ------------------------------------------------------------ tweens and the harbor's state
@@ -1124,6 +1183,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     if (!running) return
     raf = requestAnimationFrame(frame)
     if (document.hidden) { last = now; return }
+    frameN++
     const dt = Math.min((now - last) / 1000, 0.05)
     last = now
 
@@ -1133,6 +1193,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       || [...customers.values()].some((c) => c.target) || buyers.length > 0 || me.blob.busy || herald.busy
       || npcs.some((n) => n.target)   // walking townsfolk get the full frame rate too (30 fps looked jerky)
       || [...peers.values()].some((p) => p.blob.busy) || [...customers.values()].some((c) => c.blob.busy)
+      || [...everyone()].some((b) => b.busy)   // a slapped townsperson, official or buyer still flailing
     if (peopleMoving) wake(300)
     const moving = tweens.length > 0 || now < awakeUntil || Math.abs(nightGoal - night) > 0.001
     const ambient = !reduceMotion
@@ -1327,7 +1388,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     peers: () => [...peers.keys()],
     peer: (id) => { const w = peers.get(id); return w ? { x: w.pos.x, z: w.pos.z } : null },
     lastSlap: null,
-    stats: () => ({ fps, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, dpr, peers: peers.size, townsfolk: npcs.length, echoes: ghosts.size }),
+    stats: () => ({ fps, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, dpr, peers: peers.size, townsfolk: npcs.length, echoes: ghosts.size, frames: frameN, contextLost, hidden: document.hidden ? 1 : 0 }),
   }
   Object.defineProperty(window.__guildieWorld, 'lastSlap', { get: () => lastSlap })
   Object.defineProperty(window.__guildieWorld, 'lastEmote', { get: () => lastEmote })
@@ -1422,6 +1483,12 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       wake()
     },
     slap,
+    slapNpc,
+    resendPosition() {
+      // a move made before the room's welcome was dropped by the socket; send where we really are
+      lastSent = { at: 0, x: NaN, z: NaN }
+      reportMove(true)
+    },
     setSlaps(id, on) {
       if (id === myId) { mySlaps = on; me.blob.setSlapsOff(!on) }
       const w = peers.get(id)

@@ -44,13 +44,15 @@ function merge(parts: Part[]): THREE.BufferGeometry {
     p.geo.dispose()
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.rx ?? 0, p.ry ?? 0, p.rz ?? 0, p.order ?? 'XYZ'))
     g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.sx ?? 1, p.sy ?? 1, p.sz ?? 1)))
-    return [g, new THREE.Color(p.c), p.vc ?? false] as const
+    return [g, new THREE.Color(p.c), p.vc ?? false, p.foot ?? 0] as const
   })
   let n = 0
   for (const [g] of geos) n += g.attributes.position.count
   const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3)
+  // skinning: every vertex follows one bone: 0 the body, 1 the foot at -X, 2 the foot at +X (Blob steps the feet)
+  const bone = new Uint16Array(n * 4), weight = new Float32Array(n * 4)
   let o = 0
-  for (const [g, c, vc] of geos) {
+  for (const [g, c, vc, foot] of geos) {
     const m = g.attributes.position.count
     pos.set(g.attributes.position.array as Float32Array, o * 3)
     nor.set(g.attributes.normal.array as Float32Array, o * 3)
@@ -62,6 +64,9 @@ function merge(parts: Part[]): THREE.BufferGeometry {
         if (!isSkinMark(x, y, z)) { r = x; gg = y; b = z }
       }
       col[(o + i) * 3] = r; col[(o + i) * 3 + 1] = gg; col[(o + i) * 3 + 2] = b
+      const f = vc && g.attributes._foot ? g.attributes._foot.getX(i) : foot
+      bone[(o + i) * 4] = f < -0.5 ? 1 : f > 0.5 ? 2 : 0
+      weight[(o + i) * 4] = 1
     }
     o += m
     g.dispose()
@@ -70,6 +75,8 @@ function merge(parts: Part[]): THREE.BufferGeometry {
   out.setAttribute('position', new THREE.BufferAttribute(pos, 3))
   out.setAttribute('normal', new THREE.BufferAttribute(nor, 3))
   out.setAttribute('color', new THREE.BufferAttribute(col, 3))
+  out.setAttribute('skinIndex', new THREE.BufferAttribute(bone, 4))
+  out.setAttribute('skinWeight', new THREE.BufferAttribute(weight, 4))
   out.computeBoundingSphere()
   return out
 }
@@ -103,8 +110,8 @@ const base = (skin: string): Part[] => (modelBody ? [P(modelBody.clone(), skin, 
 // the 0.10 body in code: body, feet, eyes and blush (about 600 triangles)
 const codeBase = (skin: string): Part[] => [
   P(new THREE.CapsuleGeometry(0.5, 0.42, 5, 20), skin, 0, 0.72, 0),   // the main silhouette: extra round
-  P(sph(0.17, 6, 3), '#5A3A28', -0.22, 0.05, 0.1, { sy: 0.55, sz: 1.3 }),
-  P(sph(0.17, 6, 3), '#5A3A28', 0.22, 0.05, 0.1, { sy: 0.55, sz: 1.3 }),
+  P(sph(0.17, 6, 3), '#5A3A28', -0.22, 0.05, 0.1, { sy: 0.55, sz: 1.3, foot: -1 }),
+  P(sph(0.17, 6, 3), '#5A3A28', 0.22, 0.05, 0.1, { sy: 0.55, sz: 1.3, foot: 1 }),
   P(sph(0.065, 4, 3), INK, -0.16, 1.06, 0.45),
   P(sph(0.065, 4, 3), INK, 0.16, 1.06, 0.45),
   P(sph(0.08, 4, 2), '#E98A86', -0.3, 0.93, 0.39, { sz: 0.4 }),
@@ -263,19 +270,30 @@ const hitGeo = new THREE.CylinderGeometry(0.8, 0.8, 1, 10)
 hitGeo.translate(0, 0.5, 0)
 const hitMat = new THREE.MeshBasicMaterial({ visible: false })
 const HAND_REST: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(-0.6, 0.62, 0.08), new THREE.Vector3(0.6, 0.62, 0.08)]
-const L = new THREE.Vector3(), R = new THREE.Vector3(), V = new THREE.Vector3()
+const L = new THREE.Vector3(), R = new THREE.Vector3(), V = new THREE.Vector3(), F = new THREE.Vector3()
+const Q = new THREE.Quaternion()
+/** Where the feet's bones sit (the middle of each foot), body-local. */
+const FOOT_REST: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(-0.22, 0.05, 0.1), new THREE.Vector3(0.22, 0.05, 0.1)]
+/** Seconds a slapped person flails. */
+const HIT_TIME = 0.9
 
 /** One person. Move `root` yourself; call update() every frame with how fast it is walking. */
 export class Blob {
   readonly root = new THREE.Group()
   private wob = new THREE.Group()
-  private body: THREE.Mesh
+  private body: THREE.SkinnedMesh
+  private feet: [THREE.Bone, THREE.Bone]
   private hands: [THREE.Mesh, THREE.Mesh]
   private flag: THREE.Mesh
   private sq = 0
   private sqV = 0
   private lean = 0
   private leanV = 0
+  /** Forward/back lean (a slap from the front or behind). */
+  private leanX = 0
+  private leanXV = 0
+  /** Seconds left of the slapped flail. */
+  private hit = 0
   private phase = Math.random() * 6
   private emote: { name: Emote; t: number; dur: number } | null = null
   private still = Math.random() * 3
@@ -288,7 +306,16 @@ export class Blob {
 
   constructor(readonly opts: BlobOptions) {
     const mat = opts.ghost ? ghostMat : opaque
-    this.body = new THREE.Mesh(bodyGeometry(opts), mat)
+    // The body is skinned with three bones (the body and two feet) so the feet can step; clothes ride the body bone.
+    const geo = bodyGeometry(opts)
+    this.body = new THREE.SkinnedMesh(geo, mat)
+    const hips = new THREE.Bone()
+    this.feet = FOOT_REST.map((p) => { const b = new THREE.Bone(); b.position.copy(p); return b }) as [THREE.Bone, THREE.Bone]
+    this.body.add(hips, ...this.feet)
+    // bones are children of the body, so with an identity bind matrix each bone's inverse is just its rest offset
+    this.body.bind(new THREE.Skeleton([hips, ...this.feet], [new THREE.Matrix4(), ...FOOT_REST.map((p) => new THREE.Matrix4().makeTranslation(-p.x, -p.y, -p.z))]), new THREE.Matrix4())
+    this.body.boundingSphere = geo.boundingSphere!.clone()
+    this.body.boundingSphere.radius += 0.25
     this.body.receiveShadow = !opts.ghost
     const skin = skinOf(opts)
     this.hands = [new THREE.Mesh(handGeometry(skin), mat), new THREE.Mesh(handGeometry(skin, propOf(opts)), mat)]
@@ -344,7 +371,7 @@ export class Blob {
 
   /** A move is playing (keeps the engine drawing). */
   get busy(): boolean {
-    return !!this.emote && !['look', 'rock', 'stretch'].includes(this.emote.name)
+    return this.hit > 0 || (!!this.emote && !['look', 'rock', 'stretch'].includes(this.emote.name))
   }
 
   /** A white flag on the hat: this merchant has slaps off. */
@@ -364,10 +391,18 @@ export class Blob {
     this.play('wave')
   }
 
-  /** Squash sideways and wobble (the slide back is done by whoever moves root). */
-  slapped(): void {
+  /**
+   * Slapped: knocked away from the blow, arms flailing, feet kicking, a dizzy shake, then a wobble back
+   * (the slide back is done by whoever moves root). `blow`: the world direction from the slapper to this person.
+   */
+  slapped(blow?: THREE.Vector3): void {
+    V.set(1, 0, 0)
+    if (blow && blow.lengthSq() > 1e-6) V.copy(blow).setY(0).normalize().applyQuaternion(this.root.getWorldQuaternion(Q).invert())
+    this.leanV -= V.x * 14   // rotation.z < 0 tips the top toward +x
+    this.leanXV += V.z * 14  // rotation.x > 0 tips the top toward +z
     this.sqV += 7
-    this.leanV += 9
+    this.hit = HIT_TIME
+    this.still = 0
   }
 
   /** A little bounce (arriving, landing). */
@@ -402,6 +437,7 @@ export class Blob {
       const swing = Math.sin(this.phase) * 0.22
       L.z += swing
       R.z -= swing
+      tiltZ += Math.sin(this.phase) * 0.05   // a little waddle onto the standing foot
     }
     if (loop === 'carry') { L.set(-0.32, 0.95, 0.42); R.set(0.32, 0.95, 0.42) }
     if (loop === 'hammer') {
@@ -432,8 +468,30 @@ export class Blob {
       }
       if (e.t >= e.dur) { this.emote = null; this.still = 0 }
     }
+    // feet: step in turn while walking (the foot opposite the forward hand), lifting and pointing the toes as they swing
+    const step = moving && !calm ? 1 : 0
+    let kick = 0
+    if (this.hit > 0) {
+      this.hit = Math.max(0, this.hit - dt)
+      const t = HIT_TIME - this.hit, env = calm ? 1 : Math.min(1, t / 0.08, this.hit / 0.3)
+      const shake = calm ? 0 : 1
+      L.lerp(V.set(-0.66, 1.3 + Math.sin(t * 29) * 0.14 * shake, 0.1 + Math.cos(t * 23) * 0.12 * shake), env)
+      R.lerp(V.set(0.66, 1.3 + Math.cos(t * 27) * 0.14 * shake, 0.1 + Math.sin(t * 21) * 0.12 * shake), env)
+      yaw += Math.sin(t * 38) * 0.18 * env * shake
+      kick = env * shake
+    }
+    const fFollow = calm ? 1 : Math.min(1, dt * 20)
+    for (let i = 0; i < 2; i++) {
+      const ph = this.phase + (i === 0 ? Math.PI : 0)
+      F.copy(FOOT_REST[i])
+      F.z += Math.sin(ph) * 0.13 * step
+      F.y += Math.max(0, Math.cos(ph)) * 0.09 * step + kick * (0.06 + 0.05 * Math.sin((HIT_TIME - this.hit) * 30 + i * Math.PI))
+      const foot = this.feet[i]
+      foot.position.lerp(F, fFollow)
+      foot.rotation.x += (-Math.max(0, Math.cos(ph)) * 0.4 * step - kick * 0.3 - foot.rotation.x) * fFollow
+    }
     if (calm) {
-      this.sq = this.sqV = this.lean = this.leanV = 0
+      this.sq = this.sqV = this.lean = this.leanV = this.leanX = this.leanXV = 0
       this.wob.scale.set(1, 1 - squashY, 1)
       this.wob.position.y = 0
     } else {
@@ -442,11 +500,14 @@ export class Blob {
       this.sq += this.sqV * dt
       this.leanV += (-40 * this.lean - 6 * this.leanV) * dt
       this.lean += this.leanV * dt
+      this.leanXV += (-40 * this.leanX - 6 * this.leanXV) * dt
+      this.leanX += this.leanXV * dt
       const bob = moving ? Math.abs(Math.sin(this.phase)) * 0.08 : 0
       const s = THREE.MathUtils.clamp(this.sq + (moving ? Math.sin(this.phase * 2) * 0.03 : 0) + squashY, -0.3, 0.3)
       this.wob.scale.set(1 + s * 0.5, 1 - s, 1 + s * 0.5)
       this.wob.position.y = bob + hop
       tiltZ += THREE.MathUtils.clamp(this.lean * 0.35, -0.6, 0.6)
+      tiltX += THREE.MathUtils.clamp(this.leanX * 0.35, -0.6, 0.6)
     }
     this.wob.rotation.set(tiltX, yaw, tiltZ)
     const follow = calm ? 1 : Math.min(1, dt * 18)

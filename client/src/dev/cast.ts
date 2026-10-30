@@ -59,7 +59,10 @@ async function main() {
   renderer.setAnimationLoop((t) => {
     const dt = Math.min((t - last) / 1000, 0.1)
     last = t
-    for (const b of blobs) b.update(dt, 0, true)
+    // ?anim=walk: everyone walks on the spot; ?anim=slap: everyone is slapped from their left every 2 s
+    const anim = q.get('anim')
+    if (anim === 'slap' && Math.floor(t / 2000) !== Math.floor((t - dt * 1000) / 2000)) for (const b of blobs) b.slapped(new THREE.Vector3(1, 0, 0))
+    for (const b of blobs) b.update(dt, anim === 'walk' ? 2.5 : 0, anim === null)
     renderer.render(scene, camera)
   })
   ;(window as unknown as { castReady: boolean }).castReady = true

@@ -3,8 +3,11 @@
 import * as THREE from 'three'
 
 export const INK = '#2B2A33'
-/** `vc`: keep the geometry's own vertex colors (a model file), painting only its skin-marked vertices with `c`. */
-export type Part = { geo: THREE.BufferGeometry; c: string; x: number; y: number; z: number; rx?: number; ry?: number; rz?: number; sx?: number; sy?: number; sz?: number; order?: THREE.EulerOrder; vc?: boolean }
+/**
+ * `vc`: keep the geometry's own vertex colors (a model file), painting only its skin-marked vertices with `c`.
+ * `foot`: this part is a foot (-1 at -X, +1 at +X) and steps with that foot's bone; a model file says so per vertex (_foot).
+ */
+export type Part = { geo: THREE.BufferGeometry; c: string; x: number; y: number; z: number; rx?: number; ry?: number; rz?: number; sx?: number; sy?: number; sz?: number; order?: THREE.EulerOrder; vc?: boolean; foot?: number }
 export const P = (geo: THREE.BufferGeometry, c: string, x = 0, y = 0, z = 0, o: Partial<Part> = {}): Part => ({ geo, c, x, y, z, ...o })
 // 0.10.1: people are smooth-shaded with 1.5x the curve segments of 0.10.0 (the town stays faceted).
 // Every rounded part goes through these helpers, so SEG sets how smooth the whole cast is.
