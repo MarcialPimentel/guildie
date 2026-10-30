@@ -2,7 +2,7 @@
   "_comment": "Economy settings (systems.md). Every number here is [tune]. pace.time_multiplier scales ALL durations (crafts, station fill time): 1.0 = fast playtest pacing, larger = slower (e.g. 6.0 makes everything six times longer).",
   "pace": {
     "time_multiplier": 1.0,
-    "craft_by_rank": [1.0, 1.0, 1.0, 1.0],
+    "craft_by_rank": [1, 3, 10, 20],
     "_craft_by_rank": "#52: extra craft-time multiplier by the recipe's rank (Apprentice, Journeyman, Expert, Master), on top of time_multiplier. Early crafts stay quick; late crafts take hours. [tune]"
   },
   "new_player": {

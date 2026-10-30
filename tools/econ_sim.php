@@ -308,6 +308,21 @@ function bot_checkin(array $bot, array &$log): void
         if (tracked($log, 'upgrades', $id, fn() => workshop_start($id)) !== false) {
             $log['upgrades_started'][$bot['profession']] = ($log['upgrades_started'][$bot['profession']] ?? 0) + 1;
             $saving = false;
+        } else {
+            // Still missing another guild's goods: post a buy offer at the top of the fair band (0.13.0), like a
+            // player told "buy it at the marketplace, with a buy offer if nobody sells it".
+            $board = attempt(fn() => wanted_board($id));
+            $open = array_column(array_filter($board['mine'] ?? [], fn($p) => $p['status'] === 'open'), 'item_id');
+            $next = player_state($id)['profession']['workshop']['next'];
+            foreach ($next['cost']['items'] as $it) {
+                $missing = $it['quantity'] - $it['have'];
+                if ($missing > 0 && (content_item($it['item_id'])['profession'] ?? '') !== $bot['profession'] && !in_array($it['item_id'], $open, true)) {
+                    $price = $board['bands'][$it['item_id']]['max'] ?? 0;
+                    if ($price > 0 && attempt(fn() => wanted_post($id, $it['item_id'], $missing, $price)) !== false) {
+                        $log['buy_offers_posted'][$it['item_id']] = ($log['buy_offers_posted'][$it['item_id']] ?? 0) + $missing;
+                    }
+                }
+            }
         }
     }
 
@@ -338,6 +353,17 @@ function bot_checkin(array $bot, array &$log): void
     if ($ws['running'] || ($ws['next']['running'] ?? null)) {
         $keepFor[workshop_fuel_item()] = max($keepFor[workshop_fuel_item()] ?? 0, 30);
     }
+    // Fill other players' buy offers first: they pay the top of the band.
+    $have = array_column($state['inventory'], 'quantity', 'item_id');
+    foreach (attempt(fn() => wanted_board($id))['posts'] ?? [] as $post) {
+        $spare = ($have[$post['item_id']] ?? 0) - ($keepFor[$post['item_id']] ?? 0);
+        $qty = min($post['remaining'], $spare);
+        if ($qty > 0 && tracked($log, 'buy_offers_filled', $id, fn() => wanted_fill($id, $post['id'], $qty)) !== false) {
+            $have[$post['item_id']] -= $qty;
+            $log['buy_offer_units'][$post['item_id']] = ($log['buy_offer_units'][$post['item_id']] ?? 0) + $qty;
+        }
+    }
+    $state = player_state($id);
     foreach ($state['inventory'] as $item) {
         $itemId = $item['item_id'];
         $type = content_item($itemId)['type'];
@@ -490,6 +516,8 @@ echo "\nGold moved by players' own actions (+ in, - out; NPC sales are before th
 foreach ($log['gold'] as $k => $v) {
     printf("  %-22s %+9d\n", $k, $v);
 }
+echo 'Buy offers filled: ' . json_encode($log['buy_offer_units'] ?? []) . "
+";
 echo 'Machines: ' . json_encode($log['machines']) . "\nMinigame rounds: " . ($log['minigame_rounds'] ?? 0) . ' ' . json_encode($log['minigame_raws'] ?? []) . "\nFavors done: " . ($log['favors_done'] ?? 0) . "\n";
 echo "\nOrders filled: " . json_encode($log['orders_filled']) . "\nRecipes learned: " . json_encode($log['learned']) . "\n";
 printf("\nGold in circulation: start %d -> end %d\n", $daily[0]['gold_total'] ?? 0, (int) db()->query('SELECT SUM(gold) FROM players')->fetchColumn());
