@@ -1,0 +1,69 @@
+{
+  "_comment": "Economy simulator variants (.github/workflows/econ-sim.yml): each overrides parts of the content files, 'file.json' -> {'dotted.path': value}. The workflow runs every variant side by side. 'as is' runs the content unchanged.",
+  "variants": {
+    "as is": {},
+    "prices x2": {
+      "economy.json": {
+        "progression.trainer_price_by_rank": [
+          50,
+          400,
+          1600,
+          6000
+        ]
+      },
+      "professions.json": {
+        "professions.0.workshop.0.gold": 150,
+        "professions.0.workshop.1.gold": 1600,
+        "professions.0.workshop.2.gold": 6000,
+        "professions.1.workshop.0.gold": 150,
+        "professions.1.workshop.1.gold": 1600,
+        "professions.1.workshop.2.gold": 6000,
+        "professions.2.workshop.0.gold": 150,
+        "professions.2.workshop.1.gold": 1600,
+        "professions.2.workshop.2.gold": 6000
+      }
+    },
+    "prices x2.5": {
+      "economy.json": {
+        "progression.trainer_price_by_rank": [
+          50,
+          500,
+          2000,
+          7500
+        ]
+      },
+      "professions.json": {
+        "professions.0.workshop.0.gold": 200,
+        "professions.0.workshop.1.gold": 2000,
+        "professions.0.workshop.2.gold": 7500,
+        "professions.1.workshop.0.gold": 200,
+        "professions.1.workshop.1.gold": 2000,
+        "professions.1.workshop.2.gold": 7500,
+        "professions.2.workshop.0.gold": 200,
+        "professions.2.workshop.1.gold": 2000,
+        "professions.2.workshop.2.gold": 7500
+      }
+    },
+    "prices x3": {
+      "economy.json": {
+        "progression.trainer_price_by_rank": [
+          60,
+          600,
+          2400,
+          9000
+        ]
+      },
+      "professions.json": {
+        "professions.0.workshop.0.gold": 200,
+        "professions.0.workshop.1.gold": 2400,
+        "professions.0.workshop.2.gold": 9000,
+        "professions.1.workshop.0.gold": 200,
+        "professions.1.workshop.1.gold": 2400,
+        "professions.1.workshop.2.gold": 9000,
+        "professions.2.workshop.0.gold": 200,
+        "professions.2.workshop.1.gold": 2400,
+        "professions.2.workshop.2.gold": 9000
+      }
+    }
+  }
+}

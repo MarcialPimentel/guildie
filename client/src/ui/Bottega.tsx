@@ -3,7 +3,7 @@
 // goods from both other guilds. The server decides everything: costs, the build timer and what opens.
 import { duration } from '../format'
 import { session } from '../session'
-import type { GameState, Workshop } from '../types'
+import type { GameState, Running, Workshop } from '../types'
 import { Coins, ItemIcon } from './art'
 import { ActionButton, useGame } from './common'
 import { celebrate } from './Progress'
@@ -17,6 +17,12 @@ function gives(n: NonNullable<Workshop['next']>): string {
   if (n.station_cap > 1) parts.push(`station holds ${pct(n.station_cap - 1)} more`)
   if (n.station_rate > 1) parts.push(`station ${pct(n.station_rate - 1)} faster`)
   return parts.join(' · ')
+}
+
+/** The machines' running costs in one line (#52). */
+function runningText(r: Running): string {
+  return `Its machines burn ${r.fuel_name} as they craft and need ${r.wages_per_day} ducats in wages on each day you craft. ` +
+    `Without them, crafts are made by hand (${r.unpowered_speed > 0 ? `${pct(r.unpowered_speed)} faster` : 'normal speed'} instead).`
 }
 
 export function BottegaCard({ state, now }: { state: GameState; now: number }) {
@@ -46,6 +52,12 @@ export function BottegaCard({ state, now }: { state: GameState; now: number }) {
         {p.at_cap && !building && (
           <p class="accent small" data-testid="bottega-capped">
             Your skill has reached {p.cap}, the most this bottega allows. Crafts give no XP until you build the {next?.name ?? 'next upgrade'}.
+          </p>
+        )}
+        {w.running && (
+          <p class={`small ${w.running.fuel_have > 0 ? 'muted' : 'error'}`} data-testid="bottega-running">
+            {runningText(w.running)} You have {w.running.fuel_have} {w.running.fuel_name}
+            {w.running.wages_paid_today ? "; today's wages are paid." : '.'}
           </p>
         )}
         {w.kept_rank && <p class="muted small">You keep the rank you earned before upgrades existed. Build to give your bottega the look and the bonuses.</p>}
@@ -78,6 +90,7 @@ export function BottegaCard({ state, now }: { state: GameState; now: number }) {
             {next.opens_rank && <span class="accent"> · opens {next.opens_rank}</span>}
           </p>
           <p class="muted small">Becomes a {next.look.toLowerCase()} · {gives(next)} · builds in {duration(next.cost.seconds)}</p>
+          {next.running && <p class="muted small" data-testid="bottega-next-running">{runningText(next.running)}</p>}
           <div class="stack tight">
             <div class="row small"><span class="grow">Ducats</span><span class={`num ${state.player.gold >= next.cost.gold ? 'ok' : 'muted'}`}><Coins n={next.cost.gold} /></span></div>
             {next.cost.items.map((i) => (

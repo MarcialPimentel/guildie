@@ -199,13 +199,13 @@ function item_order_xp(string $itemId): float
 /** The player's progression row: profession_id, skill, xp, bonus_day, progress_version (or null). */
 function progression_row(PDO $pdo, int $playerId, bool $lock = false): ?array
 {
-    $stmt = $pdo->prepare('SELECT profession_id, skill, xp, bonus_day, progress_version, workshop_level, legacy_rank, upgrade_to, upgrade_ready_at
-                           FROM player_professions WHERE player_id = ?' . ($lock ? ' FOR UPDATE' : ''));
+    $stmt = $pdo->prepare('SELECT * FROM player_professions WHERE player_id = ?' . ($lock ? ' FOR UPDATE' : ''));
     $stmt->execute([$playerId]);
     $row = $stmt->fetch();
     if (!$row) {
         return null;
     }
+    $row['wages_day'] = (int) ($row['wages_day'] ?? 0);   // added in migration 012 (#52); absent for a moment during a deploy
     foreach (['skill', 'xp', 'bonus_day', 'progress_version', 'workshop_level'] as $k) {
         $row[$k] = (int) $row[$k];
     }
@@ -463,7 +463,7 @@ function recipe_view(array $recipe, int $skill, array $known): array
         'colour'        => $colour['id'],
         'xp_each'       => recipe_xp_each($recipe, $skill),
         'value'         => (int) round(market_reference_value($recipe['output']['item_id']) * (int) $recipe['output']['quantity']),
-        'seconds_each'  => (int) ceil($recipe['time_seconds'] * pace()),
+        'seconds_each'  => (int) ceil(recipe_craft_seconds($recipe)),
     ];
 }
 

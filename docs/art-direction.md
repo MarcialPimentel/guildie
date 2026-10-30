@@ -115,7 +115,7 @@ Alternatives considered: Babylon.js (capable, about ten times heavier, its own U
 
 - **Placeholders:** CC0 low-poly kits from Kenney (kenney.nl) and Quaternius (quaternius.com), recolored to the palette.
 - **Hero pieces** (bottega, Mercato, ships): concept image → AI image-to-3D (Meshy, Tripo or Rodin) → `.glb` → I shrink, recolor, compress and wire it in. Check each tool's plan allows commercial use.
-- **Made in Blender (0.15.1):** a Python script in `tools/art/` builds the piece and exports a `.glb` with vertex colors (no textures), so it can be rebuilt and tweaked by number. First piece: the people's body (§9.3).
+- **Made in Blender (0.16.1):** a Python script in `tools/art/` builds the piece and exports a `.glb` with vertex colors (no textures), so it can be rebuilt and tweaked by number. First piece: the people's body (§9.3).
 - **Later:** a hired low-poly artist, using this document as the brief.
 
 Concept prompt template (change the first line):
@@ -202,7 +202,7 @@ The **body color** is one of the plaster pastels (`#F2B98B #F3D27A #EFA9A0 #BFE3
 
 **Status:** approved by Marz on 2026-10-29 (all eight decisions of the character proposal, plus "players choose their look when they create their account"). The playable proposal is [`docs/art/characters-mockup.html`](art/characters-mockup.html).
 
-**One character kit** (`client/src/world/blobs.ts`): the same blob for everyone, dressed from a table of parts: dress, hat, one prop merged into the right hand, and a rank sash. No skeletons. Since 0.15.1 the bare body under the clothes is a Blender model (§9.3); everything else is still built in code. A new character is a few lines of data.
+**One character kit** (`client/src/world/blobs.ts`): the same blob for everyone, dressed from a table of parts: dress, hat, one prop merged into the right hand, and a rank sash. No skeletons. Since 0.16.1 the bare body under the clothes is a Blender model (§9.3); everything else is still built in code. A new character is a few lines of data.
 
 | Who | Where | Look | Driven by |
 |---|---|---|---|
@@ -266,7 +266,7 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 - **Your bottega, four looks** (`harbor.ts`): (1) a rundown shack of weathered planks, a patched lean-to roof, a boarded window and a barrel; (2) a repaired workshop, one floor of fresh plaster under tiles, teal shutters and a small awning; (3) the two-storey bottega of 0.7.0; (4) the same with a roof loggia (altana), lemon-gold trim, banners and a second lemon tree. While builders work: scaffolding of poles and planks, and a mason hammering at the door.
 - **Stall signs in the quarters** follow the owner's level: a weathered plank for a shack, navy for a workshop, gold trim from level 3, a double gilded frame for a fine bottega.
 
-### 9.3 The Blender body (0.15.1)
+### 9.3 The Blender body (0.16.1)
 
 **Status:** Marz's pick of 2026-10-30, option 3 "Expressive" of three made in Blender (Tidy: today's face with eye shine; Soft toy: tall shiny eyes and a smile; Expressive).
 

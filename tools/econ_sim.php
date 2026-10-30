@@ -5,17 +5,22 @@
  * Runs virtual players through the REAL server code (gathering, crafting, Exchange, market tick)
  * on a scratch database, with a fast-forwarded clock, and reports how the economy behaves.
  * Use it to tune content/economy.json before numbers reach real players.
- * Bots also fill the orders they can, learn recipes at the trainer when they can afford them, and the
- * report says when each bot reached each rank (time-to-rank, #30).
+ * Bots also fill the orders they can, learn recipes at the trainer when they can afford them, claim the
+ * new-player guide, play the station minigame, do the Palazzo officials' favors, build bottega upgrades (buying the
+ * other guilds' goods they need) and keep their Expert and Master machines in lamp oil (#52). The report says when
+ * each bot reached each rank (time-to-rank, #30) and where the gold came from and went (faucets and sinks).
+ *
+ * Three play styles: 'active' (every 30-60 min in the evening, 2-4 h otherwise), 'regular' (every 2-4 h by day)
+ * and 'daily' (the GDD's regular player: a morning and an evening check-in, a third at weekends).
  *
  *   php tools/econ_sim.php --db-name=guildie_sim --db-user=guildie --db-pass=... \
- *       [--players=6] [--days=7] [--seed=1] [--content=content] [--report=out.json]
+ *       [--players=6] [--days=7] [--seed=1] [--content=content] [--report=out.json] [--tick=300]
  *
  * WARNING: wipes and rebuilds the database you point it at. Never point it at the live database.
  */
 declare(strict_types=1);
 
-$opt = getopt('', ['db-name:', 'db-user:', 'db-pass:', 'db-host::', 'players::', 'days::', 'seed::', 'content::', 'report::', 'quiet']);
+$opt = getopt('', ['db-name:', 'db-user:', 'db-pass:', 'db-host::', 'players::', 'days::', 'seed::', 'content::', 'report::', 'tick::', 'quiet']);
 foreach (['db-name', 'db-user', 'db-pass'] as $k) {
     if (!isset($opt[$k])) {
         fwrite(STDERR, "Missing --$k\n");
@@ -69,7 +74,7 @@ $professionIds = array_keys(content_professions());
 $bots = [];
 for ($i = 0; $i < $players; $i++) {
     $prof = $professionIds[$i % count($professionIds)];
-    $style = intdiv($i, count($professionIds)) % 2 === 0 ? 'regular' : 'active';
+    $style = ['regular', 'active', 'daily'][intdiv($i, count($professionIds)) % 3];
     [$id] = register_player(sprintf('bot%02d_%s', $i, substr($prof, 0, 5)), 'simpass');
     choose_profession($id, $prof);
     $bots[] = ['id' => $id, 'profession' => $prof, 'style' => $style, 'next' => $start + mt_rand(0, 3600)];
@@ -79,6 +84,20 @@ for ($i = 0; $i < $players; $i++) {
 function next_checkin(array $bot, int $now): int
 {
     $hour = (int) gmdate('G', $now);
+    if ($bot['style'] === 'daily') {
+        // Morning (08-09) and evening (19-21); at weekends also midday (13-14).
+        $day = gmmktime(0, 0, 0, (int) gmdate('n', $now), (int) gmdate('j', $now), (int) gmdate('Y', $now));
+        foreach ([0, 1] as $add) {
+            $weekend = (int) gmdate('N', $day + $add * 86400) >= 6;
+            $slots = $weekend ? [[8, 9], [13, 14], [19, 21]] : [[8, 9], [19, 21]];
+            foreach ($slots as [$from, $to]) {
+                $t = $day + $add * 86400 + mt_rand($from * 3600, $to * 3600);
+                if ($t > $now + 1800) {
+                    return $t;
+                }
+            }
+        }
+    }
     $gap = $bot['style'] === 'active' && $hour >= 17 && $hour < 23 ? mt_rand(1800, 3600) : mt_rand(7200, 14400);
     $next = $now + $gap;
     $nextHour = (int) gmdate('G', $next);
@@ -86,6 +105,79 @@ function next_checkin(array $bot, int $now): int
         $next = gmmktime(8, mt_rand(0, 59), 0, (int) gmdate('n', $next), (int) gmdate('j', $next), (int) gmdate('Y', $next));
     }
     return $next;
+}
+
+/** Try an action and count how much gold it moved for the bot under $category (faucets > 0, sinks < 0). */
+function tracked(array &$log, string $category, int $id, callable $fn): mixed
+{
+    $before = gold_get(db(), $id);
+    $result = attempt($fn);
+    $log['gold'][$category] = ($log['gold'][$category] ?? 0) + gold_get(db(), $id) - $before;
+    return $result;
+}
+
+/** Buy up to $need of an item at the Mercato (players or the Guild Suppliers) at no more than $maxMultiple x usual. */
+function bot_buy(int $id, string $itemId, int $need, float $maxMultiple, array &$log, string $why): int
+{
+    $got = 0;
+    if ($need <= 0) {
+        return 0;
+    }
+    $detail = exchange_item($id, $itemId);
+    foreach ($detail['listings'] as $l) {
+        if ($need <= 0) {
+            break;
+        }
+        // Compare with the higher of today's price and the item's usual value: the Guild Suppliers never sell below
+        // 1.5x usual, so a dip in today's price mustn't stop a bot that needs the goods.
+        $usual = max((float) $detail['reference'], (float) (content_item($itemId)['reference_value'] ?? 0));
+        if ($l['mine'] || $l['unit_price'] > $usual * $maxMultiple) {
+            continue;
+        }
+        $qty = min($need, $l['quantity'], intdiv(gold_get(db(), $id), max(1, (int) $l['unit_price'])));
+        if ($qty > 0 && tracked($log, "buy_$why", $id, fn() => exchange_buy($id, $l['id'], $qty)) !== false) {
+            $need -= $qty;
+            $got += $qty;
+            $log['bought_inputs'][$itemId] = ($log['bought_inputs'][$itemId] ?? 0) + $qty;
+        }
+    }
+    return $got;
+}
+
+/** One round of the station minigame, played like a fair human: mostly good taps, some perfect, some misses. */
+function bot_minigame(int $id, array &$log): void
+{
+    $round = attempt(fn() => minigame_start($id, 'station'));
+    if ($round === false) {
+        return;
+    }
+    $plan = $round['plan'];
+    $taps = [];
+    foreach ($plan['swings'] as $swing) {
+        $roll = rand_between(0, 1);
+        $want = $roll < 0.35 ? 'perfect' : ($roll < 0.8 ? 'good' : 'miss');
+        $tap = null;
+        if ($want !== 'miss') {
+            for ($ms = (int) $plan['min_tap_ms']; $ms <= (int) $plan['swing_timeout_ms']; $ms += 5) {
+                $off = abs(strike_position($swing, $ms) - (float) $swing['center']);
+                if ($want === 'perfect' ? $off <= $plan['perfect_width'] / 2 : ($off > $plan['perfect_width'] / 2 && $off <= $plan['good_width'] / 2)) {
+                    $tap = $ms;
+                    break;
+                }
+            }
+        }
+        $taps[] = $tap;
+    }
+    $now = game_now();
+    set_game_now($now + (int) ceil(strike_min_ms($plan, $taps) / 1000) + 2);
+    $result = attempt(fn() => minigame_finish($id, (int) $round['round_id'], $taps));
+    set_game_now($now);
+    if ($result !== false) {
+        $log['minigame_rounds'] = ($log['minigame_rounds'] ?? 0) + 1;
+        foreach ($result['rewards'] ?? $result['items'] ?? [] as $r) {
+            $log['minigame_raws'][$r['item_id']] = ($log['minigame_raws'][$r['item_id']] ?? 0) + (int) $r['quantity'];
+        }
+    }
 }
 
 /** Try an action; return false on a game-rule error. */
@@ -105,6 +197,30 @@ function bot_checkin(array $bot, array &$log): void
     $now = game_now();
     attempt(fn() => crafting_collect($id));
     attempt(fn() => gathering_collect($id));
+    bot_minigame($id, $log);
+
+    // The new-player guide (0.14.0): claim each step once it's done; the Palazzo walk is reported by the client.
+    attempt(fn() => guide_mark($id, 'palazzo'));
+    for ($i = 0; $i < 6; $i++) {
+        $g = attempt(fn() => guide_status(db(), $id));
+        if (!$g || $g['finished']) {
+            break;
+        }
+        $skip = $g['step']['optional'] && !$g['step']['ready'];
+        if ((!$g['step']['ready'] && !$skip) || tracked($log, 'guide', $id, fn() => guide_advance($id, $g['step']['id'], $skip)) === false) {
+            break;
+        }
+    }
+
+    // The bottega (#51): open a finished upgrade.
+    $w = player_state($id)['profession']['workshop'];
+    if ($w['building'] && $w['building']['ready'] && attempt(fn() => workshop_finish($id)) !== false) {
+        $w = player_state($id)['profession']['workshop'];
+    }
+    // Machines (#52): keep some lamp oil in stock for Expert and Master crafts.
+    if ($w['running']) {
+        bot_buy($id, $w['running']['fuel_item_id'], 20 - $w['running']['fuel_have'], 1.6, $log, 'fuel');
+    }
 
     $market = [];
     foreach (exchange_overview() as $row) {
@@ -128,9 +244,13 @@ function bot_checkin(array $bot, array &$log): void
         return $out - $in + $scarce + rand_between(0, 3);
     };
     $recipes = $state['profession']['recipes'];
+    $wanted = [];   // own-guild goods the next bottega upgrade still needs (#51): craft those first
+    foreach ($state['profession']['workshop']['next']['cost']['items'] ?? [] as $it) {
+        $wanted[$it['item_id']] = $it['have'] < $it['quantity'];
+    }
     $scores = [];
     foreach ($recipes as $r) {
-        $scores[$r['id']] = $score($r);
+        $scores[$r['id']] = $score($r) + (!empty($wanted[$r['output']['item_id']]) ? 1000 : 0);
     }
     usort($recipes, fn($a, $b) => $scores[$b['id']] <=> $scores[$a['id']]);
     $free = $state['craft_slots'] - count($state['crafts']);
@@ -143,22 +263,11 @@ function bot_checkin(array $bot, array &$log): void
                 if (!$in['from_other_profession'] || $in['have'] >= $in['quantity']) {
                     continue;
                 }
-                $need = $in['quantity'] * 3 - $in['have'];
-                $detail = exchange_item($id, $in['item_id']);
-                foreach ($detail['listings'] as $l) {
-                    if ($need <= 0 || $l['mine'] || $l['unit_price'] > $detail['reference'] * 1.3) {
-                        continue;
-                    }
-                    $qty = min($need, $l['quantity']);
-                    if (attempt(fn() => exchange_buy($id, $l['id'], $qty)) !== false) {
-                        $need -= $qty;
-                        $log['bought_inputs'][$in['item_id']] = ($log['bought_inputs'][$in['item_id']] ?? 0) + $qty;
-                    }
-                }
+                bot_buy($id, $in['item_id'], $in['quantity'] * 3 - $in['have'], 1.3, $log, 'inputs');
             }
             $recipe = current(array_filter(player_state($id)['profession']['recipes'], fn($r) => $r['id'] === $recipe['id']));
         }
-        if ($recipe['can_make'] > 0 && attempt(fn() => crafting_start($id, $recipe['id'], min($recipe['can_make'], (int) econ('crafting.max_batch')))) !== false) {
+        if ($recipe['can_make'] > 0 && tracked($log, 'wages', $id, fn() => crafting_start($id, $recipe['id'], min($recipe['can_make'], (int) econ('crafting.max_batch')))) !== false) {
             $free--;
             $log['crafted'][$recipe['id']] = ($log['crafted'][$recipe['id']] ?? 0) + 1;
         }
@@ -167,16 +276,61 @@ function bot_checkin(array $bot, array &$log): void
     // Orders (#44): fill any order the bot already has the goods for (pays gold and XP).
     foreach (attempt(fn() => orders_board($id))['orders'] ?? [] as $o) {
         if ($o['arriving_in'] === 0 && array_reduce($o['items'], fn($ok, $i) => $ok && $i['have'] >= $i['quantity'], true)
-            && attempt(fn() => orders_fill($id, $o['id'])) !== false) {
+            && tracked($log, 'orders', $id, fn() => orders_fill($id, $o['id'])) !== false) {
             $log['orders_filled'][$bot['profession']] = ($log['orders_filled'][$bot['profession']] ?? 0) + 1;
         }
     }
 
+    // The Palazzo officials' favors (0.11.0): one each a day, when the bot has the goods.
+    foreach (palazzo_overview($id) as $npc) {
+        if (!$npc['favor_done']) {
+            $f = attempt(fn() => palazzo_talk($id, $npc['id']))['favor'] ?? null;
+            if ($f && !$f['done'] && $f['have'] >= $f['quantity']
+                && tracked($log, 'favors', $id, fn() => palazzo_favor_do($id, $npc['id'])) !== false) {
+                $log['favors_done'] = ($log['favors_done'] ?? 0) + 1;
+            }
+        }
+    }
+
+    // Bottega upgrades (#51): at the build skill, buy the goods still missing (players first, then the Guild
+    // Suppliers, up to 1.6x usual) and build. Saving for it comes before the trainer.
+    $prog = player_state($id)['profession']['progress'];
+    $next = $w['next'];
+    $saving = !$w['building'] && $next && $prog['skill'] >= $next['needs_skill'];
+    if ($saving) {
+        $budget = gold_get(db(), $id) - $next['cost']['gold'];
+        foreach ($next['cost']['items'] as $it) {
+            $missing = $it['quantity'] - $it['have'];
+            if ($missing > 0 && $budget > 0) {
+                $budget -= (int) (bot_buy($id, $it['item_id'], $missing, 1.6, $log, 'upgrade') * market_reference_value($it['item_id']) * 1.6);
+            }
+        }
+        if (tracked($log, 'upgrades', $id, fn() => workshop_start($id)) !== false) {
+            $log['upgrades_started'][$bot['profession']] = ($log['upgrades_started'][$bot['profession']] ?? 0) + 1;
+            $saving = false;
+        } else {
+            // Still missing another guild's goods: post a buy offer at the top of the fair band (0.13.0), like a
+            // player told "buy it at the marketplace, with a buy offer if nobody sells it".
+            $board = attempt(fn() => wanted_board($id));
+            $open = array_column(array_filter($board['mine'] ?? [], fn($p) => $p['status'] === 'open'), 'item_id');
+            $next = player_state($id)['profession']['workshop']['next'];
+            foreach ($next['cost']['items'] as $it) {
+                $missing = $it['quantity'] - $it['have'];
+                if ($missing > 0 && (content_item($it['item_id'])['profession'] ?? '') !== $bot['profession'] && !in_array($it['item_id'], $open, true)) {
+                    $price = $board['bands'][$it['item_id']]['max'] ?? 0;
+                    if ($price > 0 && attempt(fn() => wanted_post($id, $it['item_id'], $missing, $price)) !== false) {
+                        $log['buy_offers_posted'][$it['item_id']] = ($log['buy_offers_posted'][$it['item_id']] ?? 0) + $missing;
+                    }
+                }
+            }
+        }
+    }
+
     // The trainer (#49): learn the cheapest recipe the bot can, keeping 50 ducats back for inputs.
-    $learnable = array_filter(attempt(fn() => trainer_list($id))['recipes'] ?? [], fn($r) => $r['status'] === 'learn');
+    $learnable = $saving ? [] : array_filter(attempt(fn() => trainer_list($id))['recipes'] ?? [], fn($r) => $r['status'] === 'learn');
     usort($learnable, fn($a, $b) => $a['price'] <=> $b['price']);
     foreach ($learnable as $r) {
-        if (gold_get(db(), $id) >= $r['price'] + 50 && attempt(fn() => trainer_learn($id, $r['id'])) !== false) {
+        if (gold_get(db(), $id) >= $r['price'] + 50 && tracked($log, 'trainer', $id, fn() => trainer_learn($id, $r['id'])) !== false) {
             $log['learned'][$r['id']] = ($log['learned'][$r['id']] ?? 0) + 1;
             break;
         }
@@ -190,10 +344,30 @@ function bot_checkin(array $bot, array &$log): void
             $needs[$in['item_id']] = true;
         }
     }
+    // Keep what the next bottega upgrade needs, and lamp oil for the machines (now or after the next upgrade).
+    $keepFor = [];
+    $ws = $state['profession']['workshop'];
+    foreach ($ws['next']['cost']['items'] ?? [] as $it) {
+        $keepFor[$it['item_id']] = $it['quantity'];
+    }
+    if ($ws['running'] || ($ws['next']['running'] ?? null)) {
+        $keepFor[workshop_fuel_item()] = max($keepFor[workshop_fuel_item()] ?? 0, 30);
+    }
+    // Fill other players' buy offers first: they pay the top of the band.
+    $have = array_column($state['inventory'], 'quantity', 'item_id');
+    foreach (attempt(fn() => wanted_board($id))['posts'] ?? [] as $post) {
+        $spare = ($have[$post['item_id']] ?? 0) - ($keepFor[$post['item_id']] ?? 0);
+        $qty = min($post['remaining'], $spare);
+        if ($qty > 0 && tracked($log, 'buy_offers_filled', $id, fn() => wanted_fill($id, $post['id'], $qty)) !== false) {
+            $have[$post['item_id']] -= $qty;
+            $log['buy_offer_units'][$post['item_id']] = ($log['buy_offer_units'][$post['item_id']] ?? 0) + $qty;
+        }
+    }
+    $state = player_state($id);
     foreach ($state['inventory'] as $item) {
         $itemId = $item['item_id'];
         $type = content_item($itemId)['type'];
-        $keep = isset($needs[$itemId]) ? ($type === 'raw' ? 20 : 4) : 0;
+        $keep = max(isset($needs[$itemId]) ? ($type === 'raw' ? 20 : 4) : 0, $keepFor[$itemId] ?? 0);
         $qty = $item['quantity'] - $keep;
         if ($qty <= 0) {
             continue;
@@ -212,10 +386,11 @@ function bot_checkin(array $bot, array &$log): void
 
 // ---- Run ----------------------------------------------------------------------------------------
 $end = $start + (int) ($days * 86400);
-$tickEvery = 300;
+$tickEvery = max(60, (int) ($opt['tick'] ?? 300));   // seconds between market ticks (longer = faster run, coarser market)
 $nextTick = $start + $tickEvery;
-$log = ['crafted' => [], 'listed' => [], 'bought_inputs' => [], 'orders_filled' => [], 'learned' => []];
+$log = ['crafted' => [], 'listed' => [], 'bought_inputs' => [], 'orders_filled' => [], 'learned' => [], 'gold' => []];
 $rankAt = [];
+$builtAt = [];
 $daily = [];
 $unmet = [];
 $npcBought = [];
@@ -245,6 +420,8 @@ while (true) {
                 $bot['next'] = next_checkin($bot, $now);
                 $rankName = progression_rank((int) (progression_row(db(), $bot['id'])['skill'] ?? 1))['name'];
                 $rankAt[$bot['id']][$rankName] ??= round(($now - $start) / 86400, 1);
+                $lvl = (int) (progression_row(db(), $bot['id'])['workshop_level'] ?? 1);
+                $builtAt[$bot['id']]["level $lvl"] ??= round(($now - $start) / 86400, 1);
             }
         }
         unset($bot);
@@ -294,13 +471,27 @@ foreach (content_items() as $id => $item) {
 }
 
 $playersOut = db()->query(
-    'SELECT p.id, p.name, pp.profession_id, p.gold, pp.skill FROM players p JOIN player_professions pp ON pp.player_id = p.id ORDER BY p.id'
+    'SELECT p.id, p.name, pp.profession_id, p.gold, pp.skill, pp.workshop_level FROM players p JOIN player_professions pp ON pp.player_id = p.id ORDER BY p.id'
 )->fetchAll();
 foreach ($playersOut as &$p) {
     $p['style'] = current(array_filter($bots, fn($b) => $b['id'] === (int) $p['id']))['style'] ?? '';
     $p['rank_days'] = $rankAt[(int) $p['id']] ?? [];
+    $p['built_days'] = $builtAt[(int) $p['id']] ?? [];
 }
 unset($p);
+
+// Gold from selling: player sales to NPC buyers (consumers and Traders), before the Mercato's cut.
+$log['gold']['npc_sales_gross'] = (int) db()->query(
+    'SELECT COALESCE(SUM(quantity * unit_price), 0) FROM trades WHERE seller_player_id IS NOT NULL AND buyer_persona IS NOT NULL'
+)->fetchColumn();
+$oil = 0;
+$byHand = 0;
+foreach (db()->query("SELECT payload FROM activity WHERE type = 'craft_started'")->fetchAll(PDO::FETCH_COLUMN) as $pl) {
+    $pl = json_decode((string) $pl, true);
+    $oil += (int) ($pl['oil'] ?? 0);
+    $byHand += array_key_exists('powered', $pl) && $pl['powered'] === false ? 1 : 0;
+}
+$log['machines'] = ['oil_burned' => $oil, 'crafts_by_hand' => $byHand];
 
 $report = ['players' => $players, 'days' => $days, 'seed' => $seed, 'items' => $rows, 'players_final' => $playersOut, 'daily' => $daily, 'log' => $log];
 if (isset($opt['report'])) {
@@ -316,7 +507,17 @@ foreach ($rows as $r) {
 echo "\nFinal gold, skill and day each rank was reached (time-to-rank, #30):\n";
 foreach ($playersOut as $p) {
     $ranks = implode(', ', array_map(fn($r, $d) => "$r day $d", array_keys($p['rank_days']), $p['rank_days']));
-    printf("  %-14s %-14s %-8s %6d  skill %3d  %s\n", $p['name'], $p['profession_id'], $p['style'], $p['gold'], $p['skill'], $ranks);
+    printf("  %-14s %-14s %-8s %6d  skill %3d  bottega %d  %s\n", $p['name'], $p['profession_id'], $p['style'], $p['gold'], $p['skill'], $p['workshop_level'], $ranks);
+    if (count($p['built_days']) > 1) {
+        printf("  %-14s bottega built: %s\n", '', implode(', ', array_map(fn($l, $d) => "$l day $d", array_keys($p['built_days']), $p['built_days'])));
+    }
 }
+echo "\nGold moved by players' own actions (+ in, - out; NPC sales are before the Mercato's cut):\n";
+foreach ($log['gold'] as $k => $v) {
+    printf("  %-22s %+9d\n", $k, $v);
+}
+echo 'Buy offers filled: ' . json_encode($log['buy_offer_units'] ?? []) . "
+";
+echo 'Machines: ' . json_encode($log['machines']) . "\nMinigame rounds: " . ($log['minigame_rounds'] ?? 0) . ' ' . json_encode($log['minigame_raws'] ?? []) . "\nFavors done: " . ($log['favors_done'] ?? 0) . "\n";
 echo "\nOrders filled: " . json_encode($log['orders_filled']) . "\nRecipes learned: " . json_encode($log['learned']) . "\n";
 printf("\nGold in circulation: start %d -> end %d\n", $daily[0]['gold_total'] ?? 0, (int) db()->query('SELECT SUM(gold) FROM players')->fetchColumn());

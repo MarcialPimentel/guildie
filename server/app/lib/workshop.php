@@ -97,10 +97,103 @@ function workshop_slots(int $level): int
     return max(1, (int) (workshop_level_def($level)['slots'] ?? econ('crafting.slots', 2)));
 }
 
-/** Seconds a craft takes at this level (crafts finish craft_speed sooner). */
-function workshop_craft_seconds(float $seconds, int $level): int
+/**
+ * Seconds a craft takes at this level (crafts finish craft_speed sooner). $powered = false: the machines are idle
+ * (no lamp oil or wages, #52), so the craft gets only the speed of the best level without running costs.
+ */
+function workshop_craft_seconds(float $seconds, int $level, bool $powered = true): int
 {
-    return (int) ceil($seconds * (1 - (float) (workshop_level_def($level)['craft_speed'] ?? 0)));
+    $speed = $powered ? (float) (workshop_level_def($level)['craft_speed'] ?? 0) : workshop_unpowered_speed($level);
+    return (int) ceil($seconds * (1 - $speed));
+}
+
+/**
+ * Machine running costs (#52, docs/palazzo.md §2): what a level's machines need while they run, or null when the
+ * level has none. ['lamp_oil_per_minute' => per minute of a recipe's listed craft time, 'wages_per_day' => ducats
+ * paid on the first powered craft of each day (UTC)].
+ */
+function workshop_running(int $level): ?array
+{
+    $r = workshop_level_def($level)['running'] ?? null;
+    return is_array($r) ? $r : null;
+}
+
+/** The craft speed without powered machines: that of the best level at or below $level with no running costs. */
+function workshop_unpowered_speed(int $level): float
+{
+    for ($l = $level; $l >= 1; $l--) {
+        if (workshop_running($l) === null) {
+            return (float) (workshop_level_def($l)['craft_speed'] ?? 0);
+        }
+    }
+    return 0.0;
+}
+
+/** The item machines burn (Lamp Oil: Alchemists craft it; the Guild Suppliers always sell some). */
+function workshop_fuel_item(): string
+{
+    return (string) econ('workshop.fuel_item', 'lamp_oil');
+}
+
+/**
+ * Lamp oil one craft of $quantity x $recipe burns at this level. Based on the recipe's listed time (before pace and
+ * rank), so slowing the game doesn't make oil cost more per item.
+ */
+function workshop_oil_for(int $level, array $recipe, int $quantity): int
+{
+    $r = workshop_running($level);
+    if ($r === null) {
+        return 0;
+    }
+    return (int) ceil((float) $recipe['time_seconds'] * $quantity / 60 * (float) ($r['lamp_oil_per_minute'] ?? 0) - 1e-9);
+}
+
+/**
+ * Run the machines for one craft, inside the craft's transaction: burn the lamp oil and, on the first powered craft
+ * of the day, pay the wages. If the player is short of either, nothing is taken and the craft runs by hand (slower;
+ * nothing is lost). Returns ['powered' => bool|null (null = no machines), 'oil' => burned, 'wages' => paid].
+ */
+function workshop_power_craft(PDO $pdo, int $playerId, int $level, array $recipe, int $quantity, int $now): array
+{
+    $r = workshop_running($level);
+    if ($r === null) {
+        return ['powered' => null, 'oil' => 0, 'wages' => 0];
+    }
+    $oil = workshop_oil_for($level, $recipe, $quantity);
+    $today = progression_day($now);
+    $stmt = $pdo->prepare('SELECT wages_day FROM player_professions WHERE player_id = ?');
+    $stmt->execute([$playerId]);
+    $wagesDay = (int) ($stmt->fetchColumn() ?: 0);
+    $wages = $wagesDay >= $today ? 0 : (int) ($r['wages_per_day'] ?? 0);
+
+    $fuel = workshop_fuel_item();
+    if (inventory_count($pdo, $playerId, $fuel, QUALITY_COMMON, true) < $oil || gold_get($pdo, $playerId) < $wages) {
+        return ['powered' => false, 'oil' => 0, 'wages' => 0, 'oil_needed' => $oil, 'wages_needed' => $wages];
+    }
+    if ($oil > 0) {
+        inventory_remove($pdo, $playerId, $fuel, $oil);
+    }
+    if ($wages > 0) {
+        gold_spend($pdo, $playerId, $wages, 'the wages');
+        $pdo->prepare('UPDATE player_professions SET wages_day = ? WHERE player_id = ?')->execute([$today, $playerId]);
+    }
+    return ['powered' => true, 'oil' => $oil, 'wages' => $wages];
+}
+
+/** What the client shows about a level's running costs (null = none). */
+function workshop_running_view(int $level): ?array
+{
+    $r = workshop_running($level);
+    if ($r === null) {
+        return null;
+    }
+    return [
+        'fuel_item_id'        => workshop_fuel_item(),
+        'fuel_name'           => item_name(workshop_fuel_item()),
+        'lamp_oil_per_minute' => (float) ($r['lamp_oil_per_minute'] ?? 0),
+        'wages_per_day'       => (int) ($r['wages_per_day'] ?? 0),
+        'unpowered_speed'     => workshop_unpowered_speed($level),
+    ];
 }
 
 /** Goods and ducats an upgrade costs, with what the player has. */
@@ -139,9 +232,16 @@ function workshop_status(PDO $pdo, int $playerId, array $row, int $now): array
         'skill_cap'  => $cap,
         'at_cap'     => $row['skill'] >= $cap && $cap < progression_max_skill(),
         'kept_rank'  => ($row['legacy_rank'] ?? 0) > $level - 1,
+        'running'    => null,
         'building'   => null,
         'next'       => null,
     ];
+    $running = workshop_running_view($level);
+    if ($running !== null) {
+        $running['wages_paid_today'] = (int) ($row['wages_day'] ?? 0) >= progression_day($now);
+        $running['fuel_have'] = inventory_count($pdo, $playerId, $running['fuel_item_id']);
+        $out['running'] = $running;
+    }
     if ($row['upgrade_to'] !== null) {
         $up = workshop_upgrade_def($professionId, $row['upgrade_to']);
         $out['building'] = [
@@ -167,6 +267,7 @@ function workshop_status(PDO $pdo, int $playerId, array $row, int $now): array
             'craft_speed' => (float) ($nextDef['craft_speed'] ?? 0),
             'station_cap' => (float) ($nextDef['station_cap'] ?? 1),
             'station_rate' => (float) ($nextDef['station_rate'] ?? 1),
+            'running'     => workshop_running_view($level + 1),
             'cost'        => workshop_cost_view($pdo, $playerId, $up),
         ];
     }

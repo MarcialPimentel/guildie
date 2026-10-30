@@ -4,7 +4,7 @@
 // 3 draw calls; the ground shadows of everyone are one shared instanced mesh (Shadows). Motion is springs
 // on squash, lean and hand positions: no skeleton, no physics engine. A new character is a few lines in
 // LOOKS (the hired hands of #51 are already here).
-// 0.15.1: the bare body under the clothes (body, face, feet) is a Blender model, models/blob_body.glb
+// 0.16.1: the bare body under the clothes (body, face, feet) is a Blender model, models/blob_body.glb
 // (art-direction.md §9.3); everything else is still built here. If the file can't load, the code body is used.
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
