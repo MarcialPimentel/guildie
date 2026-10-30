@@ -6,12 +6,11 @@ Thanks for testing! This test is about one question: **do I want to come back to
 
 ## What changed for this test (0.16.0, "the long game")
 
-- **The game is slower from Journeyman on.** Apprentice crafts stay quick (seconds to a few minutes), so the first day still moves. Journeyman crafts take longer, Expert crafts about an hour or more, and Master crafts several hours: start a batch before bed or work, and come back to it. Aim: Journeyman in about 2–3 days, Expert in about a week, Master in about two weeks for someone who checks in daily.
+- **The game is slower from Journeyman on.** Apprentice crafts stay quick (seconds to a few minutes), so the first day still moves. Journeyman crafts take about 3x longer (a few minutes), Expert crafts about half an hour, and Master crafts 2–3 hours: start a batch before bed or work, and come back to it. Aim: Journeyman in about 2–3 days, Expert in about a week, Master in about two weeks for someone who checks in daily.
 - **Machines cost upkeep.** The two-storey bottega and the fine bottega (Expert and Master) run water wheels and clockwork. Each craft burns **Lamp Oil**, and your hired hands want their **wages** once on each day you craft. If you're short of either, nothing is lost: the craft is simply made **by hand** (slower). Alchemists make Lamp Oil; the Guild Suppliers always sell a little, at a premium.
   - The Bottega card shows what the machines cost and how much oil you have.
   - Each recipe card says how much oil a batch burns and how long it would take by hand.
   - The activity log says what the machines used on each craft.
-
 - **Recipes and upgrades cost more from Journeyman on** (about 2.5x): Journeyman recipes 500 ducats, Expert 2,000, Master 7,500; bottega upgrades 200 / 2,000 / 7,500. Gold piled up with nothing to spend it on; now saving up is a real choice.
 
 ## A day in Portovela (what to try)
