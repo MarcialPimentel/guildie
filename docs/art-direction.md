@@ -1,4 +1,6 @@
-# Guildie — Art Direction Proposal: Portovela
+# Guildie — Art Direction: Portovela
+
+_Current as of 0.19.0 (2026-10-30). Approved 2026-10-28; later sections (§9) record each look pass as built._
 
 **Status:** Approved by Marz on 2026-10-28: option A (Renaissance), the name Portovela, Three.js (in the end used directly with Preact, see §5), starting now beside M2, and lamp oil plus wages as the machine running cost. The GDD and its Decision Log were updated in 0.6.0, which shipped plan step 1 (the new look on today's screens). **0.7.0 ships step 2 and the start of step 4: the 3D harbor is the desktop home screen**, with every place opening its screen in a side panel; phones keep the classic view.
 

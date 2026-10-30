@@ -1,38 +1,30 @@
 # Guildie
 
-**Rise from apprentice to master in a guild city on the edge of the steam age.**
+**Rise from apprentice to master in Portovela, a merchant harbor on the edge of the age of invention.**
 
 Guildie is a mobile-first browser crafting and trading game. Choose one profession, master it, and trade with every other crafter in a living, persistent market. Your workshop keeps working while you're away.
 
-- **Client:** TypeScript + Preact web app (built with Vite)
-- **Platform:** Mobile and desktop browsers
-- **Status:** Pre-production (proof of concept)
+## Status
 
-## Design
+- **Live build:** 0.19.0 (see [`VERSION`](VERSION) and [CHANGELOG.md](CHANGELOG.md))
+- **Current milestone:** [M2 Crafting Depth](https://github.com/MarcialPimentel/guildie/milestone/3): the M2 playtest is running ([docs/playtest-m2.md](docs/playtest-m2.md)). Full roadmap: [GDD §12](docs/GDD.md#12-milestones).
+- **Stack:** TypeScript + Preact web client (Three.js for the 3D town), PHP 8 + MySQL server on SiteGround, a small realtime service for live presence.
 
-The full design lives in **[docs/GDD.md](docs/GDD.md)**. It is the source of truth for all design decisions, and every working session should reference it before building features.
+## Play it
 
-Quick links:
-- [Systems breakdown](docs/systems.md)
-- [Design Pillars](docs/GDD.md#2-design-pillars)
-- [Core Loops](docs/GDD.md#4-core-loops)
-- [Profession Framework](docs/GDD.md#5-profession-framework)
-- [The Exchange](docs/GDD.md#6-the-exchange-auction-house)
-- [Technical Architecture](docs/GDD.md#11-technical-architecture)
-- [Milestones](docs/GDD.md#12-milestones)
+**https://marz.gg/games/guildie/** (phone or computer). The footer shows the client and server build.
 
-## Setup and deploy
+## Run it locally
 
-- [SiteGround setup](docs/setup-siteground.md): one-time database, folders, and config
-- [Deploying](docs/deploy.md): first deploy and routine updates
-- Current build: see [`VERSION`](VERSION)
+```
+cd client
+npm install
+GUILDIE_API_TARGET=http://127.0.0.1:8080 npm run dev   # http://localhost:5173, API forwarded to a local PHP server
+npm run build                                          # type check + build into client/dist/
+```
 
-## Roadmap
+The PHP server, the API smoke test and the browser tests are described in [client/README.md](client/README.md), [server/README.md](server/README.md) and [docs/deploy.md](docs/deploy.md#local-testing).
 
-Milestones are tracked as GitHub milestones with issues:
+## Docs
 
-1. **M0 Foundation:** project setup, PHP + MySQL backend, login, deploy steps
-2. **M1 Market Prototype:** 3 professions, the Exchange, NPC market
-3. **M2 Crafting Depth:** quality, procs, orders, workshop upgrades
-4. **M3 Real Players:** shared market, leaderboards, anti-abuse
-5. **M4 Look & Feel:** art, events, onboarding polish
+All docs and what each one is for: **[docs/README.md](docs/README.md)**. The design lives in **[docs/GDD.md](docs/GDD.md)**, the source of truth for design decisions; read it before building features.

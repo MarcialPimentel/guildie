@@ -1,4 +1,6 @@
-# Guildie web client
+# Guildie — Web client
+
+_Current as of 0.19.0 (2026-10-30)._
 
 TypeScript + Preact (+ Three.js for the 3D harbor), built by Vite into static files that go to `public_html/games/guildie/`. The client is only a view: every action is a call to the PHP API (`api/index.php` next to the page), and the server decides everything.
 

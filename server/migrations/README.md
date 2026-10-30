@@ -1,4 +1,6 @@
-# Migrations
+# Guildie — Migrations
+
+_Current as of 0.19.0 (2026-10-30): 001 to 012._
 
 SQL files that build and change the database. From 0.2.1 the server applies them itself: the first API request or cron tick after a deploy runs every file numbered higher than `game_state.schema_version`, in order, once, under a database lock (`server/app/lib/migrate.php`).
 

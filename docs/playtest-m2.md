@@ -1,4 +1,6 @@
-# Guildie Playtest 2: Crafting Depth (M2)
+# Guildie — Playtest 2: Crafting Depth (M2)
+
+_Current playtest, as of 0.19.0 (2026-10-30)._
 
 Thanks for testing! This test is about one question: **do I want to come back tomorrow?**
 
@@ -19,6 +21,12 @@ Thanks for testing! This test is about one question: **do I want to come back to
 - **The easier a recipe is for you, the better you make it.** Each recipe card says what it makes, e.g. "Makes Common · 10% Fine". New (orange) recipes give lots of XP but mostly Common goods; old (green and grey) recipes give little or no XP but Fine and Masterwork goods.
 - Recipes, orders and upgrades take any quality (your plainest goods go first), so quality never blocks you. When you sell, you pick which quality to sell.
 - Try: craft a batch of an old grey recipe and see what comes out, then sell a Fine one at the selling desk and compare the price with a Common one.
+
+## New in 0.19.0: stepping feet, slap anyone ([#78](https://github.com/MarcialPimentel/guildie/pull/78))
+
+- On a computer, people now **walk with their feet** (they step in turn, with a little waddle).
+- **Anyone can be slapped:** with no merchant in reach, **F** (or **Slap**) hits the nearest townsperson, customer, official, vendor or trainer. They get knocked back, flail and say something indignant. Only you see it, and nothing changes in the game. Slapping now works on the quay too.
+- Try: walk around the quay and watch the feet, then slap the notary in the Palazzo.
 
 ## A day in Portovela (what to try)
 

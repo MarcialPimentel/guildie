@@ -1,4 +1,6 @@
-# Deploying Guildie to SiteGround
+# Guildie — Deploying to SiteGround
+
+_Current as of 0.19.0 (2026-10-30). The per-build sections further down are a record of past one-time steps._
 
 **From 0.2.1, deploys are automatic.** Every merge to `main` builds the game (the full checks already passed on the PR) and uploads the new version to marz.gg over FTPS through two locked-down FTP accounts (`.github/workflows/deploy.yml`). Database updates apply themselves on the server's next request. Nothing to upload by hand.
 
@@ -20,33 +22,27 @@ Before anything, the [SiteGround setup guide](setup-siteground.md) must be done 
 
 The build number shows as e.g. **0.2.1 (build 12)**: the `VERSION` file plus the GitHub run number.
 
+**What's live right now:** open https://marz.gg/games/guildie/api/index.php?action=ping. `build` is the live version, `schema` the newest database migration applied (the highest `server/migrations/NNN_*.sql`), and `tick.seconds_since` how long ago the market last ticked (under 300 is healthy). The game's footer shows the client and server builds too.
+
 ### One-time setup
 
-Two SiteGround FTP accounts, each limited to the one folder it needs, so neither password can reach WordPress or anything else on the site.
+Two SiteGround FTP accounts, each limited to the one folder it needs (one for the private server code, one for the public game files), so neither password can reach WordPress or anything else on the site.
 
-> The actual account names, home folders and server paths are kept out of this public repo. They're in Marz's private hosting doc and in `hosting.private.md` on Marz's PC (git-ignored).
+> The account names, their home folders, server paths and the exact names of the repository secrets are kept out of this public repo. They're in Marz's private hosting doc and in the git-ignored `CLAUDE.local.md` / `hosting.private.md` on Marz's PC.
 
 **1. FTP account for the server code (SiteGround).**
 
 1. Site Tools → **Site → FTP Accounts**.
-2. Create an account with a strong password (save it in your password manager) whose home path is the **`guildie-private`** folder.
+2. Create an account with a strong password (save it in your password manager) whose home path is the private server folder (next to `public_html`, see the private notes).
 3. On the account: **⋮ → FTP Credentials**. Note the **Host**.
 
-**2. FTP account for the game files.** An account whose home path is **`public_html/games/`** (Guildie shares Pythio's).
+**2. FTP account for the game files.** An account whose home path is the public games folder (see the private notes).
 
-**3. Add five secrets to the Guildie repo.**
+**3. Add the deploy secrets to the Guildie repo.**
 
-Repo **Settings → Secrets and variables → Actions → New repository secret**:
+Repo **Settings → Secrets and variables → Actions → New repository secret**: one secret each for the FTP host and for each account's username and password, named exactly as in the private notes (the workflow file lists the names it expects).
 
-| Name | Value |
-|---|---|
-| `FTP_SERVER` | the Host (the same for both accounts) |
-| `FTP_USERNAME` | the server-code account's full username |
-| `FTP_PASSWORD` | its password |
-| `FTP_PUBLIC_USERNAME` | the game-files account's full username |
-| `FTP_PUBLIC_PASSWORD` | its password |
-
-GitHub encrypts them: nobody can read them back, only the deploy job can use them. Until all five exist, merges run the checks and skip the upload (the Deploy job says which secret is missing).
+GitHub encrypts them: nobody can read them back, only the deploy job can use them. Until all of them exist, merges run the checks and skip the upload (the Deploy job says which secret is missing).
 
 **4. Run it.** Merge the next PR, or GitHub → **Actions → Deploy → Run workflow** (on `main`). After a few minutes, the ping URL shows the new `build`.
 
