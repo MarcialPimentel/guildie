@@ -115,6 +115,8 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
   container.appendChild(fade)
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
+  let frameN = 0, contextLost = 0
+  canvas.addEventListener('webglcontextlost', () => { contextLost++; console.error('Guildie 3D: WebGL context lost') })
   const maxDpr = Math.min(window.devicePixelRatio || 1, 2)
   let dpr = Math.min(maxDpr, 1.5)
   renderer.setPixelRatio(dpr)
@@ -1198,6 +1200,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     if (!running) return
     raf = requestAnimationFrame(frame)
     if (document.hidden) { last = now; return }
+    frameN++
     const dt = Math.min((now - last) / 1000, 0.05)
     last = now
 
@@ -1402,7 +1405,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     peers: () => [...peers.keys()],
     peer: (id) => { const w = peers.get(id); return w ? { x: w.pos.x, z: w.pos.z } : null },
     lastSlap: null,
-    stats: () => ({ fps, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, dpr, peers: peers.size, townsfolk: npcs.length, echoes: ghosts.size }),
+    stats: () => ({ fps, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, dpr, peers: peers.size, townsfolk: npcs.length, echoes: ghosts.size, frames: frameN, contextLost, hidden: document.hidden ? 1 : 0 }),
   }
   Object.defineProperty(window.__guildieWorld, 'lastSlap', { get: () => lastSlap })
   Object.defineProperty(window.__guildieWorld, 'lastEmote', { get: () => lastEmote })

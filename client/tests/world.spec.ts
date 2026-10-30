@@ -238,6 +238,7 @@ test('the living city: walk, the Palazzo, a second player live, and a slap', asy
 
   // Arrivals spread out at the top of the Steps (0.10.0), so A walks up to B (tapping them opens their
   // bottega and walks over), then slaps, and B sees it.
+  for (let i = 0; i < 2; i++) { console.log('[B stats]', JSON.stringify(await b.evaluate(() => ({ s: window.__guildieWorld!.stats(), me: window.__guildieWorld!.me() })))); await b.waitForTimeout(1000) }
   await walkUpTo(a, b, idA, idB)
   await a.locator('.world-canvas').focus()
   await a.keyboard.press('f')
