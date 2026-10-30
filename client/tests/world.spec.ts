@@ -195,8 +195,7 @@ test('the living city: walk, the Palazzo, a second player live, and a slap', asy
   const a = await ctxA.newPage()
   const b = await ctxB.newPage()
   for (const [who, page] of [['A', a], ['B', b]] as const) {
-    page.on('pageerror', (e) => console.log(`[${who} pageerror]`, e.message, e.stack?.split('
-').slice(0, 6).join(' | ')))
+    page.on('pageerror', (e) => console.log(`[${who} pageerror]`, e.message, e.stack?.split(String.fromCharCode(10)).slice(0, 6).join(' | ')))
     page.on('console', (m) => { if (m.type() === 'error') console.log(`[${who} console]`, m.text().slice(0, 500)) })
   }
 
