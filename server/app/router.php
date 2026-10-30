@@ -155,7 +155,7 @@ function action_market_item(array $body, ?int $playerId): array
 
 function action_sell_quote(array $body, ?int $playerId): array
 {
-    return exchange_sell_quote($playerId, body_string($body, 'item_id'), body_int($body, 'quantity', 1, 1, 10000));
+    return exchange_sell_quote($playerId, body_string($body, 'item_id'), body_int($body, 'quantity', 1, 1, 10000), body_int($body, 'quality', 1, 1, 3));
 }
 
 function action_list_item(array $body, ?int $playerId): array
@@ -165,7 +165,8 @@ function action_list_item(array $body, ?int $playerId): array
         body_string($body, 'item_id'),
         body_int($body, 'quantity', 1, 1, 10000),
         body_int($body, 'unit_price', 1, 1, 100000000),
-        body_int($body, 'duration_hours', 24, 1, 1000)
+        body_int($body, 'duration_hours', 24, 1, 1000),
+        body_int($body, 'quality', 1, 1, 3)   // optional (0.18.0): older clients sell Common
     );
     return ['listing' => $result, 'state' => player_state($playerId)];
 }
@@ -230,7 +231,7 @@ function action_learn_recipe(array $body, ?int $playerId): array
 function action_sell_to_guild(array $body, ?int $playerId): array
 {
     $expected = isset($body['expected_total']) ? body_int($body, 'expected_total', 0, 0, PHP_INT_MAX) : null;
-    $sale = guild_sell($playerId, body_string($body, 'item_id'), body_int($body, 'quantity', 1, 1, 10000), $expected);
+    $sale = guild_sell($playerId, body_string($body, 'item_id'), body_int($body, 'quantity', 1, 1, 10000), $expected, body_int($body, 'quality', 1, 1, 3));
     return ['sale' => $sale, 'state' => player_state($playerId)];
 }
 

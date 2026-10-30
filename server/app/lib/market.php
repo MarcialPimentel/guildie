@@ -105,13 +105,16 @@ function market_consumers(PDO $pdo, int $now, int $elapsed, array $refs, array &
             $stats['demanded'][$itemId] = ($stats['demanded'][$itemId] ?? 0) + $units;
 
             for ($i = 0; $i < $units; $i++) {
-                $willing = (int) floor($refs[$itemId] * rand_between((float) $def['willing_min'], (float) $def['willing_max']));
+                // What they'd pay for a Common one; better quality is worth its multiple (0.18.0). They buy the
+                // best value for money: the lowest price per Common-equivalent.
+                $willing = $refs[$itemId] * rand_between((float) $def['willing_min'], (float) $def['willing_max']);
                 $stmt = $pdo->prepare(
-                    "SELECT * FROM listings WHERE status = 'active' AND item_id = ? AND unit_price <= ? AND expires_at > ?
+                    "SELECT * FROM listings WHERE status = 'active' AND item_id = ? AND expires_at > ?
                        AND (seller_persona IS NULL OR seller_persona <> 'suppliers')
-                     ORDER BY unit_price, id LIMIT 1 FOR UPDATE"
+                       AND unit_price <= FLOOR(? * " . market_quality_sql() . ")
+                     ORDER BY unit_price / " . market_quality_sql() . ", id LIMIT 1 FOR UPDATE"
                 );
-                $stmt->execute([$itemId, $willing, $now]);
+                $stmt->execute([$itemId, $now, $willing]);
                 $listing = $stmt->fetch();
                 if (!$listing) {
                     $stats['unmet'][$itemId] = ($stats['unmet'][$itemId] ?? 0) + 1;
@@ -125,6 +128,13 @@ function market_consumers(PDO $pdo, int $now, int $elapsed, array $refs, array &
     }
 }
 
+/** SQL for a listing row's quality multiplier (Fine 1.5x, Masterwork 2.5x), from economy.json's numbers. */
+function market_quality_sql(): string
+{
+    return sprintf('(CASE quality WHEN %d THEN %F WHEN %d THEN %F ELSE 1 END)',
+        QUALITY_FINE, quality_multiplier(QUALITY_FINE), QUALITY_MASTERWORK, quality_multiplier(QUALITY_MASTERWORK));
+}
+
 /** Traders: buy anything players list at or below the trader price; resell some, consume the rest. */
 function market_traders(PDO $pdo, int $now, array $refs, array &$stats): void
 {
@@ -136,9 +146,9 @@ function market_traders(PDO $pdo, int $now, array $refs, array &$stats): void
     foreach ($refs as $itemId => $ref) {
         $stmt = $pdo->prepare(
             "SELECT * FROM listings WHERE status = 'active' AND item_id = ? AND seller_player_id IS NOT NULL
-               AND unit_price <= ? AND expires_at > ? ORDER BY unit_price, id FOR UPDATE"
+               AND unit_price <= FLOOR(? * " . market_quality_sql() . ") AND expires_at > ? ORDER BY unit_price, id FOR UPDATE"
         );
-        $stmt->execute([$itemId, (int) floor($ref * $buyBelow), $now]);
+        $stmt->execute([$itemId, $ref * $buyBelow, $now]);
         $cheap = $stmt->fetchAll();
         if (!$cheap) {
             continue;
@@ -153,14 +163,17 @@ function market_traders(PDO $pdo, int $now, array $refs, array &$stats): void
             exchange_execute($pdo, $listing, $qty, null, 'traders');
             $stats['trader_bought'][$itemId] = ($stats['trader_bought'][$itemId] ?? 0) + $qty;
 
-            // Bought above the floor and there's room: resell near the reference value. Otherwise the goods are consumed.
-            $resell = (int) $listing['unit_price'] > $ref * $floor ? max(0, min($qty, $maxStock - $stock)) : 0;
+            // Bought above the floor and there's room: resell near the reference value, at the same quality.
+            // Otherwise the goods are consumed.
+            $quality = (int) $listing['quality'];
+            $qref = $ref * quality_multiplier($quality);
+            $resell = (int) $listing['unit_price'] > $qref * $floor ? max(0, min($qty, $maxStock - $stock)) : 0;
             if ($resell > 0) {
-                $price = max(1, (int) ceil($ref * $relist));
+                $price = max(1, (int) ceil($qref * $relist));
                 $pdo->prepare(
-                    "INSERT INTO listings (seller_persona, item_id, quantity, original_quantity, unit_price, created_at, expires_at)
-                     VALUES ('traders', ?, ?, ?, ?, ?, ?)"
-                )->execute([$itemId, $resell, $resell, $price, $now, $now + 48 * 3600]);
+                    "INSERT INTO listings (seller_persona, item_id, quality, quantity, original_quantity, unit_price, created_at, expires_at)
+                     VALUES ('traders', ?, ?, ?, ?, ?, ?, ?)"
+                )->execute([$itemId, $quality, $resell, $resell, $price, $now, $now + 48 * 3600]);
                 $stock += $resell;
             }
             $stats['consumed'] += $qty - $resell;
@@ -209,7 +222,7 @@ function market_trade_signal(PDO $pdo, string $itemId, int $since, float $usual)
 {
     $stmt = $pdo->prepare(
         'SELECT unit_price, quantity, seller_player_id, buyer_player_id, buyer_persona FROM trades
-         WHERE item_id = ? AND created_at >= ? AND seller_player_id IS NOT NULL'
+         WHERE item_id = ? AND created_at >= ? AND seller_player_id IS NOT NULL AND quality = 1'   // Common prices (0.18.0)
     );
     $stmt->execute([$itemId, $since]);
     $rows = $stmt->fetchAll();

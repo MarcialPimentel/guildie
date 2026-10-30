@@ -33,9 +33,9 @@ function party_label(array $names, ?int $playerId, ?string $persona): string
     return persona_label((string) $persona);
 }
 
-function exchange_deposit(string $itemId, int $quantity, int $hours): int
+function exchange_deposit(string $itemId, int $quantity, int $hours, int $quality = QUALITY_COMMON): int
 {
-    $ref = market_reference_value($itemId);
+    $ref = market_reference_value($itemId) * quality_multiplier($quality);
     return max(1, (int) ceil($ref * $quantity * (float) econ('exchange.deposit_rate_per_12h', 0.01) * $hours / 12));
 }
 
@@ -44,25 +44,28 @@ function exchange_cut(int $total): int
     return (int) ceil($total * (float) econ('exchange.cut', 0.05));
 }
 
-function exchange_list(int $playerId, string $itemId, int $quantity, int $unitPrice, int $hours): array
+function exchange_list(int $playerId, string $itemId, int $quantity, int $unitPrice, int $hours, int $quality = QUALITY_COMMON): array
 {
     if (content_item($itemId) === null) {
         throw new ApiError('unknown_item', 'That item does not exist.');
+    }
+    if (!quality_valid($quality)) {
+        throw new ApiError('bad_request', 'Unknown quality.');
     }
     $durations = econ('exchange.durations_hours', [12, 24, 48]);
     if (!in_array($hours, $durations, true)) {
         throw new ApiError('bad_request', 'Duration must be one of: ' . implode(', ', $durations) . ' hours.');
     }
-    $maxPrice = max(1, (int) ceil(market_reference_value($itemId) * (float) econ('exchange.max_price_multiple', 20)));
+    $maxPrice = max(1, (int) ceil(market_reference_value($itemId) * quality_multiplier($quality) * (float) econ('exchange.max_price_multiple', 20)));
     if ($unitPrice < 1 || $unitPrice > $maxPrice) {
         throw new ApiError('bad_price', 'Price must be between 1 and ' . ducats($maxPrice) . '.');
     }
     if ($quantity < 1 || $quantity > 10000) {
         throw new ApiError('bad_request', 'Quantity must be at least 1.');
     }
-    $deposit = exchange_deposit($itemId, $quantity, $hours);
+    $deposit = exchange_deposit($itemId, $quantity, $hours, $quality);
 
-    return tx(function (PDO $pdo) use ($playerId, $itemId, $quantity, $unitPrice, $hours, $deposit) {
+    return tx(function (PDO $pdo) use ($playerId, $itemId, $quantity, $unitPrice, $hours, $deposit, $quality) {
         require_profession($pdo, $playerId);
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM listings WHERE seller_player_id = ? AND status = 'active' FOR UPDATE");
         $stmt->execute([$playerId]);
@@ -71,16 +74,16 @@ function exchange_list(int $playerId, string $itemId, int $quantity, int $unitPr
             throw new ApiError('too_many_listings', "You can have at most $max active listings.");
         }
 
-        inventory_remove($pdo, $playerId, $itemId, $quantity);
+        inventory_remove($pdo, $playerId, $itemId, $quantity, $quality);
 
         $now = game_now();
         $pdo->prepare(
-            'INSERT INTO listings (seller_player_id, item_id, quantity, original_quantity, unit_price, deposit, created_at, expires_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        )->execute([$playerId, $itemId, $quantity, $quantity, $unitPrice, $deposit, $now, $now + $hours * 3600]);
+            'INSERT INTO listings (seller_player_id, item_id, quality, quantity, original_quantity, unit_price, deposit, created_at, expires_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([$playerId, $itemId, $quality, $quantity, $quantity, $unitPrice, $deposit, $now, $now + $hours * 3600]);
         $listingId = (int) $pdo->lastInsertId();
 
-        activity_log($pdo, $playerId, 'listed', ['item_id' => $itemId, 'quantity' => $quantity, 'unit_price' => $unitPrice, 'deposit' => $deposit]);
+        activity_log($pdo, $playerId, 'listed', ['item_id' => $itemId, 'quality' => $quality, 'quantity' => $quantity, 'unit_price' => $unitPrice, 'deposit' => $deposit]);
         return ['listing_id' => $listingId, 'deposit' => $deposit];
     });
 }
@@ -123,14 +126,14 @@ function exchange_execute(PDO $pdo, array $listing, int $quantity, ?int $buyerPl
     $names = player_names($pdo, [$buyerPlayerId, $sellerId]);
     if ($sellerId !== null) {
         activity_log($pdo, $sellerId, 'sold', [
-            'item_id' => $itemId, 'quantity' => $quantity, 'buyer' => party_label($names, $buyerPlayerId, $buyerPersona),
+            'item_id' => $itemId, 'quality' => $quality, 'quantity' => $quantity, 'buyer' => party_label($names, $buyerPlayerId, $buyerPersona),
             'buyer_is_player' => $buyerPlayerId !== null, 'buyer_persona' => $buyerPersona, 'earned' => $total - $cut - $depositTaken, 'cut' => $cut,
             'deposit' => $depositTaken,
         ]);
     }
     if ($buyerPlayerId !== null) {
         activity_log($pdo, $buyerPlayerId, 'bought', [
-            'item_id' => $itemId, 'quantity' => $quantity, 'seller' => party_label($names, $sellerId, $sellerPersona), 'total' => $total,
+            'item_id' => $itemId, 'quality' => $quality, 'quantity' => $quantity, 'seller' => party_label($names, $sellerId, $sellerPersona), 'total' => $total,
         ]);
     }
     return ['total' => $total, 'cut' => $cut, 'deposit' => $depositTaken, 'quantity' => $quantity];
@@ -213,7 +216,7 @@ function exchange_cancel(int $playerId, int $listingId): void
         [$charged, $waived] = exchange_settle_deposit($pdo, $listing);
         $pdo->prepare("UPDATE listings SET status = 'cancelled' WHERE id = ?")->execute([$listingId]);
         activity_log($pdo, $playerId, 'listing_cancelled', [
-            'item_id' => $listing['item_id'], 'quantity' => (int) $listing['quantity'], 'deposit' => $charged, 'waived' => $waived,
+            'item_id' => $listing['item_id'], 'quality' => (int) $listing['quality'], 'quantity' => (int) $listing['quantity'], 'deposit' => $charged, 'waived' => $waived,
         ]);
     });
 }
@@ -229,7 +232,7 @@ function exchange_expire(PDO $pdo, int $now): int
             inventory_add($pdo, (int) $listing['seller_player_id'], $listing['item_id'], (int) $listing['quantity'], (int) $listing['quality']);
             [$charged, $waived] = exchange_settle_deposit($pdo, $listing);
             activity_log($pdo, (int) $listing['seller_player_id'], 'listing_expired', [
-                'item_id' => $listing['item_id'], 'quantity' => (int) $listing['quantity'], 'deposit' => $charged, 'waived' => $waived,
+                'item_id' => $listing['item_id'], 'quality' => (int) $listing['quality'], 'quantity' => (int) $listing['quantity'], 'deposit' => $charged, 'waived' => $waived,
             ]);
         }
         $pdo->prepare("UPDATE listings SET status = 'expired' WHERE id = ?")->execute([$listing['id']]);
@@ -244,7 +247,7 @@ function exchange_overview(): array
     $pdo = db();
     $now = game_now();
     $stmt = $pdo->prepare(
-        "SELECT item_id, MIN(unit_price) AS lowest, SUM(quantity) AS listed,
+        "SELECT item_id, MIN(CASE WHEN quality = 1 THEN unit_price END) AS lowest, SUM(quantity) AS listed,
                 SUM(CASE WHEN seller_player_id IS NOT NULL THEN quantity ELSE 0 END) AS from_players
          FROM listings WHERE status = 'active' AND expires_at > ? GROUP BY item_id"
     );
@@ -256,7 +259,7 @@ function exchange_overview(): array
 
     $stmt = $pdo->prepare(
         'SELECT item_id, SUM(quantity * unit_price) / SUM(quantity) AS avg_price, SUM(quantity) AS volume
-         FROM trades WHERE created_at >= ? GROUP BY item_id'
+         FROM trades WHERE created_at >= ? AND quality = 1 GROUP BY item_id'   // Common prices only (0.18.0)
     );
     $stmt->execute([$now - 86400]);
     $recent = [];
@@ -274,7 +277,7 @@ function exchange_overview(): array
             'type'          => $item['type'],
             'profession'    => $item['profession'],
             'reference'     => (int) round($refs[$id]),
-            'lowest'        => isset($listed[$id]) ? (int) $listed[$id]['lowest'] : null,
+            'lowest'        => isset($listed[$id]['lowest']) ? (int) $listed[$id]['lowest'] : null,
             'listed'        => isset($listed[$id]) ? (int) $listed[$id]['listed'] : 0,
             'from_players'  => isset($listed[$id]) ? (int) $listed[$id]['from_players'] : 0,
             'avg_24h'       => isset($recent[$id]) ? (int) round((float) $recent[$id]['avg_price']) : null,
@@ -295,14 +298,14 @@ function exchange_item(int $playerId, string $itemId): array
     $now = game_now();
 
     $stmt = $pdo->prepare(
-        "SELECT id, seller_player_id, seller_persona, quantity, unit_price, expires_at FROM listings
-         WHERE status = 'active' AND item_id = ? AND expires_at > ? ORDER BY unit_price, id LIMIT 30"
+        "SELECT id, seller_player_id, seller_persona, quality, quantity, unit_price, expires_at FROM listings
+         WHERE status = 'active' AND item_id = ? AND expires_at > ? ORDER BY quality, unit_price, id LIMIT 30"
     );
     $stmt->execute([$itemId, $now]);
     $listings = $stmt->fetchAll();
 
     $stmt = $pdo->prepare(
-        'SELECT quantity, unit_price, buyer_player_id, buyer_persona, seller_player_id, seller_persona, created_at
+        'SELECT quality, quantity, unit_price, buyer_player_id, buyer_persona, seller_player_id, seller_persona, created_at
          FROM trades WHERE item_id = ? ORDER BY id DESC LIMIT 20'
     );
     $stmt->execute([$itemId]);
@@ -326,10 +329,12 @@ function exchange_item(int $playerId, string $itemId): array
             'seller'     => party_label($names, $l['seller_player_id'] !== null ? (int) $l['seller_player_id'] : null, $l['seller_persona']),
             'is_npc'     => $l['seller_player_id'] === null,
             'mine'       => (int) $l['seller_player_id'] === $playerId,
+            'quality'    => (int) $l['quality'],
             'quantity'   => (int) $l['quantity'],
             'unit_price' => (int) $l['unit_price'],
         ], $listings),
         'trades'    => array_map(fn($t) => [
+            'quality'    => (int) $t['quality'],
             'quantity'   => (int) $t['quantity'],
             'unit_price' => (int) $t['unit_price'],
             'buyer'      => party_label($names, $t['buyer_player_id'] !== null ? (int) $t['buyer_player_id'] : null, $t['buyer_persona']),
@@ -343,10 +348,10 @@ function exchange_item(int $playerId, string $itemId): array
 function exchange_my_listings(int $playerId): array
 {
     $stmt = db()->prepare(
-        "(SELECT id, item_id, quantity, original_quantity, unit_price, status, expires_at FROM listings
+        "(SELECT id, item_id, quality, quantity, original_quantity, unit_price, status, expires_at FROM listings
           WHERE seller_player_id = ? AND status = 'active' ORDER BY id DESC)
          UNION ALL
-         (SELECT id, item_id, quantity, original_quantity, unit_price, status, expires_at FROM listings
+         (SELECT id, item_id, quality, quantity, original_quantity, unit_price, status, expires_at FROM listings
           WHERE seller_player_id = ? AND status <> 'active' ORDER BY id DESC LIMIT 15)"
     );
     $stmt->execute([$playerId, $playerId]);
@@ -354,7 +359,8 @@ function exchange_my_listings(int $playerId): array
     return array_map(fn($l) => [
         'id'            => (int) $l['id'],
         'item_id'       => $l['item_id'],
-        'name'          => item_name($l['item_id']),
+        'name'          => item_name_q($l['item_id'], (int) $l['quality']),
+        'quality'       => (int) $l['quality'],
         'quantity'      => (int) $l['quantity'],
         'sold'          => (int) $l['original_quantity'] - (int) $l['quantity'],
         'original'      => (int) $l['original_quantity'],
@@ -364,33 +370,43 @@ function exchange_my_listings(int $playerId): array
     ], $stmt->fetchAll());
 }
 
-/** Numbers the sell form needs: suggested price, deposit per duration, cut. */
-function exchange_sell_quote(int $playerId, string $itemId, int $quantity): array
+/**
+ * Numbers the sell form needs: suggested price, deposit per duration, cut. Prices are for the quality being
+ * sold (0.18.0): Fine and Masterwork are worth more, and the player picks which of their stacks to sell.
+ */
+function exchange_sell_quote(int $playerId, string $itemId, int $quantity, int $quality = QUALITY_COMMON): array
 {
     if (content_item($itemId) === null) {
         throw new ApiError('unknown_item', 'That item does not exist.');
     }
+    if (!quality_valid($quality)) {
+        throw new ApiError('bad_request', 'Unknown quality.');
+    }
     $quantity = max(1, $quantity);
-    $ref = market_reference_value($itemId);
+    $ref = market_reference_value($itemId) * quality_multiplier($quality);
     $deposits = [];
     foreach (econ('exchange.durations_hours', [12, 24, 48]) as $h) {
-        $deposits[(string) $h] = exchange_deposit($itemId, $quantity, (int) $h);
+        $deposits[(string) $h] = exchange_deposit($itemId, $quantity, (int) $h, $quality);
     }
-    $stmt = db()->prepare("SELECT MIN(unit_price) FROM listings WHERE status = 'active' AND item_id = ? AND expires_at > ? AND seller_persona IS NULL");
-    $stmt->execute([$itemId, game_now()]);
+    $stmt = db()->prepare("SELECT MIN(unit_price) FROM listings WHERE status = 'active' AND item_id = ? AND quality = ? AND expires_at > ? AND seller_persona IS NULL");
+    $stmt->execute([$itemId, $quality, game_now()]);
     $lowest = $stmt->fetchColumn();
+    $have = inventory_by_quality(db(), $playerId, $itemId);
     return [
         'item_id'        => $itemId,
-        'name'           => item_name($itemId),
+        'name'           => item_name_q($itemId, $quality),
         'type'           => content_item($itemId)['type'] ?? '',
-        'you_have'       => inventory_count(db(), $playerId, $itemId),
+        'quality'        => $quality,
+        'have_by_quality' => (object) $have,
+        'you_have'       => $have[$quality] ?? 0,
         'reference'      => (int) round($ref),
         'lowest_player'  => $lowest !== null && $lowest !== false ? (int) $lowest : null,
         'trader_price'   => (int) floor($ref * (float) econ('market.trader_buy_below', 0.8)),
         'ceiling'        => (int) ceil($ref * (float) econ('market.ceiling_multiplier', 1.5)),
+        'suppliers_sell' => $quality === QUALITY_COMMON,   // the Guild Suppliers only sell Common goods
         'deposits'       => $deposits,
         'deposit_from_sale' => true,
         'cut_percent'    => (int) round((float) econ('exchange.cut', 0.05) * 100),
-        'guild'          => guild_sale_quote($playerId, $itemId, $quantity),
+        'guild'          => guild_sale_quote($playerId, $itemId, $quantity, $quality),
     ];
 }

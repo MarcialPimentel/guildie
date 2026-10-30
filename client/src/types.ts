@@ -36,6 +36,8 @@ export interface Recipe {
   skill: number
   colour: Colour
   xp_each: number
+  /** What you'd make at this colour (0.18.0): at least `floor` (1 Common, 2 Fine, 3 Masterwork), `up` chance of one better. */
+  quality: { floor: number; up: number }
   trade_bonus: boolean
   rare: boolean
   discovered: boolean
@@ -238,6 +240,15 @@ export interface Surprise {
   text: string
   item_id: string
   quantity: number
+  quality?: number
+}
+
+/** One finished batch from collect_crafts (0.18.0): how many came out at each quality ({"1": 7, "2": 3}). */
+export interface Collected {
+  item_id: string
+  name: string
+  quantity: number
+  qualities: Record<string, number>
 }
 
 export interface OrderLine {
@@ -286,11 +297,13 @@ export interface Listing {
   seller: string
   is_npc: boolean
   mine: boolean
+  quality: number
   quantity: number
   unit_price: number
 }
 
 export interface Trade {
+  quality: number
   quantity: number
   unit_price: number
   buyer: string
@@ -323,6 +336,11 @@ export interface SellQuote {
   item_id: string
   name: string
   type: string
+  /** The quality being sold (0.18.0); prices below are for it. */
+  quality: number
+  have_by_quality: Record<string, number>
+  /** False for Fine and Masterwork: the Guild Suppliers only sell Common goods. */
+  suppliers_sell: boolean
   you_have: number
   reference: number
   lowest_player: number | null
@@ -337,6 +355,7 @@ export interface MyListing {
   id: number
   item_id: string
   name: string
+  quality: number
   quantity: number
   sold: number
   original: number

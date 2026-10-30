@@ -13,6 +13,13 @@ Thanks for testing! This test is about one question: **do I want to come back to
   - The activity log says what the machines used on each craft.
 - **Recipes and upgrades cost more from Journeyman on** (about 2.5x): Journeyman recipes 500 ducats, Expert 2,000, Master 7,500; bottega upgrades 200 / 2,000 / 7,500. Gold piled up with nothing to spend it on; now saving up is a real choice.
 
+## New in 0.18.0: quality
+
+- Crafted goods now come out **Common, Fine or Masterwork**. Fine and Masterwork goods carry a green or gold badge in your bag and sell for more (1.5x and 2.5x).
+- **The easier a recipe is for you, the better you make it.** Each recipe card says what it makes, e.g. "Makes Common · 10% Fine". New (orange) recipes give lots of XP but mostly Common goods; old (green and grey) recipes give little or no XP but Fine and Masterwork goods.
+- Recipes, orders and upgrades take any quality (your plainest goods go first), so quality never blocks you. When you sell, you pick which quality to sell.
+- Try: craft a batch of an old grey recipe and see what comes out, then sell a Fine one at the selling desk and compare the price with a Common one.
+
 ## A day in Portovela (what to try)
 
 Every check-in:
@@ -49,5 +56,9 @@ Use the **Feedback** button any time (it attaches what you're looking at). At th
 8. Did you notice the **lamp oil and wages**? Did you ever run out, and did you care? Did you buy oil, make it, or go without?
 9. Did you **run out of ducats** at any point? What for?
 
+**Quality (new in 0.18.0)**
+10. Did you ever craft an old recipe **for quality instead of XP**? Was "learn or excel" a real choice, or did one side always win?
+11. Did Fine and Masterwork goods feel **worth the effort** when you sold them?
+
 **Anything else**
-10. What was the best moment, and the most annoying one?
+12. What was the best moment, and the most annoying one?

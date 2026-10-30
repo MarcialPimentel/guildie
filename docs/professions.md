@@ -119,7 +119,7 @@ With a handful of players, the NPC market has to **author** these swings; there 
 | Apprentice | 1–25 | Hand tools, short crafts | Raws 1–2 (raw 2 at skill 15) |
 | Journeyman | 26–50 | Imports begin | **3rd craft slot**, first workshop upgrade, bundle orders |
 | Expert | 51–75 | Water-powered machines, longer crafts | Raw 3 (skill 40), machine upgrades with a running cost (§8) |
-| Master | 76–100 | Prestige goods, planning | Raw 4 (skill 65), prestige upgrade; second profession at 80 (later) |
+| Master | 76–100 | Prestige goods, planning | Raw 4 (skill 65), prestige upgrade; second profession at the Master bottega (later, GDD 5.7) |
 
 ### Where skill comes from
 - **Crafting XP** (most of it): each unit crafted gives `recipe XP × colour factor`.
@@ -385,7 +385,8 @@ Then a simulator pass, slowing the pace (`pace.time_multiplier`, now that gold s
   - ~~arrive only once there are enough active players (about 3 per guild)~~ dropped 2026-10-29: it opens when it's ready, because NPC customers and buyers keep a quiet quarter alive and the Suppliers sell every part.
 
   **Chosen (2026-10-29): the Glassblower** (Murano glass, *Arte dei Vetrai*), not the Tinker: nobody makes glass today (flasks, lamp glass, lenses, mirrors), while a Tinker would take the Blacksmith's Gears and Clockwork. Designed after the ladder (#50); built after workshop upgrades (#51). See §11 for how a guild is added.
-- **Second profession** at skill 80.
+- **Second profession** (designed 2026-10-30, GDD 5.7): unlocks at the Master bottega, capped at Expert, shares your craft slots; built after the M2 playtest and the Glassblower.
+- **Changing guild** (designed 2026-10-30, GDD 5.8): free until the first bottega upgrade, then a restart at skill 1 in the new guild.
 
 ---
 

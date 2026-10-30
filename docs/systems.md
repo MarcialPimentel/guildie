@@ -177,7 +177,7 @@ These rules apply to every system.
 | **Job** | Track what each player owns |
 | **Owns** | `inventory` (item, quality, quantity), `players.gold` |
 | **Verbs** | None directly; other systems move items through it |
-| **Rules** | Only add/remove functions change it, always inside the calling action's transaction. Quantities and gold can never go negative (enforced in code and by unsigned columns). Gold is a whole number. |
+| **Rules** | Only add/remove functions change it, always inside the calling action's transaction. Quantities and gold can never go negative (enforced in code and by unsigned columns). Gold is a whole number. **Quality (0.18.0):** rows are kept per quality; counting and removing without a quality covers every tier, lowest first, and returns what was taken so a transfer (trade, buy offer) keeps the quality. Only selling (selling desk, Mercato listing) names a quality. An item's value at a quality is its value × `quality.value_multiplier` (Fine 1.5, Masterwork 2.5). |
 | **Tuning knobs** | Starting gold and items (`economy.json`); storage cap [tune, M2] |
 | **M1 adds** | `inventory_remove`, items **reserved** while listed on the Exchange (listed items leave the inventory and return if cancelled or expired) |
 | **Later** | Storage cap from the Storehouse building (M2) |
@@ -280,12 +280,13 @@ These rules apply to every system.
 - Starting a craft **removes the inputs immediately** (no double-spending) and creates a job with an end time.
 - A job occupies one **queue slot** until collected. Starting slots: 2 [tune] (so a player can make a component and a finished good at once). More come from rank and buildings.
 - Results are rolled **at collection** on the server: quantity (multicraft), refunds (resourcefulness), quality (inspiration), skill-up.
+- **Quality (0.18.0, #79):** each unit rolls from the recipe's colour at the player's skill before the batch's XP: at least `quality_floor`, with a `quality_up` chance of one tier better (`progression.colours`). The more XP a recipe gives, the worse the goods (GDD 5.2).
 - Craft time scales by recipe tier: seconds to minutes for Apprentice recipes, hours for Master recipes (GDD 3, Target pacing).
 - A player can queue a **batch** (up to 10 at once [tune]) in one slot, with total time = per-item time × quantity, so short sessions can set up long idle runs.
 
 **Tuning knobs:** recipe inputs, outputs, time, difficulty; proc chances; starting slots; batch limit.
 
-**Milestones:** M1 = recipes, timers, two slots, batches, collect (Common quality only). M2 = quality tiers, procs, extra slots.
+**Milestones:** M1 = recipes, timers, two slots, batches, collect (Common quality only). M2 = quality tiers (0.18.0), procs, extra slots.
 
 ### 5.4 Focus — active play *(new, Confirmed)*
 

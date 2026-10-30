@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { callAction, setTokenProvider, type ApiResult } from './api'
 import type {
-  Activity, Directory, DukeBoard, Friends, GameState, GuideClaim, GuideStatus, Honors, ItemCount, MarketItem, MarketRow, MinigameResult, MinigameRound, MyListing, NewsItem, NpcTalk, Offers, OrderBoard, PalazzoNpc, PresencePass, ProfessionChoice, Profile, ProgressGain, SellQuote, Surprise, Trainer, WantedBoard,
+  Activity, Directory, DukeBoard, Friends, GameState, GuideClaim, GuideStatus, Honors, ItemCount, MarketItem, MarketRow, MinigameResult, MinigameRound, MyListing, NewsItem, Collected, NpcTalk, Offers, OrderBoard, PalazzoNpc, PresencePass, ProfessionChoice, Profile, ProgressGain, SellQuote, Surprise, Trainer, WantedBoard,
 } from './types'
 
 const TOKEN_KEY = 'guildie.token'
@@ -112,7 +112,7 @@ class Session {
     return this.stateCall<MinigameResult>('minigame_finish', { round_id: roundId, taps }, 'state')
   }
   collectCrafts() {
-    return this.stateCall<{ surprises?: Surprise[]; progress?: ProgressGain | null }>('collect_crafts', {}, 'state')
+    return this.stateCall<{ collected?: Collected[]; surprises?: Surprise[]; progress?: ProgressGain | null }>('collect_crafts', {}, 'state')
   }
   /** The new-player guide (0.14.0): claim the current step's ducats, or skip it when it's optional. */
   async guideClaim(step: string) {
@@ -144,11 +144,11 @@ class Session {
   marketItem(itemId: string) {
     return this.call<MarketItem>('market_item', { item_id: itemId })
   }
-  sellQuote(itemId: string, quantity: number) {
-    return this.call<SellQuote>('sell_quote', { item_id: itemId, quantity })
+  sellQuote(itemId: string, quantity: number, quality = 1) {
+    return this.call<SellQuote>('sell_quote', { item_id: itemId, quantity, quality })
   }
-  listItem(itemId: string, quantity: number, unitPrice: number, hours: number) {
-    return this.stateCall('list_item', { item_id: itemId, quantity, unit_price: unitPrice, duration_hours: hours }, 'state')
+  listItem(itemId: string, quantity: number, unitPrice: number, hours: number, quality = 1) {
+    return this.stateCall('list_item', { item_id: itemId, quantity, unit_price: unitPrice, duration_hours: hours, quality }, 'state')
   }
   buyListing(listingId: number, quantity: number) {
     return this.stateCall('buy_listing', { listing_id: listingId, quantity }, 'state')
@@ -160,8 +160,8 @@ class Session {
     return this.call<{ listings: MyListing[] }>('my_listings')
   }
   /** Instant sale to the guild. expectedTotal = the total shown; the server refuses if the offer dropped. */
-  sellToGuild(itemId: string, quantity: number, expectedTotal: number) {
-    return this.stateCall<{ sale: { total: number } }>('sell_to_guild', { item_id: itemId, quantity, expected_total: expectedTotal }, 'state')
+  sellToGuild(itemId: string, quantity: number, expectedTotal: number, quality = 1) {
+    return this.stateCall<{ sale: { total: number } }>('sell_to_guild', { item_id: itemId, quantity, expected_total: expectedTotal, quality }, 'state')
   }
   sendFeedback(message: string, screen: string) {
     return this.call<{ saved: boolean }>('feedback', { message, screen })

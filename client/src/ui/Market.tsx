@@ -13,16 +13,17 @@ import type { Listing, MarketRow, SellQuote } from '../types'
 import { ActionButton, Modes, Stepper, useGame, useLoad, type TabRequest } from './common'
 import { BuyOffers } from './Palazzo'
 import { NewsBoard, Sparkline, Trend } from './Ticker'
+import { QualityTag, withQuality } from './Quality'
 
 
-type View = { name: 'browse' } | { name: 'item'; itemId: string } | { name: 'sell' } | { name: 'sell_form'; itemId: string; qty: number } | { name: 'mine' } | { name: 'offers' }
+type View = { name: 'browse' } | { name: 'item'; itemId: string } | { name: 'sell' } | { name: 'sell_form'; itemId: string; qty: number; quality: number } | { name: 'mine' } | { name: 'offers' }
 
 export function Market({ request, onView, vendor = false, desk = false }: { request: TabRequest; onView: (v: string) => void; vendor?: boolean; desk?: boolean }) {
   const [view, setView] = useState<View>(desk ? { name: 'sell' } : { name: 'browse' })
 
   // Requests from other tabs (e.g. Bag → Sell this item).
   useEffect(() => {
-    if (request.sellItem) setView({ name: 'sell_form', itemId: request.sellItem, qty: request.sellQty ?? 1 })
+    if (request.sellItem) setView({ name: 'sell_form', itemId: request.sellItem, qty: request.sellQty ?? 1, quality: request.sellQuality ?? 1 })
     else if (request.market) setView({ name: request.market } as View)
   }, [request])
   useEffect(() => onView(view.name), [view.name])
@@ -39,9 +40,9 @@ export function Market({ request, onView, vendor = false, desk = false }: { requ
       )}
       {view.name === 'browse' && <Browse guild={request.guild} open={(itemId) => setView({ name: 'item', itemId })} />}
       {view.name === 'item' && <ItemDetail itemId={view.itemId} back={() => setView({ name: 'browse' })} />}
-      {view.name === 'sell' && <SellList open={(itemId, qty) => setView({ name: 'sell_form', itemId, qty })} />}
+      {view.name === 'sell' && <SellList open={(itemId, qty, quality) => setView({ name: 'sell_form', itemId, qty, quality })} />}
       {view.name === 'sell_form' && (
-        <SellForm key={view.itemId} itemId={view.itemId} startQty={view.qty} back={() => setView({ name: 'sell' })} done={(v) => setView({ name: v } as View)} />
+        <SellForm key={`${view.itemId}-${view.quality}`} itemId={view.itemId} quality={view.quality} startQty={view.qty} back={() => setView({ name: 'sell' })} done={(v) => setView({ name: v } as View)} />
       )}
       {view.name === 'mine' && <MyListings />}
       {view.name === 'offers' && <BuyOffers />}
@@ -169,7 +170,7 @@ function ListingRow({ listing, name, reload }: { listing: Listing; name: string;
   return (
     <div class="card tight">
       <div class="row">
-        <span class={`grow ${listing.is_npc ? 'npc' : ''}`}>{listing.mine ? 'You' : capitalize(listing.seller)}</span>
+        <span class={`grow ${listing.is_npc ? 'npc' : ''}`}>{listing.mine ? 'You' : capitalize(listing.seller)}<QualityTag q={listing.quality} /></span>
         <span class="muted small">{listing.quantity} left</span>
         <span class="accent num"><Coins n={listing.unit_price} /> each</span>
       </div>
@@ -179,7 +180,7 @@ function ListingRow({ listing, name, reload }: { listing: Listing; name: string;
           <ActionButton
             class="small"
             action={() => session.buyListing(listing.id, qty)}
-            success={`Bought ${qty} ${name}.`}
+            success={`Bought ${qty} ${withQuality(name, listing.quality ?? 1)}.`}
             after={(ok) => ok && reload()}
             testid={`buy-${listing.id}`}
           >
@@ -193,7 +194,7 @@ function ListingRow({ listing, name, reload }: { listing: Listing; name: string;
 
 // ---------------------------------------------------------------- selling
 
-function SellList({ open }: { open: (itemId: string, qty: number) => void }) {
+function SellList({ open }: { open: (itemId: string, qty: number, quality: number) => void }) {
   const s = useSession()
   const items = s.state!.inventory
   return (
@@ -204,9 +205,10 @@ function SellList({ open }: { open: (itemId: string, qty: number) => void }) {
         <div class="card tight">
           <div class="row">
             <ItemIcon id={item.item_id} />
-            <span class="grow">{item.name} × {item.quantity}</span>
+            <span class="grow">{item.name}<QualityTag q={item.quality} /> × {item.quantity}</span>
             <span class="muted small">value ~<Coins n={item.reference} /></span>
-            <button class="secondary small" onClick={() => open(item.item_id, item.quantity)} data-testid={`sell-${item.item_id}`}>Sell…</button>
+            <button class="secondary small" onClick={() => open(item.item_id, item.quantity, item.quality)}
+              data-testid={`sell-${item.item_id}${item.quality > 1 ? `-q${item.quality}` : ''}`}>Sell…</button>
           </div>
         </div>
       ))}
@@ -214,8 +216,8 @@ function SellList({ open }: { open: (itemId: string, qty: number) => void }) {
   )
 }
 
-function SellForm({ itemId, startQty, back, done }: {
-  itemId: string; startQty: number; back: () => void; done: (v: 'sell' | 'mine') => void
+function SellForm({ itemId, quality, startQty, back, done }: {
+  itemId: string; quality: number; startQty: number; back: () => void; done: (v: 'sell' | 'mine') => void
 }) {
   const game = useGame()
   const [qty, setQty] = useState(startQty)
@@ -226,7 +228,7 @@ function SellForm({ itemId, startQty, back, done }: {
 
   useEffect(() => {
     let alive = true
-    session.sellQuote(itemId, qty).then((r) => {
+    session.sellQuote(itemId, qty, quality).then((r) => {
       if (!alive) return
       if (!r.ok) return game.say(r.error.message, true)
       setQuote(r.data)
@@ -253,6 +255,11 @@ function SellForm({ itemId, startQty, back, done }: {
           <ItemIcon id={itemId} big />
           <h1 class="grow">Sell {q.name}</h1>
         </div>
+        {q.quality > 1 && (
+          <p class="small quality-note" data-testid="sell-quality">
+            {q.name.split(' ')[0]} goods are worth more than Common ones, and the Guild Suppliers don't sell them.
+          </p>
+        )}
         <p class="muted small">
           Value <Coins n={q.reference} /> · lowest player price {q.lowest_player !== null ? <Coins n={q.lowest_player} /> : 'none'} · traders buy
           instantly at <Coins n={q.trader_price} /> or less
@@ -295,9 +302,9 @@ function SellForm({ itemId, startQty, back, done }: {
               <div class="row"><span class="grow">{label}</span><span class="num">{v}</span></div>
             ))}
           </div>
-          {price > q.ceiling && <p class="error small">Guild suppliers sell this for <Coins n={q.ceiling} />, so few will pay more.</p>}
+          {q.suppliers_sell !== false && price > q.ceiling && <p class="error small">Guild suppliers sell this for <Coins n={q.ceiling} />, so few will pay more.</p>}
           <ActionButton
-            action={() => session.listItem(itemId, qty, price, hours)}
+            action={() => session.listItem(itemId, qty, price, hours, quality)}
             success={`Listed ${qty} ${q.name}.`}
             after={(ok) => ok && done('mine')}
             testid="list-item"
@@ -313,7 +320,7 @@ function SellForm({ itemId, startQty, back, done }: {
           {q.guild.hint && <p class="error small">{q.guild.hint}</p>}
           <ActionButton
             class="secondary"
-            action={() => session.sellToGuild(itemId, q.guild.quantity, q.guild.total)}
+            action={() => session.sellToGuild(itemId, q.guild.quantity, q.guild.total, quality)}
             success={`Sold ${q.guild.quantity} ${q.name} to the guild for ${gold(q.guild.total)}.`}
             after={(ok, r) => {
               if (ok) done('sell')

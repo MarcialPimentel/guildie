@@ -109,7 +109,7 @@ function player_profile(int $viewerId, int $playerId): array
     $seen = players_last_seen($pdo, $playerId)[$playerId] ?? null;
 
     $stmt = $pdo->prepare(
-        "SELECT id, item_id, quantity, unit_price FROM listings
+        "SELECT id, item_id, quality, quantity, unit_price FROM listings
          WHERE seller_player_id = ? AND status = 'active' AND expires_at > ? ORDER BY item_id, unit_price"
     );
     $stmt->execute([$playerId, game_now()]);
@@ -133,7 +133,8 @@ function player_profile(int $viewerId, int $playerId): array
         'listings'       => array_map(fn($l) => [
             'id'         => (int) $l['id'],
             'item_id'    => $l['item_id'],
-            'name'       => item_name($l['item_id']),
+            'name'       => item_name_q($l['item_id'], (int) $l['quality']),
+            'quality'    => (int) $l['quality'],
             'quantity'   => (int) $l['quantity'],
             'unit_price' => (int) $l['unit_price'],
         ], $stmt->fetchAll()),
