@@ -1,6 +1,6 @@
 # Deploying Guildie to SiteGround
 
-**From 0.2.1, deploys are automatic.** Every merge to `main` runs the checks and, if they pass, uploads the new version to marz.gg over FTPS through two locked-down FTP accounts (`.github/workflows/deploy.yml`). Database updates apply themselves on the server's next request. Nothing to upload by hand.
+**From 0.2.1, deploys are automatic.** Every merge to `main` builds the game (the full checks already passed on the PR) and uploads the new version to marz.gg over FTPS through two locked-down FTP accounts (`.github/workflows/deploy.yml`). Database updates apply themselves on the server's next request. Nothing to upload by hand.
 
 - **[Automatic deploys](#automatic-deploys)**: how it works and the one-time setup (about 10 minutes).
 - **[Manual deploy](#first-deploy-one-time)**: the old way, kept for emergencies or if FTP ever breaks.
@@ -13,7 +13,7 @@ Before anything, the [SiteGround setup guide](setup-siteground.md) must be done 
 
 ### What happens on a merge
 
-1. **Checks** (on every pull request too): PHP syntax, the content validator, the API smoke test against a throwaway MySQL database, the web client build (type check), and a browser test that plays the game on a phone-sized and a desktop-sized screen. A pull request shows a green check when they pass; its packages can be downloaded under the PR's **Checks → Deploy → Artifacts**.
+1. **Checks run on the pull request, not again on the merge.** On every PR: PHP syntax, the content validator, the API smoke test against a throwaway MySQL database, the web client build (type check), and a browser test that plays the game on a phone-sized and a desktop-sized screen (about 8 minutes). A PR shows a green check when they pass; its packages can be downloaded under the PR's **Checks → Deploy → Artifacts**. The merge itself only re-checks PHP syntax and the content, builds the game and uploads it, so it's live **about 2 minutes** after the merge (from 0.17.2; it used to run every test again, about 8 minutes). The "up to date" rule below makes sure the PR tested exactly what gets merged. To deploy with every test anyway: GitHub → **Actions → Deploy → Run workflow** on `main`.
 2. **Upload server code** into `guildie-private/` (`app/`, `content/`, `migrations/`). `config.php` is never touched.
 3. **Upload the game** into `public_html/games/guildie/`.
 4. **Database updates:** the first request or cron tick after the upload applies any new `migrations/NNN_*.sql` file once (protected by a database lock) and records it in `game_state.schema_version`. The ping URL shows `"schema"`.
@@ -50,6 +50,17 @@ GitHub encrypts them: nobody can read them back, only the deploy job can use the
 
 **4. Run it.** Merge the next PR, or GitHub → **Actions → Deploy → Run workflow** (on `main`). After a few minutes, the ping URL shows the new `build`.
 
+**5. Only merge PRs that are up to date with `main` (one time, about 3 minutes).** Merges no longer re-run the tests, so a PR must have been tested on top of the latest `main`. This GitHub rule enforces it:
+
+1. On the Guildie repo page: **Settings → Rules → Rulesets → New ruleset → New branch ruleset**.
+2. **Ruleset name:** `main`. **Enforcement status:** **Active**.
+3. **Target branches → Add target → Include default branch**.
+4. Under **Rules**, leave "Restrict deletions" and "Block force pushes" ticked, and tick **Require status checks to pass**.
+5. Under it, tick **Require branches to be up to date before merging**, then **+ Add checks**, type `checks` and pick **checks** (GitHub Actions).
+6. Click **Create** at the bottom.
+
+From then on, if another PR merged first, GitHub asks for the branch to be updated before merging. Claude does that (it re-runs that PR's tests, about 8 minutes), then merges.
+
 ### If an automatic deploy goes wrong
 
 | What you see | Most likely cause | Fix |
@@ -59,6 +70,7 @@ GitHub encrypts them: nobody can read them back, only the deploy job can use the
 | Upload step: TLS / certificate error | FTPS handshake | Change both `protocol: ftps` to `protocol: ftp` in `.github/workflows/deploy.yml` |
 | Upload step: "folder not found" / files land in the wrong place | An account's home path differs from the setup above | Check the home paths in FTP Accounts, or tell Claude what they are |
 | Checks fail on a PR | A real bug caught before it went live | Nothing reached players; Claude fixes the PR |
+| "Live check blocked by captcha" warning | SiteGround's bot protection blocked GitHub's check (the upload itself worked) | Open the ping URL in a browser and look for the new `build`; Claude can check it from your PC |
 
 To **roll back**, revert the PR on GitHub and merge the revert. A database change that already ran is not undone, so migrations must stay backward-compatible.
 
