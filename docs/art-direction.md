@@ -115,6 +115,7 @@ Alternatives considered: Babylon.js (capable, about ten times heavier, its own U
 
 - **Placeholders:** CC0 low-poly kits from Kenney (kenney.nl) and Quaternius (quaternius.com), recolored to the palette.
 - **Hero pieces** (bottega, Mercato, ships): concept image → AI image-to-3D (Meshy, Tripo or Rodin) → `.glb` → I shrink, recolor, compress and wire it in. Check each tool's plan allows commercial use.
+- **Made in Blender (0.16.1):** a Python script in `tools/art/` builds the piece and exports a `.glb` with vertex colors (no textures), so it can be rebuilt and tweaked by number. First pieces: the people's body (§9.3) and the town kit (§9.4).
 - **Later:** a hired low-poly artist, using this document as the brief.
 
 Concept prompt template (change the first line):
@@ -201,7 +202,7 @@ The **body color** is one of the plaster pastels (`#F2B98B #F3D27A #EFA9A0 #BFE3
 
 **Status:** approved by Marz on 2026-10-29 (all eight decisions of the character proposal, plus "players choose their look when they create their account"). The playable proposal is [`docs/art/characters-mockup.html`](art/characters-mockup.html).
 
-**One character kit** (`client/src/world/blobs.ts`): the same blob for everyone, dressed from a table of parts: dress, hat, one prop merged into the right hand, and a rank sash. No skeletons, no model files. A new character is a few lines of data.
+**One character kit** (`client/src/world/blobs.ts`): the same blob for everyone, dressed from a table of parts: dress, hat, one prop merged into the right hand, and a rank sash. No skeletons. Since 0.16.1 the bare body under the clothes is a Blender model (§9.3); everything else is still built in code. A new character is a few lines of data.
 
 | Who | Where | Look | Driven by |
 |---|---|---|---|
@@ -264,6 +265,19 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 - **Officials** (`blobs.ts`): the notary in black with a red cap and a quill; the town crier in teal and lemon with a bell and a plumed hat; the Duke's steward in majolica blue with a gold chain of office and a scroll.
 - **Your bottega, four looks** (`harbor.ts`): (1) a rundown shack of weathered planks, a patched lean-to roof, a boarded window and a barrel; (2) a repaired workshop, one floor of fresh plaster under tiles, teal shutters and a small awning; (3) the two-storey bottega of 0.7.0; (4) the same with a roof loggia (altana), lemon-gold trim, banners and a second lemon tree. While builders work: scaffolding of poles and planks, and a mason hammering at the door.
 - **Stall signs in the quarters** follow the owner's level: a weathered plank for a shack, navy for a workshop, gold trim from level 3, a double gilded frame for a fine bottega.
+
+### 9.3 The Blender body (0.16.1)
+
+**Status:** Marz's pick of 2026-10-30, option 3 "Expressive" of three made in Blender (Tidy: today's face with eye shine; Soft toy: tall shiny eyes and a smile; Expressive).
+
+- **What:** one shared body for every person (players, trainers, townsfolk, customers, officials): the body, the face and the feet. Clothes, hats, hands and props are still built in code on top of it.
+- **The face:** oval ink eyes with a white shine, small arched brows, a button nose in the body color, a smile, rosy cheeks. **Feet:** little brown shoes with dark soles, toes turned slightly out.
+- **The outline is locked** to the 0.10 capsule (radius 0.5 m, 1.43 m tall before the 1.4× blob scale), because robes and hats are fitted to it. Personality goes into the face and feet, not the silhouette.
+- **File:** `client/src/world/models/blob_body.glb` (31 KB, about 1,320 triangles, vertex colors, no textures). Skin is painted magenta `#FF00FF` in the file and swapped for each person's body color in code. Built and exported by `tools/art/blob_body.py` (`blender -b -P tools/art/blob_body.py` from the repo root); change the numbers there, re-run, commit the new `.glb`.
+- **Loading:** the 3D view loads it once before drawing anyone. If it fails or takes over 8 s, people use the 0.10 code body, so the harbor never breaks over it.
+- **Budget:** about 2,050 triangles per person on average (was about 1,750), so a full quarter is about 78,000 triangles for people. Draw calls unchanged (3 per person).
+- **Checking it:** `npm run dev` in `client/`, then open `/cast.html`: every look side by side, drawn by the game's own code (`?code=1` shows the old body, `?near=1` a close camera, `?players=1` only players and trainers).
+- **Known, unchanged by the new body:** Madre Ilaria's veil band and the workshop hand's apron straps cross the face, as before.
 
 ### 9.4 An Italian town, not a Greek one (0.17.0)
 

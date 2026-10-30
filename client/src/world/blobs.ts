@@ -4,7 +4,11 @@
 // 3 draw calls; the ground shadows of everyone are one shared instanced mesh (Shadows). Motion is springs
 // on squash, lean and hand positions: no skeleton, no physics engine. A new character is a few lines in
 // LOOKS (the hired hands of #51 are already here).
+// 0.16.1: the bare body under the clothes (body, face, feet) is a Blender model, models/blob_body.glb
+// (art-direction.md §9.3); everything else is still built here. If the file can't load, the code body is used.
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import blobBodyUrl from './models/blob_body.glb?url'
 import { isGuildId } from '../guilds'
 import { kitFor } from './guildKits'
 import { BODY_COLORS, SASH_COLORS } from './looks'
@@ -40,17 +44,25 @@ function merge(parts: Part[]): THREE.BufferGeometry {
     p.geo.dispose()
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.rx ?? 0, p.ry ?? 0, p.rz ?? 0, p.order ?? 'XYZ'))
     g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.sx ?? 1, p.sy ?? 1, p.sz ?? 1)))
-    return [g, new THREE.Color(p.c)] as const
+    return [g, new THREE.Color(p.c), p.vc ?? false] as const
   })
   let n = 0
   for (const [g] of geos) n += g.attributes.position.count
   const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3)
   let o = 0
-  for (const [g, c] of geos) {
+  for (const [g, c, vc] of geos) {
     const m = g.attributes.position.count
     pos.set(g.attributes.position.array as Float32Array, o * 3)
     nor.set(g.attributes.normal.array as Float32Array, o * 3)
-    for (let i = 0; i < m; i++) { col[(o + i) * 3] = c.r; col[(o + i) * 3 + 1] = c.g; col[(o + i) * 3 + 2] = c.b }
+    const own = vc ? g.attributes.color : undefined
+    for (let i = 0; i < m; i++) {
+      let r = c.r, gg = c.g, b = c.b
+      if (own) {
+        const x = own.getX(i), y = own.getY(i), z = own.getZ(i)
+        if (!isSkinMark(x, y, z)) { r = x; gg = y; b = z }
+      }
+      col[(o + i) * 3] = r; col[(o + i) * 3 + 1] = gg; col[(o + i) * 3 + 2] = b
+    }
     o += m
     g.dispose()
   }
@@ -62,8 +74,34 @@ function merge(parts: Part[]): THREE.BufferGeometry {
   return out
 }
 
-// the shared blob: body, feet, eyes and blush (about 300 triangles; flat shading hides the low count)
-const base = (skin: string): Part[] => [
+/** Skin in the model file is painted magenta (#FF00FF); each person's body color replaces it. */
+const isSkinMark = (r: number, g: number, b: number) => r > 0.99 && g < 0.01 && b > 0.99
+
+let modelBody: THREE.BufferGeometry | null = null
+let modelLoad: Promise<void> | null = null
+/**
+ * Load the Blender body (models/blob_body.glb) once. Call before making the first Blob. Never fails: on an
+ * error or after 8 s it gives up and people are built from the code body below.
+ */
+export function preloadBlobModel(): Promise<void> {
+  modelLoad ??= Promise.race([
+    new GLTFLoader().loadAsync(blobBodyUrl).then((gltf) => {
+      let geo: THREE.BufferGeometry | null = null
+      gltf.scene.traverse((o) => { if (!geo && (o as THREE.Mesh).isMesh) geo = (o as THREE.Mesh).geometry })
+      if (!geo) throw new Error('blob_body.glb has no mesh')
+      const g = (geo as THREE.BufferGeometry).index ? (geo as THREE.BufferGeometry).toNonIndexed() : (geo as THREE.BufferGeometry)
+      if (!g.attributes.normal || !g.attributes.color) throw new Error('blob_body.glb needs normals and vertex colors')
+      modelBody = g
+    }),
+    new Promise<void>((resolve) => setTimeout(resolve, 8000)),
+  ]).catch((e) => console.warn('Blob model failed to load; using the code body', e))
+  return modelLoad
+}
+
+/** The shared blob: the Blender body (about 1,300 triangles: body, face, feet) or the code body below. */
+const base = (skin: string): Part[] => (modelBody ? [P(modelBody.clone(), skin, 0, 0, 0, { vc: true })] : codeBase(skin))
+// the 0.10 body in code: body, feet, eyes and blush (about 600 triangles)
+const codeBase = (skin: string): Part[] => [
   P(new THREE.CapsuleGeometry(0.5, 0.42, 5, 20), skin, 0, 0.72, 0),   // the main silhouette: extra round
   P(sph(0.17, 6, 3), '#5A3A28', -0.22, 0.05, 0.1, { sy: 0.55, sz: 1.3 }),
   P(sph(0.17, 6, 3), '#5A3A28', 0.22, 0.05, 0.1, { sy: 0.55, sz: 1.3 }),
@@ -141,6 +179,8 @@ const LOOKS: Record<Npc, LookDef> = {
   steward: { skin: '#E9D5F0', prop: 'scroll', parts: () => [robe('#2A4C9A', 1.0, 1.0, 0.7), ...chain(), P(tor(0.32, 0.12, 4, 12), '#F7F3EA', 0, 1.4, 0, { rx: Math.PI / 2 }), P(sph(0.29, 8, 5), '#2A4C9A', 0, 1.5, 0, { sy: 0.65 })] },
 }
 const isNpc = (c: string): c is Npc => c in LOOKS
+/** Every NPC look (for the dev cast sheet, cast.html). */
+export const NPC_IDS = Object.keys(LOOKS) as Npc[]
 const isTrainer = (c: string) => c.startsWith('trainer:') && isGuildId(c.slice(8))
 /** A guild member or a guild trainer: drawn from the guild's kit. */
 const isGuild = (c: string) => isGuildId(c)

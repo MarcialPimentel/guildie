@@ -144,7 +144,7 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     let alive = true
     import('../world/engine')
       .then(async (m) => {
-        await m.preloadTownKit()
+        await Promise.all([m.preloadBlobModel(), m.preloadTownKit()])
         if (!alive || !box.current) return
         engine.current = m.createWorld(box.current, state.profession!.id, state.player.name, {
           onPick: (id) => cbs.current.onPick(id),
