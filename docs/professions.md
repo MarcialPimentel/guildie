@@ -1,5 +1,7 @@
 # Guildie — Professions, Progression & the M2 Fun Loop
 
+_Current as of 0.19.0 (2026-10-30). The "as built" parts of §9 say which build shipped what._
+
 **Status:** Decided with Marz (2026-10-28) · **Companion to:** [GDD.md](GDD.md) §5 and §2.1, [systems.md](systems.md) §5.1
 
 This document sets:

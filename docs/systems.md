@@ -1,6 +1,8 @@
 # Guildie — Systems Design
 
-**Version:** 0.4 · **Date:** 2026-10-27 · **Companion to:** [GDD.md](GDD.md)
+_Current as of 0.19.0 (2026-10-30). Sections marked with a build number describe what was built; the rest is the design._
+
+**Version:** 0.5 · **Date:** 2026-10-30 · **Companion to:** [GDD.md](GDD.md)
 
 The GDD describes *what Guildie is*. This document breaks the game into **systems**: self-contained pieces of mechanics, each with one clear job, its own data, and defined connections to the others. Every feature we build should belong to exactly one system (or be explicitly cross-cutting).
 
@@ -22,7 +24,7 @@ The GDD describes *what Guildie is*. This document breaks the game into **system
 7. [Meta systems](#7-meta-systems): Workshop & Buildings, Calendar & Events, Leaderboards, Guilds, Presence, Friends
 8. [Cross-cutting systems](#8-cross-cutting-systems): Economy Balance, Playtest Feedback, Onboarding
 9. [Milestone matrix](#9-milestone-matrix)
-10. [Confirmed defaults](#confirmed-defaults)
+10. [Proposed defaults to confirm](#proposed-defaults-to-confirm)
 11. [M1 tuning notes](#m1-tuning-notes)
 
 ---
@@ -211,7 +213,7 @@ These rules apply to every system.
 | **Outputs** | Which recipes are available; rank, which gates building levels |
 
 **Rules**
-- One profession at the start, chosen during onboarding. A second unlocks at skill 80 in the first (GDD 5.7).
+- One profession at the start, chosen during onboarding. Planned (later): a second profession unlocks at the Master bottega, capped at Expert, sharing your craft slots (GDD 5.7, designed 2026-10-30; replaces the earlier "skill 80" rule).
 - Skill 1–100 in four ranks: Apprentice, Journeyman, Expert, Master.
 - Each craft can raise skill based on the recipe's colour (orange 100%, yellow 75%, green 25%, grey 0% [tune]).
 - **Progression split [Confirmed]:**
@@ -254,7 +256,7 @@ These rules apply to every system.
 - Each profession has one station: **Mine** (Blacksmith), **Herb Garden** (Alchemist), **Trapper's Lodge** (Leatherworker).
 - Production = `rate × elapsed time`, capped at storage. Resolved when the player collects. Anything past the cap is lost, which is what makes check-ins matter.
 - Higher-tier materials (Iron Ore, Ember Moss, Thick Hide) unlock at skill 15 [tune].
-- **Each station has one signature *decision* [Confirmed]** (the idle side of the profession's identity):
+- **Planned (later), after the M2 playtest ([#85](https://github.com/MarcialPimentel/guildie/issues/85)): each station has one signature *decision*** (the idle side of the profession's identity). Not built: today each station fills at a fixed rate, with an occasional surprise on collect (0.5.0), and the station minigames (5.5, 0.15.0) cover active play.
   - **Mine — Veins:** choose which vein to work. Veins deplete; a "rich vein" appears now and then with a better yield.
   - **Herb Garden — Plots:** choose what each plot grows; different herbs take different times.
   - **Trapper's Lodge — Expeditions:** choose trip length. Short trips are safe and common; long trips have a chance at Thick or rare hides.
@@ -264,7 +266,7 @@ These rules apply to every system.
 
 **Tuning knobs:** rate per hour, storage cap, unlock levels, vein/plot/expedition tables.
 
-**Milestones:** M1 = one fixed output per station, rate + cap, collect. M2 = signature decisions, rare results.
+**Milestones:** M1 = one fixed output per station, rate + cap, collect. M2 = rare results (surprises on collect, 0.5.0) and station minigames (0.15.0). Later = signature decisions ([#85](https://github.com/MarcialPimentel/guildie/issues/85)).
 
 ### 5.3 Crafting
 
@@ -653,7 +655,7 @@ What each system delivers in each milestone.
 | Inventory & Wallet | Remove, reserve for listings | Storage cap | — | — |
 | **Activity Log** | **Table + writes** | Return screen | Metrics | — |
 | Professions | Choice, starter recipes | Skill, colours, ranks, learning | — | Second profession? |
-| Gathering | Rate + cap + collect | Signature decisions, rares | — | — |
+| Gathering | Rate + cap + collect | Rares (0.5.0), minigames (0.15.0); signature decisions moved to later (#85) | — | — |
 | Crafting | Timers, batches, 2 slots | Quality, procs, more slots | — | — |
 | Focus | — | **Prototype** | Build if it works | Polish |
 | Exchange | Buyout flow, price history | Mailbox | Anti-abuse, limits | — |

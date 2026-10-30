@@ -1,4 +1,8 @@
-# Guildie Playtest 1: the Market Prototype
+# Guildie — Playtest 1: the Market Prototype
+
+_Historical: the M1 playtest (0.2.0 to 0.15.0). Current version: [playtest-m2.md](playtest-m2.md)._
+
+> Historical: M1 is done and the current test is Playtest 2 (M2). Current version: [playtest-m2.md](playtest-m2.md).
 
 Thanks for testing! Guildie is a crafting and trading game. You join one guild, make goods, and sell them to the city and to each other. This first test is about one question: **is making a good trade fun?**
 
@@ -10,7 +14,7 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
 
 1. **Create an account** (any name, a simple password) and **choose a guild**:
    - **Blacksmith:** copper and iron. Makes Brass Fittings, Lanterns, Iron Ingots, Swords.
-   - **Alchemist:** herbs. Makes Healing Draughts, Smelting Flux, Tanning Solution, Steam Tonic.
+   - **Alchemist:** herbs. Makes Healing Draughts, Smelting Flux, Tanning Solution, Lemon Tonic.
    - **Leatherworker:** hides. Makes Leather Grips, Satchels, Cured Leather, Jerkins.
    Try to spread out so all three guilds have players.
 2. **Workshop:** your gathering station fills up over time (about an hour to fill). Tap **Collect**. When it's full, it stops producing, so check in now and then.

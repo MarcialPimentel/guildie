@@ -1,6 +1,8 @@
 # Guildie — Game Design Document
 
-**Version:** 0.11 · **Date:** 2026-10-29 · **Status:** M2 in progress (build 0.11.0, the Palazzo and the bottega upgrades)
+_Current as of 0.19.0 (2026-10-30)._
+
+**Version:** 0.19 · **Date:** 2026-10-30 · **Status:** M2 Crafting Depth in progress, live build 0.19.0 (see [CHANGELOG.md](../CHANGELOG.md))
 **Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -294,7 +296,11 @@ These three are chosen to form a **dependency triangle**. Each is about 70% self
 | **Alchemist** | The Herb Garden | **Plots and volatile brewing:** plant herbs in plots with growth timers. Optional opt-in "volatile brew" that risks some ingredients for a chance at extra or higher-quality output. |
 | **Leatherworker** | The Trapper's Lodge | **Expeditions:** send trappers out for a chosen duration. Short trips return common hides, and long trips have a chance at thick or rare pelts. This creates a risk-versus-time choice that fits the check-in rhythm. |
 
+**Planned (later), after the M2 playtest ([#85](https://github.com/MarcialPimentel/guildie/issues/85)):** the station choices above (which vein, what each plot grows, how long a trip) are not built. Today each station fills at a fixed rate and you collect it, with an occasional surprise on collect (0.5.0), and since 0.15.0 the station minigames cover active play at the station (see 5.2 and [systems.md 5.5](systems.md#55-minigames--active-play-0150)). Forge heat and volatile brewing are the planned crafting Focus minigames.
+
 ### 5.5 Launch item list (18 items) [tune]
+
+_This is the M1 launch list. Since 0.12.0 ([#68](https://github.com/MarcialPimentel/guildie/pull/68)) the game has 60 items and 60 recipes across the recipe ladder to 100; the live list is `content/items.json` and `content/recipes.json`, and the ladder is in [professions.md §6](professions.md#6-the-ladder-all-three-guilds-to-100)._
 
 The live numbers (recipes, times, values) are in `/content`; this table shows the structure.
 
@@ -499,7 +505,7 @@ Other players become people you see. Full design: [living-city.md](living-city.m
 - **Gentlemanly slaps:** a glove slap was a Renaissance duel challenge. Cosmetic, opt-out, can't block a door.
 - **The Duke's order:** a city-wide order with lines from all three guilds and a public board of helpers. Pays 1.25 × usual value per unit at once, plus 0.15 × on completion (under the suppliers' 1.5 ×).
 - **Never empty:** townsfolk and "echoes" of crafters who acted in the last 30 minutes fill quiet quarters.
-- **Presence is cosmetic and optional:** positions, waves and slaps go through a small realtime service (a Node container on the DigitalOcean droplet that already hosts Hormigas); everything with value stays on the PHP server. With no service configured, the quarters still show stalls, townsfolk and echoes.
+- **Presence is cosmetic and optional:** positions, waves and slaps go through a small realtime service (a Node container on a small cloud server, a droplet, that Marz already runs); everything with value stays on the PHP server. With no service configured, the quarters still show stalls, townsfolk and echoes.
 - **Phones:** the City tab lists the quarters, friends and the Duke's order.
 
 ### 8.5 The people of Portovela (0.10.0)
@@ -594,15 +600,15 @@ Everything runs on the existing SiteGround hosting, on one domain.
 - **The market tick** runs from a SiteGround cron job (every 5–15 minutes [tune]). It runs NPC buys and sells, updates reference values and bands, expires listings, and advances events.
 - **Catch-up guard:** the server records `last_tick_at`. If a tick is overdue (for example, cron was delayed), the next API request runs the missed tick first, protected by a database lock so it never runs twice at once.
 
-### 11.6 Web client structure (0.4.0)
+### 11.6 Web client structure (0.4.0, updated 0.19.0)
 
 - **TypeScript + Preact**, built by **Vite** into plain static files (one HTML page, one script, one stylesheet, about 25 KB of code compressed, plus about 100 KB of bundled fonts cached after the first visit). It loads in about a second, even on a phone.
 - **3D harbor (0.7.0):** plain **Three.js** inside the Preact app (`client/src/world/`), as a separate file of about 140 KB compressed that only the 3D view downloads. The static town is merged into a few meshes, waves run on the GPU, shadows are drawn once and redrawn only on change, the frame rate drops to 30 when nothing moves, and the pixel ratio adapts to the machine. Today's scene: about 40 draw calls and 35k triangles. The engine only shows the server's state. Budgets are in [art-direction.md](art-direction.md) §5.
 - **Responsive:** one column with a bottom tab bar on phones. From 900 px wide, the tabs move to the top and busy screens (Workshop, sell form, City trades) use two columns.
-- `src/api.ts` (HTTP wrapper), `src/session.ts` (auth, player state, server clock offset; every action goes through it), `src/ui/*` (one file per screen: Login, Profession, GameScreen, Workshop, Market, Bag, City, Feedback).
+- `src/api.ts` (HTTP wrapper), `src/session.ts` (auth, player state, server clock offset; every action goes through it), `src/ui/*` (one file per screen, plus HarborView and World for the 3D view), `src/world/*` (the 3D town). The current file map is in [client/README.md](../client/README.md).
 - Uses the browser's own text boxes, keyboard, scrolling and password autofill.
 - Data-driven from what the server sends, so a profession, building, or NPC persona can be added mostly through data, in line with the "systems" approach used in Pythio.
-- Tested by a Playwright browser test (`client/tests/play.spec.ts`) that plays every screen on a phone-sized and a desktop-sized screen against a real API.
+- Tested by Playwright browser tests against a real API: `client/tests/play.spec.ts` plays the classic view on a phone-sized and a desktop-sized screen, and `client/tests/world.spec.ts` the 3D view on desktop (with a local realtime room server).
 
 ### 11.7 Repo layout
 
@@ -633,16 +639,16 @@ Everything runs on the existing SiteGround hosting, on one domain.
 
 ## 12. Milestones
 
-Each milestone ends with a playtest and a clear exit question.
+Each milestone ends with a playtest and a clear exit question. This table is the roadmap; status matches the [GitHub milestones](https://github.com/MarcialPimentel/guildie/milestones?state=all) (as of 2026-10-30, 0.19.0).
 
-| Milestone | Scope | Exit criteria |
-|---|---|---|
-| **M0 Foundation** ✅ | Repo, Godot project, MySQL database and PHP API on SiteGround (step-by-step setup guide), name + password login, read and write one inventory item through the server, cron job running a test tick, deploy steps, build number | Open on a phone, log in, see server-owned gold and an item |
-| **M1 Market Prototype** (live, playtesting) | 3 professions (choice + starter recipes), 18 items, gathering stations, crafting with timers and batches, the Exchange with 3 NPC personas, liquidity band, market tick, Activity Log, economy simulator. Plain text UI. See [systems.md §9](systems.md#9-milestone-matrix). | **"Is making one good trade fun?"** |
-| **M2 Crafting Depth** | Built fun-first, shipped in steps (0.5.0 = step 1) ([professions.md](professions.md) §9): **1.** order board, market ticker with Guild Week and events, "while you were away" screen, surprises on collect · **2.** skill and XP, learning recipes, rare recipes · **3.** the recipe ladder to 100 and the web rules · **4.** workshop upgrades as rank-up milestones. Quality tiers, gathering decisions and the Focus prototype follow if time allows | **"Do I want to come back tomorrow?"** |
-| **M3 Real Players** | Shared market with multiple players, NPC scaling, leaderboards (gold and rank progress; a simple City directory shipped early in 0.3.0), anti-abuse | **"Does trading with real people feel different and better?"** |
-| **M4 Look & Feel** | Final low-poly 3D art (hero models, icons rendered from models), machine progression visuals, sound, onboarding polish, installable web app. Pulled forward: the Portovela look shipped in 0.6.0, and the 3D harbor became the desktop home screen in 0.7.0 (low-poly shapes built in code, to be replaced by modelled assets) | **"Would I show this to a stranger?"** |
-| **Later** | Guilds, specializations, second profession, more professions | — |
+| Milestone | Status | Scope | Exit criteria |
+|---|---|---|---|
+| **[M0 Foundation](https://github.com/MarcialPimentel/guildie/milestone/1)** | ✅ Done (2026-10-25) | Repo, Godot project (replaced by the TypeScript web client in 0.4.0), MySQL database and PHP API on SiteGround (step-by-step setup guide), name + password login, read and write one inventory item through the server, cron job running a test tick, deploy steps, build number | Open on a phone, log in, see server-owned gold and an item |
+| **[M1 Market Prototype](https://github.com/MarcialPimentel/guildie/milestone/2)** | ✅ Done (0.2.0 to 0.3.1, 2026-10-26 to 10-27; playtest: [playtest-m1.md](playtest-m1.md)) | 3 professions (choice + starter recipes), 18 items, gathering stations, crafting with timers and batches, the Exchange with 3 NPC personas, liquidity band, market tick, Activity Log, economy simulator. Plain text UI. See [systems.md §9](systems.md#9-milestone-matrix). | **"Is making one good trade fun?"** |
+| **[M2 Crafting Depth](https://github.com/MarcialPimentel/guildie/milestone/3)** | **Current**: playtest running ([playtest-m2.md](playtest-m2.md)); left: orders that ask for quality ([#80](https://github.com/MarcialPimentel/guildie/issues/80)) | Built fun-first, shipped in steps ([professions.md](professions.md) §9), all four shipped: **1.** order board, market ticker with Guild Week and events, "while you were away" screen, surprises on collect (0.5.0) · **2.** skill and XP, learning recipes, rare recipes (0.8.0) · **3.** the recipe ladder to 100 and the web rules (0.12.0) · **4.** workshop upgrades as rank-up milestones (0.11.0). Also shipped: station minigames (0.15.0), the long-game balance pass with machine upkeep (0.16.0), quality tiers (0.18.0). Station choices (veins, plots, trip length) moved to later ([#85](https://github.com/MarcialPimentel/guildie/issues/85)); the crafting Focus minigame follows later | **"Do I want to come back tomorrow?"** |
+| **[M3 Real Players](https://github.com/MarcialPimentel/guildie/milestone/4)** | Next (the City directory and direct trades shipped early, 0.3.0) | Shared market with multiple players, NPC scaling, leaderboards (gold and rank progress; a simple City directory shipped early in 0.3.0), anti-abuse | **"Does trading with real people feel different and better?"** |
+| **[M4 Look & Feel](https://github.com/MarcialPimentel/guildie/milestone/5)** | Later (much pulled forward: the Portovela look 0.6.0, the 3D harbor 0.7.0, the people 0.10.0, Blender bodies and town 0.16.1–0.17.0) | Final low-poly 3D art (hero models, icons rendered from models), machine progression visuals, sound, onboarding polish, installable web app. | **"Would I show this to a stranger?"** |
+| **Later** | Later | Guilds, specializations, second profession (designed 2026-10-30, 5.7), changing guild (5.8), the 4th guild (Glassblower), more professions, station choices ([#85](https://github.com/MarcialPimentel/guildie/issues/85)) | — |
 
 ### Backlog (not scheduled)
 
@@ -756,7 +762,7 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-28 | **Rare recipes are better variants of existing goods for now** (2 per guild: more output per craft and 1.5× XP), taught by orders up to 10 skill above yours | Trophies without new items and icons; step 3 (#50) can add rare goods with their own art |
 | 2026-10-28 | Raw 2 (Iron Ore, Ember Moss, Thick Hide) unlocks at skill 15 for new players | professions.md §5; Apprentice recipes before 15 use only raw 1 |
 | 2026-10-27 | Profession skill max stays at 100, shown as "x/100" | Considered 200 after playtest 1; 100 means less progression to balance. Can be tweaked later |
-| 2026-10-28 | **The living city (0.9.0):** live presence of other players through a small realtime service next to SiteGround: a **Node container on the existing DigitalOcean droplet** (behind its Caddy, `guildie.marz.gg`), carrying only cosmetic things (positions, waves, slaps); the PHP server signs a 10-minute pass so only logged-in players join | Marz wants to see other players move. Shared PHP hosting can't hold WebSockets. The droplet is already paid for, already serves HTTPS and WebSockets for Hormigas, and has no message quota; no new account. Cloudflare Durable Objects (free plan) was the runner-up; Ably and Pusher count every delivery. Presence is optional: without the service the game is unchanged ([living-city.md](living-city.md) §7) |
+| 2026-10-28 | **The living city (0.9.0):** live presence of other players through a small realtime service next to SiteGround: a **Node container on the existing DigitalOcean droplet** (behind its Caddy, `guildie.marz.gg`), carrying only cosmetic things (positions, waves, slaps); the PHP server signs a 10-minute pass so only logged-in players join | Marz wants to see other players move. Shared PHP hosting can't hold WebSockets. The droplet is already paid for, already serves HTTPS and WebSockets for another project, and has no message quota; no new account. Cloudflare Durable Objects (free plan) was the runner-up; Ably and Pusher count every delivery. Presence is optional: without the service the game is unchanged ([living-city.md](living-city.md) §7) |
 | 2026-10-28 | Player-steered merchant (WASD, arrows, click-to-move); clicking a place opens its panel at once while the merchant walks there | Walking around is the fun; the 30-second check-in must not get slower |
 | 2026-10-28 | **Guild quarters** (Smiths', Alchemists', Tanners') instead of one long street; 30 visible players per quarter copy, more open a new copy; townsfolk and echoes from recent activity fill quiet quarters | Meeting your own guild serves Pillar 1; a long street of every player doesn't scale and is empty with few players (Pillar 3) |
 | 2026-10-28 | **Friends** as one-way bookmarks (no requests); friends' stalls first in every quarter (migration 007) | Everything a friend sees is already public, so no consent step is needed; simplest version to test |
@@ -811,6 +817,7 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-30 | **Second profession (designed, not built):** unlocks at the Master bottega (replaces skill 80), **capped at Expert**, and **shares your craft slots**; the bottega, city standing and a +50% XP bonus until Journeyman carry over, recipes don't ([5.7](#57-second-profession)). Built after the M2 playtest and the Glassblower | Marz's pick. Slots are the scarce thing, so a second craft adds choice, not output, and Master goods still need specialists. Replaces the 2026-10-25 "skill 80" row; resolves Open Question 4 |
 | 2026-10-30 | **Changing guild (designed, not built):** free until your first bottega upgrade; after that the new guild starts at skill 1 and the old guild's progress is lost, with no fee ([5.8](#58-changing-guild)) | Marz's pick over "frozen and restored on return". Switching fixes a wrong pick; the second profession is the way to grow. Everything open at once is ruled out: self-sufficiency kills trade |
 | 2026-10-30 | People **walk with stepping feet** (two foot bones in the body model) and **anyone can be slapped**: townsfolk, customers, officials, vendors and trainers react with a knock-back and flail. Slapping a non-player is local and cosmetic; a merchant in reach still gets the room-checked challenge first | Marz's request. Townsfolk live only in each browser, so a local slap needs no server and can't touch the economy |
+| 2026-10-30 | **Station choices moved to later; minigames cover active play for now.** The Mine's veins, the Herb Garden's plots and the Lodge's trip length (5.4, systems.md 5.2) are built after the M2 playtest ([#85](https://github.com/MarcialPimentel/guildie/issues/85)) | Marz, docs sync. They were never built; since 0.15.0 the station minigames give the station its active play |
 
 ---
 

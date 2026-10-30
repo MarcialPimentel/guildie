@@ -1,24 +1,25 @@
-# Setting up the realtime rooms (the living city, 0.9.0)
+# Guildie — Setting up the realtime rooms
 
-The living city shows other players moving around the guild quarters live. SiteGround can't do that (it can't keep connections open), so a small "rooms" program runs on the **DigitalOcean droplet** that already hosts Hormigas, as one more container next to it. It only carries positions, waves and slaps. Ducats, items, trades and orders stay on SiteGround.
+_One-time setup, done 2026-10-28 (0.9.0). Still current: every merge restarts the rooms by itself._
+
+The living city shows other players moving around the town live. SiteGround can't do that (it can't keep connections open), so a small "rooms" program runs as a container on a separate small cloud server (a droplet) that Marz already runs. It only carries positions, waves and slaps. Ducats, items, trades and orders stay on SiteGround.
 
 **Until you do this, nothing breaks:** the quarters still show stalls, townsfolk and echoes of recent activity, with "Quiet day: other merchants can't be seen right now" at the bottom. You can do it any time after 0.9.0 is merged.
 
-It takes about 15 minutes, once. The droplet's address and how to log in are in your private doc "Hormigas — Hosting & Session Handoff (private)". Keep secrets in your password manager, never in the repo or in chat.
+It takes about 15 minutes, once. The droplet's address, how to log in, its folders and the exact secret names are in Marz's private notes (his private hosting doc and the git-ignored `CLAUDE.local.md` on his PC), not in this public repo. Keep secrets in your password manager, never in the repo or in chat.
 
 ## How it fits on the droplet
 
 ```
-guildie.marz.gg ──> Caddy (already there: HTTPS) ──> guildie-realtime container (new)
-hormigas.marz.gg     ──> Caddy                        ──> hormigas container (unchanged)
+guildie.marz.gg ──> Caddy (already on the droplet: HTTPS) ──> guildie-realtime container
 ```
 
-The new container uses about 50 MB of memory and almost no CPU. If it ever stops, Hormigas is unaffected and Guildie's quarters just say "Quiet day".
+The container uses about 50 MB of memory and almost no CPU. If it ever stops, nothing else on the droplet is affected and the town just says "Quiet day".
 
 ## 1. Add the web address (SiteGround DNS) ✓ done 2026-10-28
 
 1. SiteGround **Site Tools** → **Domain** → **DNS Zone Editor**.
-2. Choose **A** record. **Name:** `guildie`. **Points to:** the droplet's IP (the same IP as the `hormigas` record). Leave TTL as it is. Click **Create**.
+2. Choose **A** record. **Name:** `guildie`. **Points to:** the droplet's IP (from the private notes). Leave TTL as it is. Click **Create**.
 
 `guildie.marz.gg` only carries the live rooms. If someone opens it in a browser, Caddy sends them to the game at `marz.gg/games/guildie/`.
 
@@ -28,22 +29,21 @@ Make up a long random phrase of at least 32 characters (your password manager's 
 
 ## 3. Add two secrets to the Guildie repo on GitHub ✓ done 2026-10-28
 
-These let GitHub restart the rooms after each merge. They're the same values the Hormigas repo already uses (GitHub never shows a saved secret, so copy them from the source):
+These let GitHub restart the rooms after each merge: the droplet's address and a deploy key that can log in to it. Which secrets, and where to copy their values from, is in the private notes (GitHub never shows a saved secret, so copy them from the source).
 
 1. Open the **guildie** repository on GitHub → **Settings** → **Secrets and variables** → **Actions**.
-2. **New repository secret** `DROPLET_HOST`: the droplet's IP address.
-3. **New repository secret** `DROPLET_SSH_KEY`: open the `hormigas-deploy` private key file from your PC's `.ssh` folder in Notepad, and paste **all** of it, including the `-----BEGIN` and `-----END` lines.
+2. **New repository secret** for each of the two, named exactly as in the private notes. For the key, paste **all** of the key file, including the `-----BEGIN` and `-----END` lines.
 
 ## 4. After merging 0.9.0: make the rooms' image public
 
-The merge's deploy run builds the rooms as a package on GitHub (`guildie-realtime`). New packages start private, and the droplet can only download public ones (same as Hormigas):
+The merge's deploy run builds the rooms as a package on GitHub (`guildie-realtime`). New packages start private, and the droplet can only download public ones:
 
 1. On GitHub, click your profile picture → **Your profile** → **Packages** → **guildie-realtime**.
 2. **Package settings** (bottom right) → **Change visibility** → **Public** → type the name to confirm.
 
 ## 5. One-time change on the droplet
 
-Log in as in your private doc (`ssh deploy@…`), then `cd /opt/hub`. Three small edits, then a restart of the new container. The text to paste is in this repo's `realtime/deploy/` folder.
+Log in to the droplet and go to the folder that holds its containers, both as in the private notes. Three small edits, then a restart of the new container. The text to paste is in this repo's `realtime/deploy/` folder.
 
 1. **The secret.** Run `nano .env` and add this line at the end, with your phrase from step 2:
    ```
@@ -57,9 +57,9 @@ Log in as in your private doc (`ssh deploy@…`), then `cd /opt/hub`. Three smal
    docker compose up -d guildie-realtime
    docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
    ```
-   The second line makes Caddy pick up the new address without restarting Hormigas.
+   The second line makes Caddy pick up the new address without restarting anything else.
 5. **Check:** `docker compose ps` should list `guildie-realtime` as running (healthy after half a minute). In a browser, `https://guildie.marz.gg/health` should show `{"ok":true,…}`. If the page doesn't load yet, the DNS record from step 1 may still be on its way: wait and try again.
-6. **Keep the repo copy in step:** the Hormigas repo keeps a copy of these files in `deploy/hub/`. Add the same two blocks there (or ask a session to), as your private doc says.
+6. **Keep the repo copy in step:** another repo keeps a copy of the droplet's container files. Add the same two blocks there (or ask a session to), as the private notes say.
 
 From now on, every merge to Guildie's `main` rebuilds the rooms and restarts the container by itself (the **realtime** job in the deploy run). Players in a quarter reconnect on their own within a few seconds.
 

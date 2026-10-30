@@ -1,5 +1,7 @@
 # Guildie — The Palazzo and the bottega upgrades (0.11.0)
 
+_Current as of 0.19.0 (2026-10-30): the town's one shared square (since 0.13.0) and the bottega upgrades._
+
 **In one sentence:** up the Steps there is now a shared square where all three guilds meet, with the city hall (the Palazzo), the Wanted board, the Hall of honor and three officials you can talk to; and your own bottega starts as a rundown shack that you rebuild, one upgrade per rank, to become a Journeyman, an Expert and a Master.
 
 Decided with Marz on 2026-10-29 (`/next-build Living City`). Builds on the living city (`docs/living-city.md`) and M2 step 2 (skill and ranks, 0.8.0). Closes the redesigned #51 for levels 2 to 4 with today's goods; the recipe ladder (#50) swaps in its new parts later.

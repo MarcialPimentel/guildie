@@ -1,5 +1,9 @@
 # Guildie — The Living City (0.9.0)
 
+_Historical: the 0.9.0 design as built; the town's layout changed in 0.13.0. Current version: [palazzo.md](palazzo.md) (the square), [systems.md](systems.md) 7.5–7.6 (presence, friends) and [realtime-setup.md](realtime-setup.md) (the rooms)._
+
+> Historical: the guild quarters described here were removed in 0.13.0. Current version: [palazzo.md](palazzo.md).
+
 > **Since 0.13.0 the guild quarters are gone:** the Palazzo is the one shared square, and the quay keeps only your own work ([palazzo.md](palazzo.md) "0.13.0: one square"). The sections below describe 0.9.0 as built.
 
 **Status:** Design built on Marz's decisions of 2026-10-28 (live presence, a merchant you steer, guild quarters, friends, gentlemanly slaps, the Duke's order). Released as **0.9.0**, after M2 step 2 (0.8.0). Desktop first; phones keep the classic view and get a list version of the quarters.
@@ -131,7 +135,7 @@ One city-wide order that everyone works on together. Server-authoritative, built
 
 ### 7.2 Which service, and what it costs
 
-**Chosen (2026-10-28): the DigitalOcean droplet that already runs Hormigas** (`hub`, 1 vCPU, 2 GB). Its Caddy already serves HTTPS and passes WebSockets through, and it has an automatic GitHub deploy. The rooms run as one more container (`guildie-realtime`) at `guildie.marz.gg`. No new account and no message quota; the load is tiny (small messages, only while people walk, no game simulation), about 50 MB of memory. If the droplet is down, quarters show "Quiet day" and nothing else is affected.
+**Chosen (2026-10-28): a small DigitalOcean droplet Marz already runs for another project** (details in his private notes). Its Caddy already serves HTTPS and passes WebSockets through, and it has an automatic GitHub deploy. The rooms run as one more container (`guildie-realtime`) at `guildie.marz.gg`. No new account and no message quota; the load is tiny (small messages, only while people walk, no game simulation), about 50 MB of memory. If the droplet is down, quarters show "Quiet day" and nothing else is affected.
 
 The hosted services compared first (checked on 2026-10-28 on each provider's pricing page):
 
@@ -163,7 +167,7 @@ The room clamps positions to the piazza, drops a client that floods it, refuses 
 - `realtime/`: the room rules (`room.js`), the pass check (`token.js`), the server (`server.mjs`: the same program in production, tests and local play), its `Dockerfile`, and the droplet snippets (`deploy/`).
 - `server/app/lib/city.php`: the presence pass, slap setting, friends, and the quarters (stalls and echoes). `server/app/lib/duke.php`: the Duke's order.
 - `client/src/world/`: blob merchants (`blobs.ts`), the quarters (`quarter.ts`) and the engine additions for walking, other players and slaps. `client/src/presence.ts`: the room connection.
-- Setup for Marz: `docs/realtime-setup.md` (a DNS record, two GitHub secrets copied from Hormigas, a one-time change on the droplet, two lines in `config.php`). After that, each merge rebuilds and restarts the rooms automatically, like the game.
+- Setup for Marz: `docs/realtime-setup.md` (a DNS record, two GitHub secrets (values from Marz's private notes), a one-time change on the droplet, two lines in `config.php`). After that, each merge rebuilds and restarts the rooms automatically, like the game.
 
 ---
 

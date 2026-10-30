@@ -1,4 +1,6 @@
-# SiteGround Setup Guide (one-time)
+# Guildie — SiteGround Setup Guide (one-time)
+
+_Done 2026-10-25 (M0). Kept for a rebuild or a move; still accurate for the folders and config the game expects._
 
 This guide sets up everything Guildie needs on SiteGround before any game code is deployed. It takes about **15–20 minutes**. You only do this once.
 
