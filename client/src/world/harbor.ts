@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { bake, box, cyl, flat, hipRoof, instanced, rng, signTexture, solid, stripes, vertexColorMaterial } from './kit'
 import { kitFor } from './guildKits'
 import { C } from './palette'
+import { HOUSE_WIDTH, townKitReady, townPiece } from './townKit'
 import type { PickId, ProfessionId } from './types'
 
 
@@ -99,14 +100,25 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
       const wy = y + 0.6 + f * 1.75
       box(town, 0.5, 0.75, 0.08, r() < 0.55 ? windowMat : darkWin, wx, wy, z + d / 2 + 0.02, false)
       if (r() < 0.6) {
-        box(town, 0.16, 0.75, 0.06, C.teal, wx - 0.36, wy, z + d / 2 + 0.05, false)
-        box(town, 0.16, 0.75, 0.06, C.teal, wx + 0.36, wy, z + d / 2 + 0.05, false)
+        box(town, 0.16, 0.75, 0.06, C.shutter, wx - 0.36, wy, z + d / 2 + 0.05, false)
+        box(town, 0.16, 0.75, 0.06, C.shutter, wx + 0.36, wy, z + d / 2 + 0.05, false)
       }
     }
   }
+  // since 0.17.0 the houses are the Blender town kit (townKit.ts): Italian row houses in earth-colored plaster
+  const townKit = townKitReady()
+  const KIT_HOUSES = ['house_a', 'house_a', 'house_b', 'house_b', 'house_d', 'house_d', 'house_c'] as const
   const row = (y: number, zFront: number, skip: [number, number][]) => {
     let x = -32
-    while (x < 31) {
+    while (townKit && x < 31) {
+      const id = pick([...KIT_HOUSES])
+      const s = rr(0.78, 0.9)
+      const w = HOUSE_WIDTH[id] * s
+      if (r() < 0.06 || skip.some(([a, b]) => x + w > a && x < b)) { x += w * 0.5; continue }
+      townPiece(town, id, x + w / 2, y, zFront - 2.3 * s - rr(0, 0.5), { plaster: pick(C.plaster), scale: s, glassMat: r() < 0.55 ? windowMat : darkWin })
+      x += w + rr(0.05, 0.3)
+    }
+    while (!townKit && x < 31) {
       const w = rr(2.6, 4.4), d = rr(3.2, 4.4), h = rr(2.8, 6)
       if (r() < 0.12 || skip.some(([a, b]) => x + w > a && x < b)) { x += w * 0.6; continue }
       house(x + w / 2, y, zFront - d / 2 - rr(0, 0.6), w, h, d)
@@ -114,7 +126,7 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     }
   }
   row(4, -6.4, [[25.5, 28.6], [-15, -10]])
-  row(8, -15, [[8, 12.2]])
+  row(8, -15, townKit ? [[5.4, 15]] : [[8, 12.2]])
   row(12, -23.2, [[-18, -6]])
   // lemon pergola on terrace 3
   for (let i = 0; i < 4; i++) {
@@ -122,12 +134,14 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     box(town, 11, 0.9, 0.8, C.leaf, -12, 12, lz)
     for (let k = 0; k < 9; k++) solid(town, new THREE.IcosahedronGeometry(0.16, 0), C.lemon, -17 + k * 1.2 + rr(-0.2, 0.2), 12.6 + rr(0, 0.3), lz + 0.42, false)
   }
-  // bell tower with a majolica dome
+  // the church: a Brunelleschi dome and a brick campanile (0.17.0); before, a bell tower with a majolica dome
+  if (!townPiece(town, 'chiesa', 9, 8, -15.3, { glassMat: windowMat })) {
   box(town, 2.4, 11, 2.4, '#F4EBD8', 10, 8, -17.5)
   box(town, 2.6, 0.3, 2.6, '#E5D7BC', 10, 19, -17.5)
   for (const dx of [-0.6, 0.6]) box(town, 0.5, 1.4, 0.1, '#2B4750', 10 + dx, 16.5, -16.27, false)
   solid(town, new THREE.SphereGeometry(1.25, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), '#2F9C8A', 10, 19.3, -17.5)
   solid(town, new THREE.SphereGeometry(0.3, 8, 6), C.lemon, 10, 20.7, -17.5)
+  }
   const pine = (x: number, y: number, z: number, s = 1) => {
     cyl(town, 0.14 * s, 0.2 * s, 3.2 * s, C.woodDark, x, y, z, 5)
     const c = solid(town, new THREE.SphereGeometry(1.7 * s, 8, 5), C.pine, x, y + 3.4 * s, z)
@@ -208,8 +222,8 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   box(repaired, 2.1, 2.7, 0.1, doorMat, -3, 1, -1.67, false)
   for (const wx of [-5.4, -0.6]) {
     box(repaired, 1.1, 1.3, 0.1, windowMat, wx, 1.9, -1.67, false)
-    box(repaired, 0.36, 1.3, 0.08, C.teal, wx - 0.72, 1.9, -1.62, false)
-    box(repaired, 0.36, 1.3, 0.08, C.teal, wx + 0.72, 1.9, -1.62, false)
+    box(repaired, 0.36, 1.3, 0.08, C.shutter, wx - 0.72, 1.9, -1.62, false)
+    box(repaired, 0.36, 1.3, 0.08, C.shutter, wx + 0.72, 1.9, -1.62, false)
   }
   {
     const aw = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.1), new THREE.MeshStandardMaterial({ map: stripes('#1F8A87', '#F6F2E8', 8), side: THREE.DoubleSide }))
@@ -236,8 +250,8 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     for (const wx of [-5.7, -0.3]) box(bottega, 1.1, 1.5, 0.1, windowMat, wx, 1.6, -1.47, false)
     for (const wx of [-4.8, -1.2]) {
       box(bottega, 1, 1.3, 0.1, windowMat, wx, 4.4, -1.47, false)
-      box(bottega, 0.4, 1.3, 0.08, C.teal, wx - 0.75, 4.4, -1.42, false)
-      box(bottega, 0.4, 1.3, 0.08, C.teal, wx + 0.75, 4.4, -1.42, false)
+      box(bottega, 0.4, 1.3, 0.08, C.shutter, wx - 0.75, 4.4, -1.42, false)
+      box(bottega, 0.4, 1.3, 0.08, C.shutter, wx + 0.75, 4.4, -1.42, false)
     }
     box(bottega, 4.6, 0.15, 0.9, C.white, -3, 4.1, -1.05)
     for (let i = 0; i < 7; i++) box(bottega, 0.07, 0.6, 0.07, C.iron, -5.1 + i * 0.7, 4.25, -0.65, false)
@@ -378,6 +392,8 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   // until the market moved up to the Palazzo
   const mercato = scenery()
   const MX = -22
+  const dogana = townPiece(mercato, 'dogana', MX, 1, -3)   // since 0.17.0: a loggia of round arches on columns
+  if (!dogana) {
   box(mercato, 10, 0.3, 6, C.stoneDark, MX, 1, -3)
   box(mercato, 10, 5.2, 0.5, '#F4EBD8', MX, 1.3, -5.8)
   for (let i = 0; i < 5; i++) cyl(mercato, 0.3, 0.34, 4.2, '#F4EBD8', MX - 4.4 + i * 2.2, 1.3, -0.4, 10)
@@ -385,6 +401,7 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   for (const dx of [-4.4, 4.4]) box(mercato, 0.5, 4.2, 5.4, '#F4EBD8', MX + dx, 1.3, -3.2)
   hipRoof(mercato, 11, 6.6, 2, C.roof, MX, 6.4, -3)
   box(mercato, 11, 0.3, 6.6, C.white, MX, 6.4, -3)
+  }
   for (let i = 0; i < 4; i++) box(mercato, 0.9, 1.6, 0.06, i % 2 ? '#1F8A87' : '#F2C53D', MX - 3.3 + i * 2.2, 3.7, -0.15, false)
   for (const dx of [-2.2, 2.2]) {
     box(mercato, 2.6, 0.9, 1.2, C.wood, MX + dx, 1.3, -3.2)
@@ -392,7 +409,7 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   }
   {
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.15), new THREE.MeshStandardMaterial({ map: signTexture('Dogana') }))
-    sign.position.set(MX, 5.95, 0.02)
+    sign.position.set(MX, 5.95, dogana ? 0.24 : 0.02)
     mercato.add(sign)
   }
   bake(mercato, vc)
@@ -400,6 +417,8 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
   // the guild hall: scenery since 0.13.0 (players, friends and trades are at the Palazzo now)
   const hall = scenery()
   const HX = 21
+  const kitHall = townPiece(hall, 'guildhall', HX, 1, -3.6, { glassMat: windowMat })   // since 0.17.0: a small palazzo
+  if (!kitHall) {
   box(hall, 8, 6.4, 5, '#EFD9B5', HX, 1, -3.6)
   hipRoof(hall, 8.6, 5.6, 2, C.roof, HX, 7.4, -3.6)
   box(hall, 2.6, 4, 2.6, '#EFD9B5', HX + 2.2, 7.4, -4.4)
@@ -409,9 +428,10 @@ export function buildHarbor(profession: ProfessionId, playerName: string): Harbo
     box(hall, 1.2, 1.8, 0.1, windowMat, HX + dx, 2, -1.07, false)
     box(hall, 1.2, 1.8, 0.1, windowMat, HX + dx, 4.6, -1.07, false)
   }
+  }
   for (const dx of [-1.6, 1.6]) {
-    box(hall, 1, 2.6, 0.06, '#1F8A87', HX + dx, 4.2, -1.0, false)
-    box(hall, 0.5, 0.5, 0.07, '#F2C53D', HX + dx, 5.4, -0.98, false)
+    box(hall, 1, 2.6, 0.06, '#1F8A87', HX + dx, 4.2, kitHall ? -0.8 : -1.0, false)
+    box(hall, 0.5, 0.5, 0.07, '#F2C53D', HX + dx, 5.4, kitHall ? -0.78 : -0.98, false)
   }
   box(hall, 4, 0.3, 1.4, C.stoneDark, HX, 1, -0.4)
   bake(hall, vc)

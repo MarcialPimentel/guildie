@@ -68,7 +68,7 @@ The old palette (`#1b1816`, `#2a211b`, `#c9963f`, `#e8d5a8`, shared with Hormiga
 | Lantern | `#F5CF5A` |
 | Ember (warnings) | `#EC8A64` |
 
-**World colors** (3D only, never used for UI text): plaster pastels `#F2B98B #F3D27A #EFA9A0 #F5F0E4 #BFE3D9`, roofs `#C4623A #A9492A`, stone `#E7D7B9`, sea `#86D8CC` → `#1F8F8D`, greenery `#6E9B48`, umbrella pine `#4F7A3A`.
+**World colors** (3D only, never used for UI text): plaster pastels `#F2B98B #F3D27A #EFA9A0 #F5F0E4 #BFE3D9` (since 0.17.0 the *buildings* use Italian earth plasters instead, see §9.4; people keep the pastels), roofs `#C4623A #A9492A`, stone `#E7D7B9`, sea `#86D8CC` → `#1F8F8D`, greenery `#6E9B48`, umbrella pine `#4F7A3A`.
 
 ## 3. Type and icons
 
@@ -265,3 +265,24 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 - **Your bottega, four looks** (`harbor.ts`): (1) a rundown shack of weathered planks, a patched lean-to roof, a boarded window and a barrel; (2) a repaired workshop, one floor of fresh plaster under tiles, teal shutters and a small awning; (3) the two-storey bottega of 0.7.0; (4) the same with a roof loggia (altana), lemon-gold trim, banners and a second lemon tree. While builders work: scaffolding of poles and planks, and a mason hammering at the door.
 - **Stall signs in the quarters** follow the owner's level: a weathered plank for a shack, navy for a workshop, gold trim from level 3, a double gilded frame for a fine bottega.
 
+### 9.4 An Italian town, not a Greek one (0.17.0)
+
+**Status:** Marz's pick of 2026-10-30, option 1 "warm plaster" of two colorways made in Blender (the other was "Florentine stone": honey stone and brown shutters). Playtest feedback was that the town looked more Greek than Italian: whitewashed cubes with flat white roofs, teal shutters, mint and lilac plaster, a blue dome and white columns under flat lintels read as a Greek island.
+
+**What changed:** the buildings are a Blender town kit, `client/src/world/models/town_kit.glb`, made by `tools/art/town_kit.py` (run headless; it also renders preview pictures) and loaded by `client/src/world/townKit.ts`. If the file can't load, the older code buildings are used.
+
+| Piece | Where | Italian (1400s) features |
+|---|---|---|
+| Four row houses (`house_a`–`house_d`) | The three terraces of the harbor, behind the Piazza | Arched shop openings, stone quoins and string courses, framed windows with green shutters, a small iron balcony, a palazzetto with a rusticated ground floor and biforate windows, a roof loggia (*altana*), deep cornices, low terracotta hip roofs with eaves. Their plaster takes one of eight earth colors per building |
+| The church (`chiesa`) | Terrace 2 of the harbor, where the blue-domed tower stood | A two-tier front in green and white marble with volutes and an oculus (Alberti), a ribbed terracotta dome with a white lantern on an octagonal drum (Brunelleschi), a brick campanile |
+| The Palazzo (`palazzo`) and its tower (`campanile`) | The Piazza | A Brunelleschi loggia: seven round arches on Corinthian columns in grey *pietra serena*, blue majolica roundels in the spandrels; a rusticated ground floor; biforate windows; a cornice on brackets; a brick bell tower with an open belfry and a pyramid roof. The guild banners fly from poles on the cornice |
+| The Dogana (`dogana`) | The quay | A loggia of four round arches on columns, side walls with blind arches |
+| The guild hall (`guildhall`) | The quay | A small palazzo: rusticated ground floor, arched portal, a tower with a roof loggia |
+
+**Rules for new buildings:** round arches, never pointed or flat-lintel colonnades; columns are slender and grey, carrying arches; stone at the base and corners, plaster above; a real cornice and an overhanging terracotta roof (no flat white roofs); shutters green; plasters from the earth palette below; domes are terracotta with white ribs, never blue.
+
+**House plasters** (`C.plaster` in `client/src/world/palette.ts`): ochre `#E9B872`, sienna `#E39B6B`, rose `#EAA796`, cream `#F1DCB0`, yellow `#F3CF78`, terracotta `#D98C5F`, peach `#F2C29A`, dusty pink `#E2B9A1`. **Kit colors:** stone `#E6D5B3`, rusticated stone `#D9C29A` with joints `#A89070`, pietra serena `#8C9A98`, roof `#C4623A` / `#A9492A`, shutters `#4F7A4A`, brick `#B86A4B`, marble green `#3F6B57`, majolica `#2A4C9A`.
+
+**Budget:** houses 630–1,500 triangles, the church 3,450, the guild hall 2,460, the Dogana 1,890, the campanile 2,430, the Palazzo 6,700 (the one hero piece slightly over the 6,000 guideline). The file is about 960 KB (vertex colors only, no textures). Everything static is still baked into a few meshes, so draw calls don't grow; window panes are a separate part so they light up at night.
+
+**Checking it:** in development, `/town.html` shows the harbor (`?scene=piazza` the Piazza, `?code=1` the old buildings, `?night=1` lit windows) without logging in. Before and after pictures are in [`docs/art/town/`](art/town/).
