@@ -52,7 +52,7 @@ function Lesson({ recipe: r, gold, after, say }: { recipe: TrainerRecipe; gold: 
       <div class="row">
         <span class="grow small muted">{r.rank} · skill {r.skill}</span>
         {r.status === 'known' && <span class="ok small" data-testid="known">Known</span>}
-        {r.status === 'locked' && <span class="small muted">Learn from skill {r.skill}</span>}
+        {r.status === 'locked' && <span class="small error" data-testid="locked">Learn from skill {r.skill}</span>}
         {r.status === 'rare' && <span class="small muted">Only a customer can teach this</span>}
         {r.status === 'learn' && (
           <ActionButton

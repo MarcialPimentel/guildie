@@ -77,6 +77,7 @@ test('a new alchemist plays through every screen', async ({ page }, info) => {
   // --- the guild trainer (#49): in the recipes column; what each recipe needs, costs and gives
   await page.click(id('trainer-open'))
   await expect(page.locator(id('lesson-smelting_flux'))).toContainText('Learn from skill 15')
+  await expect(page.locator(id('lesson-smelting_flux')).locator(id('locked'))).toHaveClass(/error/) // red: not yet
   await expect(page.locator(id('lesson-steam_tonic'))).toContainText('Uses Blacksmith goods')
   await expect(page.locator(id('lesson-cliffside_draught'))).toContainText('Only a customer can teach this')
   await expect(page.locator(id('lesson-healing_draught')).locator(id('known'))).toBeVisible()
