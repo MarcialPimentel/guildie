@@ -1,0 +1,70 @@
+# Runs the economy simulator (tools/econ_sim.php, systems.md 8.1) on a throwaway MySQL database and puts the
+# report on the run's summary page (and as a downloadable file). Use it when tuning content/economy.json.
+#
+#   - automatically on pushes to non-main branches that touch the economy (content, the simulator, game logic);
+#   - by hand: Actions -> "Economy simulator" -> Run workflow (pick days, players and seed).
+#
+# It never touches the live game.
+name: Economy simulator
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "content/**"
+      - "tools/econ_sim.php"
+      - "server/app/lib/**"
+      - ".github/workflows/econ-sim.yml"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Days to simulate"
+        default: "21"
+      players:
+        description: "Bots (3 guilds x 3 play styles = 9)"
+        default: "9"
+      seed:
+        description: "Random seed"
+        default: "1"
+
+concurrency:
+  group: econ-sim-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: guildie_sim
+          MYSQL_USER: guildie
+          MYSQL_PASSWORD: simpw
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_mysql, mbstring, json
+
+      - name: Simulate
+        run: |
+          php tools/econ_sim.php --db-name=guildie_sim --db-user=guildie --db-pass=simpw \
+            --days=${{ github.event.inputs.days || '21' }} --players=${{ github.event.inputs.players || '9' }} \
+            --seed=${{ github.event.inputs.seed || '1' }} --report=sim-report.json --quiet | tee sim-report.txt
+          { echo '## Economy simulator'; echo '```'; cat sim-report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: econ-sim-report
+          path: |
+            sim-report.txt
+            sim-report.json

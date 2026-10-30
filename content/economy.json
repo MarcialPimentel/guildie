@@ -1,7 +1,9 @@
 {
   "_comment": "Economy settings (systems.md). Every number here is [tune]. pace.time_multiplier scales ALL durations (crafts, station fill time): 1.0 = fast playtest pacing, larger = slower (e.g. 6.0 makes everything six times longer).",
   "pace": {
-    "time_multiplier": 1.0
+    "time_multiplier": 1.0,
+    "craft_by_rank": [1.0, 1.0, 1.0, 1.0],
+    "_craft_by_rank": "#52: extra craft-time multiplier by the recipe's rank (Apprentice, Journeyman, Expert, Master), on top of time_multiplier. Early crafts stay quick; late crafts take hours. [tune]"
   },
   "new_player": {
     "starting_gold": 150,
@@ -182,9 +184,13 @@
     "levels": [
       { "level": 1, "name": "Rundown shack",      "slots": 2, "craft_speed": 0,    "station_cap": 1.0, "station_rate": 1.0 },
       { "level": 2, "name": "Repaired workshop",  "slots": 3, "craft_speed": 0.10, "station_cap": 1.0, "station_rate": 1.0 },
-      { "level": 3, "name": "Two-storey bottega", "slots": 4, "craft_speed": 0.20, "station_cap": 1.5, "station_rate": 1.0 },
-      { "level": 4, "name": "Fine bottega",       "slots": 5, "craft_speed": 0.30, "station_cap": 1.5, "station_rate": 1.25 }
-    ]
+      { "level": 3, "name": "Two-storey bottega", "slots": 4, "craft_speed": 0.20, "station_cap": 1.5, "station_rate": 1.0,
+        "running": { "lamp_oil_per_minute": 0.2, "wages_per_day": 40 } },
+      { "level": 4, "name": "Fine bottega",       "slots": 5, "craft_speed": 0.30, "station_cap": 1.5, "station_rate": 1.25,
+        "running": { "lamp_oil_per_minute": 0.2, "wages_per_day": 100 } }
+    ],
+    "fuel_item": "lamp_oil",
+    "_running": "Machine running costs (#52): levels with 'running' burn fuel_item per minute of a recipe's listed craft time (before pace) and pay wages_per_day in ducats on the first powered craft of each UTC day. Short of either, nothing is taken and the craft runs at the speed of the best level without running costs. [tune]"
   },
   "wanted": {
     "_comment": "The Wanted board at the Palazzo (0.11.0): players post paid requests for goods. The price per unit must sit inside the market band (market.floor_multiplier .. ceiling_multiplier x usual value). The ducats are held when posted; whoever fills it is paid minus the Mercato cut (exchange.cut). Unfilled posts are refunded when they expire or are cancelled. [tune]",

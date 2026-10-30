@@ -13,6 +13,7 @@ SQL files that build and change the database. From 0.2.1 the server applies them
 - `009_palazzo.sql`: the bottega upgrades on `player_professions` (`workshop_level`, `legacy_rank` = the rank kept from before 0.11.0, `upgrade_to`, `upgrade_ready_at`), the Wanted board (`wanted_posts`) and the officials' daily favors (`npc_favors`) (0.11.0)
 - `010_guide.sql`: the new-player guide's progress (`guide_progress`: next step, done, when the player reached the Palazzo and first slapped someone); players from before 0.14.0 get a finished guide (0.14.0)
 - `011_minigames.sql`: minigame rounds (`minigame_rounds`: the plan the server rolled, status, score, reward); tiredness is read from recent rounds (0.15.0)
+- `012_running_costs.sql`: `player_professions.wages_day`, the last day the Expert and Master machines' wages were paid (0.16.0, #52)
 
 Rules:
 - Name files `NNN_short_name.sql`, numbered in order. Never edit a migration that has already been applied; add a new file instead.

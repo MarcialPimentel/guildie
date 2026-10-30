@@ -54,6 +54,25 @@ function deposit_note(array $p): string
     return (int) ($p['waived'] ?? 0) > 0 ? ' Deposit waived.' : '';
 }
 
+/** How the Expert and Master machines ran for a craft (#52): oil burned and wages paid, or crafted by hand. */
+function activity_power_text(array $p): string
+{
+    if (!array_key_exists('powered', $p) || $p['powered'] === null) {
+        return '';
+    }
+    if ($p['powered'] === false) {
+        return sprintf(' No %s or wages for the machines, so it is made by hand (slower).', strtolower(item_name(workshop_fuel_item())));
+    }
+    $parts = [];
+    if ((int) ($p['oil'] ?? 0) > 0) {
+        $parts[] = sprintf('burned %d %s', (int) $p['oil'], item_name(workshop_fuel_item()));
+    }
+    if ((int) ($p['wages'] ?? 0) > 0) {
+        $parts[] = sprintf("paid today's wages (%s)", ducats((int) $p['wages']));
+    }
+    return $parts ? ' Machines: ' . implode(', ', $parts) . '.' : '';
+}
+
 function activity_text(string $type, array $p): string
 {
     $n = fn($key) => (int) ($p[$key] ?? 0);
@@ -64,7 +83,7 @@ function activity_text(string $type, array $p): string
                                    fn($i) => $i['quantity'] . ' ' . item_name($i['item_id']), $p['items'] ?? [])) . '.',
         'worked'            => sprintf('%s: ', $p['title'] ?? 'Worked') . ($p['items'] ?? [] ? implode(', ', array_map(
                                    fn($i) => '+' . $i['quantity'] . ' ' . item_name($i['item_id']), $p['items'])) : 'nothing this time') . '.',
-        'craft_started'     => sprintf('Started crafting %d %s.', $n('quantity'), $item()),
+        'craft_started'     => sprintf('Started crafting %d %s.', $n('quantity'), $item()) . activity_power_text($p),
         'crafted'           => sprintf('Crafted %d %s.', $n('quantity'), $item()),
         'listed'            => sprintf('Listed %d %s at %s each (deposit %s, taken from the sale).', $n('quantity'), $item(), ducats($n('unit_price')), ducats($n('deposit'))),
         'sold'              => sprintf('Sold %d %s to %s for %s (after %s cut%s).', $n('quantity'), $item(), $p['buyer'] ?? 'someone', ducats($n('earned')), ducats($n('cut')),

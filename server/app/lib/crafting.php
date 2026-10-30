@@ -48,7 +48,9 @@ function crafting_recipes(int $playerId, string $professionId): array
             'output'       => ['item_id' => $recipe['output']['item_id'], 'quantity' => (int) $recipe['output']['quantity']],
             'value'        => (int) round(market_reference_value($recipe['output']['item_id']) * (int) $recipe['output']['quantity']),
             'inputs'       => $inputs,
-            'seconds_each' => workshop_craft_seconds($recipe['time_seconds'] * pace(), $level),
+            'seconds_each' => workshop_craft_seconds(recipe_craft_seconds($recipe), $level),
+            'seconds_each_by_hand' => workshop_running($level) !== null ? workshop_craft_seconds(recipe_craft_seconds($recipe), $level, false) : null,
+            'lamp_oil_each' => workshop_oil_for($level, $recipe, 1) > 0 ? (float) $recipe['time_seconds'] / 60 * (float) (workshop_running($level)['lamp_oil_per_minute'] ?? 0) : 0,
             'can_make'     => max(0, $maxBatch),
             'skill'        => recipe_skill($recipe),
             'colour'       => recipe_colour($recipe, $skill)['id'],
@@ -59,6 +61,17 @@ function crafting_recipes(int $playerId, string $professionId): array
         ];
     }
     return $out;
+}
+
+/**
+ * A recipe's craft time in seconds before the bottega's speed: its listed time x the game's pace x its rank's pace
+ * (economy.json pace.craft_by_rank, #52: Apprentice crafts stay quick, Expert and Master crafts take hours).
+ */
+function recipe_craft_seconds(array $recipe): float
+{
+    $byRank = (array) econ('pace.craft_by_rank', []);
+    $factor = (float) ($byRank[progression_rank_index(recipe_skill($recipe))] ?? 1.0);
+    return (float) $recipe['time_seconds'] * pace() * ($factor > 0 ? $factor : 1.0);
 }
 
 /** Open (uncollected) jobs, oldest first. */
@@ -98,6 +111,7 @@ function crafting_start(int $playerId, string $recipeId, int $quantity): void
     }
 
     tx(function (PDO $pdo) use ($playerId, $recipe, $quantity) {
+        gold_get($pdo, $playerId, true);   // player row first, the same lock order as every action (wages may be paid)
         $profession = require_profession($pdo, $playerId);
         if ($recipe['profession'] !== $profession['id']) {
             throw new ApiError('wrong_profession', 'That recipe belongs to another profession.');
@@ -123,11 +137,14 @@ function crafting_start(int $playerId, string $recipeId, int $quantity): void
         }
 
         $now = game_now();
-        $duration = workshop_craft_seconds($recipe['time_seconds'] * $quantity * pace(), $level);
+        // Expert and Master machines (#52): burn lamp oil and pay the day's wages, or craft by hand (slower).
+        $power = workshop_power_craft($pdo, $playerId, $level, $recipe, $quantity, $now);
+        $duration = workshop_craft_seconds(recipe_craft_seconds($recipe) * $quantity, $level, $power['powered'] !== false);
         $pdo->prepare('INSERT INTO craft_jobs (player_id, recipe_id, quantity, started_at, ends_at) VALUES (?, ?, ?, ?, ?)')
             ->execute([$playerId, $recipe['id'], $quantity, $now, $now + $duration]);
         activity_log($pdo, $playerId, 'craft_started', [
             'item_id' => $recipe['output']['item_id'], 'quantity' => $quantity * (int) $recipe['output']['quantity'],
+            'powered' => $power['powered'], 'oil' => $power['oil'], 'wages' => $power['wages'],
         ]);
     });
 }

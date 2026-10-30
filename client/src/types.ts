@@ -28,6 +28,10 @@ export interface Recipe {
   value: number
   inputs: RecipeInput[]
   seconds_each: number
+  /** Expert and Master bottegas (#52): the time without lamp oil or wages (crafted by hand); null = no machines. */
+  seconds_each_by_hand: number | null
+  /** Lamp oil one craft burns (the server rounds a batch up); 0 = no machines. */
+  lamp_oil_each: number
   can_make: number
   skill: number
   colour: Colour
@@ -53,6 +57,17 @@ export interface Progress {
   at_cap: boolean
 }
 
+/** What a bottega level's machines need while they run (#52, docs/palazzo.md §2). */
+export interface Running {
+  fuel_item_id: string
+  fuel_name: string
+  /** Per minute of a recipe's listed craft time. */
+  lamp_oil_per_minute: number
+  wages_per_day: number
+  /** Craft speed when the machines are idle. */
+  unpowered_speed: number
+}
+
 /** Your bottega and its next upgrade (0.11.0, #51, docs/palazzo.md §2). */
 export interface Workshop {
   level: number
@@ -67,6 +82,8 @@ export interface Workshop {
   at_cap: boolean
   /** Holds a rank from before 0.11.0 that the building hasn't caught up with yet. */
   kept_rank: boolean
+  /** Machine running costs at levels 3-4 (#52); null = none. */
+  running: null | (Running & { wages_paid_today: boolean; fuel_have: number })
   building: null | { level: number; name: string; ready_at: number; seconds: number; ready: boolean }
   next: null | {
     level: number
@@ -79,6 +96,7 @@ export interface Workshop {
     craft_speed: number
     station_cap: number
     station_rate: number
+    running: Running | null
     cost: { gold: number; seconds: number; items: { item_id: string; name: string; quantity: number; have: number; guild: string }[] }
   }
 }
