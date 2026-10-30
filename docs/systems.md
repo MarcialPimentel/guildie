@@ -158,7 +158,7 @@ These rules apply to every system.
 | **Inputs** | Server clock; cron |
 | **Outputs** | Tick runs for Market Simulation and Calendar; helper functions for "how much time has passed" |
 | **Rules** | Tick every 5 minutes [tune] (SiteGround cron), with catch-up on API requests when overdue. A row lock means only one tick runs at a time. |
-| **Tuning knobs** | `tick_interval_seconds` = 300 (config.php, must match the cron schedule); `pace.time_multiplier` in `economy.json` scales every duration (1.0 = fast playtest pace) |
+| **Tuning knobs** | `tick_interval_seconds` = 300 (config.php, must match the cron schedule); `pace.time_multiplier` in `economy.json` scales every duration (1.0 = fast playtest pace); `pace.craft_by_rank` (0.16.0, #52) multiplies craft times further by the recipe's rank (1 / 3 / 10 / 20: Apprentice crafts stay quick, Master crafts take hours) |
 | **M1 adds** | Shared timer helpers used by Gathering and Crafting |
 
 ### 4.3 Content
@@ -518,6 +518,7 @@ Player-posted orders are in the backlog.
 - ~~Maximum building level is capped by profession rank~~ **Since 0.11.0 the building opens the rank** (Marz, 2026-10-29): skill stops at the top of the rank the bottega allows (25 / 50 / 75 / 100) and crafts, orders and favors give no XP at that cap; building the next level steps you into the next rank. One bottega level covers the workstation and the station. Players who held a rank before 0.11.0 keep it (`legacy_rank`).
 - **0.11.0 as built:** `workshop.php`; levels and their effects in `economy.json` → `workshop` (craft slots 2/3/4/5, crafts 0/10/20/30% faster, station cap x1.5 from level 3, station rate x1.25 at level 4); costs in `professions.json` → `workshop` (always both other guilds' goods, only goods one rank lower can make). Owns `player_professions.workshop_level`, `legacy_rank`, `upgrade_to`, `upgrade_ready_at` (migration 009). Actions `workshop_upgrade` (pay now, build timer) and `workshop_open` (+1 skill into the new rank when you were waiting at the cap). Details: [palazzo.md](palazzo.md) §2.
 - **Machines** (Expert+: water wheels, gear trains, clockwork) automate work and cost **lamp oil and wages** as an ongoing running cost: a sink that scales with how much you automate (replaced coal, 2026-10-28).
+- **Running costs as built (0.16.0, #52):** levels with `running` in `economy.json` → `workshop.levels` (3 and 4) burn `fuel_item` (Lamp Oil) per minute of a recipe's listed craft time, and pay `wages_per_day` on the first powered craft of each UTC day (`player_professions.wages_day`, migration 012). Short of oil or ducats, nothing is taken and the craft gets the speed of the best level without running costs (level 2). `workshop_power_craft()` runs inside the craft's transaction. Details: [palazzo.md](palazzo.md) §2.
 
 **Milestone:** M2 (core upgrades), the 3D harbor on desktop (0.7.0), the rank gate and four visible bottega levels (0.11.0), M4 (final 3D art, machine visuals).
 
