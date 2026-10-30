@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { callAction, setTokenProvider, type ApiResult } from './api'
 import type {
-  Activity, Directory, DukeBoard, Friends, GameState, GuideClaim, GuideStatus, Honors, ItemCount, MarketItem, MarketRow, MyListing, NewsItem, NpcTalk, Offers, OrderBoard, PalazzoNpc, PresencePass, ProfessionChoice, Profile, ProgressGain, SellQuote, Surprise, Trainer, WantedBoard,
+  Activity, Directory, DukeBoard, Friends, GameState, GuideClaim, GuideStatus, Honors, ItemCount, MarketItem, MarketRow, MinigameResult, MinigameRound, MyListing, NewsItem, NpcTalk, Offers, OrderBoard, PalazzoNpc, PresencePass, ProfessionChoice, Profile, ProgressGain, SellQuote, Surprise, Trainer, WantedBoard,
 } from './types'
 
 const TOKEN_KEY = 'guildie.token'
@@ -103,6 +103,13 @@ class Session {
   }
   startCraft(recipeId: string, quantity: number) {
     return this.stateCall<GameState>('start_craft', { recipe_id: recipeId, quantity })
+  }
+  /** Minigames (0.15.0): roll a round on the server, then send back when you tapped; the server scores and pays. */
+  minigameStart<Plan>(target: 'station') {
+    return this.call<MinigameRound<Plan>>('minigame_start', { target })
+  }
+  minigameFinish(roundId: number, taps: (number | null)[]) {
+    return this.stateCall<MinigameResult>('minigame_finish', { round_id: roundId, taps }, 'state')
   }
   collectCrafts() {
     return this.stateCall<{ surprises?: Surprise[]; progress?: ProgressGain | null }>('collect_crafts', {}, 'state')

@@ -17,6 +17,7 @@
       "station": {
         "id": "mine",
         "find_label": "Rich vein!",
+        "minigame": { "kind": "strike", "skin": "pickaxe", "title": "Work the seam", "intro": "Swing when the pick is over the glint. Clean strikes break off the most ore.", "button": "Swing", "perfect": "Clean strike!", "good": "Chipped", "miss": "Glanced off", "zone": "the glint" },
         "name": "The Mine",
         "outputs": [
           { "item_id": "copper_ore", "rate_per_hour": 30, "cap": 30 },
@@ -50,6 +51,7 @@
       "station": {
         "id": "herb_garden",
         "find_label": "Bumper crop!",
+        "minigame": { "kind": "strike", "skin": "sickle", "title": "Harvest by hand", "intro": "Cut when the sickle is over the ripest stems. Clean cuts bring in the most.", "button": "Cut", "perfect": "Clean cut!", "good": "Snipped", "miss": "Bruised it", "zone": "the ripe stems" },
         "name": "The Herb Garden",
         "outputs": [
           { "item_id": "sunleaf",    "rate_per_hour": 30, "cap": 30 },
@@ -83,6 +85,7 @@
       "station": {
         "id": "trappers_lodge",
         "find_label": "Prize pelt!",
+        "minigame": { "kind": "strike", "skin": "snare", "title": "Set the snares", "intro": "Spring the snare when the hare crosses the trail. Clean catches bring in the most.", "button": "Snap", "perfect": "Caught!", "good": "Grazed it", "miss": "It got away", "zone": "the trail" },
         "name": "The Trapper's Lodge",
         "outputs": [
           { "item_id": "raw_hide",   "rate_per_hour": 30, "cap": 30 },

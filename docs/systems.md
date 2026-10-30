@@ -60,7 +60,8 @@ flowchart LR
 | Production | **Professions & Progression** | What the player is and how they grow | ✅ M1 (choice); skill M2 (#30) |
 | | **Gathering** | Raw materials over time | ✅ M1 |
 | | **Crafting** | Turning inputs into goods | ✅ M1 |
-| | **Focus** | Optional active play that improves crafts | M2 |
+| | **Focus** | Optional active play that improves crafts (a minigame target, after quality tiers) | Later |
+| | **Minigames** | Short optional games that pay for active play (station rounds pay extra raws) | 0.15.0 |
 | Exchange | **The Exchange** | Player-facing auction house | ✅ M1; 0.2.2: deposit from the sale, Sell to guild |
 | | **Direct Trades** | Player-to-player offers | ✅ 0.3.0 |
 | | **Market Simulation** | NPC demand and supply that keeps the market alive | ✅ M1 |
@@ -88,7 +89,8 @@ Everything a player can *do*, and which system owns it. If a new feature adds a 
 | **Decide** a gathering option (vein, plot, expedition length) | Gathering | 30 s | M2 |
 | **Craft** (queue a recipe) | Crafting | 30 s | M1 |
 | **Collect** finished crafts | Crafting | 30 s | M1 |
-| **Tend** active crafts (Focus) | Focus | 30 min | M2 |
+| **Work** the station by hand (a minigame round) | Minigames | 30 min | 0.15.0 |
+| **Tend** active crafts (Focus) | Focus | 30 min | Later |
 | **List** an item for sale | Exchange | 30 s | M1 |
 | **Sell to guild** instantly (no listing) | Exchange | 30 s | 0.2.2 |
 | **Send feedback** | Playtest Feedback | 30 s | 0.2.2 |
@@ -307,6 +309,37 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 **Open:** this is the biggest unvalidated idea in the design. It should be prototyped as a small experiment in M2 before it's built properly.
 
 **Milestone:** M2 (prototype), then decided.
+
+**Update 0.15.0 (Marz, 2026-10-29):** active play comes first as **minigames at the station that pay extra raws** (5.5), because players found idle collecting dull and quality tiers don't exist yet, so a quality bonus would have nothing to give. Focus stays the plan for crafts: it will be a second *target* of the same minigame framework (the bellows game from the art mock-up), once quality tiers are built.
+
+### 5.5 Minigames — active play *(0.15.0)*
+
+| | |
+|---|---|
+| **Job** | Give players who want to play actively something to do with their hands, and pay them for it, without making idle play worse |
+| **Owns** | `minigame_rounds` (player, target, kind, plan, status, score, reward, started, finished) |
+| **Verbs** | Work (play a round) |
+| **Inputs** | Each station's game in `professions.json` → `station.minigame`; rules and numbers in `content/minigames.json`; station rates (Gathering, Workshop level) |
+| **Outputs** | Raw materials into Inventory; a `worked` event to the Activity Log |
+
+**Rules**
+- **Optional.** The station keeps gathering on its own; idle players get exactly what they got before.
+- **A round:** the server rolls it (`minigame_start`) and keeps the plan. The client draws the plan and sends back only *when* the player tapped (`minigame_finish`). The server replays the taps against its own plan, scores the round (0–1) and pays, in one transaction. One open round per player; starting a new one abandons the old.
+- **Anti-cheat:** a round can't come back faster than its taps, timeouts and pauses add up to (`too_fast`), each round pays once, and a cheater can at most score what a perfect player scores, which tiredness caps.
+- **Pay (station target):** a perfect fresh round pays `reward_minutes` (20) of the station's first raw at its current rate (after pace and bottega level), scaled by score. A round scoring `find_at_score` (90%) or more also finds `find_units` (2) of the rarest raw the player has unlocked, with the station's find text ("Rich vein!").
+- **Tiredness:** every finished round adds 1; it halves every `recovery_half_life_hours` (2 h × pace). A round pays `(1 − drop_per_round)^tiredness` of full (drop 0.2), never below `floor` (0.1). The station card says what a clean round brings now ("Fresh", "Tiring", "Worn out"). It's the same idea as the guild sale's pressure (6.1): no hard wall, but grinding fades, which protects the shared market for raws.
+
+**Modular by design** (so future professions plug in)
+- A **kind** is a game's rules: a plan function, a taps check, a scorer and min/max durations on the server (`server/app/lib/minigame_<kind>.php`, registered in `minigame_kinds()`), and one screen in the client (`client/src/minigames/<Kind>.tsx`, registered in `registry.ts`). Default numbers live in `minigames.json` → `kinds`.
+- A **target** is what a round is played on and what it pays (`minigame_targets()`): `station` today; `craft` (Focus) later.
+- A **guild** picks a kind, a **skin** (its look) and its words in `professions.json` → `station.minigame`, and may override any of the kind's numbers in `params`. **A new profession reuses an existing kind with its own skin and words: no code.** Only a brand-new kind needs code.
+- The content validator checks each station's kind, skin, words and params, and the kinds' numbers.
+
+**Launch kind: Strike.** A marker sweeps back and forth along a bar; tap while it's over the sweet spot. 8 swings, each faster than the last; perfect = 1 point, good = 0.6, miss = 0. Skins: **pickaxe** on a glinting seam (Mine, "Work the seam"), **sickle** on ripe stems (Herb Garden, "Harvest by hand"), **snare** on a trail (Trapper's Lodge, "Set the snares").
+
+**Tuning knobs** (`minigames.json`): reward minutes, find score and units, tiredness drop, floor and half-life, and every Strike number (swings, speeds, zone widths, points, timings).
+
+**Later:** more kinds (the bellows "keep the heat in the band" game for crafting Focus; a different game per guild if Strike gets stale), and acting the round out in the 3D harbor.
 
 ---
 

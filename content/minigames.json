@@ -1,0 +1,36 @@
+{
+  "_comment": "Minigames (0.15.0, systems.md 5.5): short optional games that pay for active play. A game has a KIND (the rules: how a round is planned and scored, one PHP scorer + one client screen each) and is used by a TARGET (what it's played on and what it pays: 'station' pays extra raws today; 'craft' is the later Focus bonus). Each guild's station picks its kind and its look (skin, words) in professions.json -> station.minigame, and may override any of the kind's params there. tiredness: every finished round adds 1 to the player's tiredness, which halves every recovery_half_life_hours x pace; a round pays (1 - drop_per_round)^tiredness of full, never below floor. Every number here is [tune].",
+  "tiredness": {
+    "drop_per_round": 0.2,
+    "floor": 0.1,
+    "recovery_half_life_hours": 2
+  },
+  "targets": {
+    "station": {
+      "_comment": "A perfect, fresh round pays reward_minutes of the station's first raw (at its current rate, after pace and bottega level). A round scoring find_at_score or better also finds find_units of the rarest raw the player has unlocked (or more of the first raw, before any other is unlocked); tiredness scales both.",
+      "reward_minutes": 20,
+      "find_at_score": 0.9,
+      "find_units": 2
+    }
+  },
+  "kinds": {
+    "strike": {
+      "_comment": "A marker sweeps back and forth along a bar; tap while it's over the sweet spot. Each swing: speed in bar-lengths per second (random between speed_min and speed_max, then x (1 + ramp_per_swing x swing number)), a random start (phase 0-2) and a random sweet-spot centre. good_width and perfect_width are the whole width of each zone. No tap within swing_timeout_ms is a miss; gap_ms is the pause between swings. A round can't be finished faster than its taps, timeouts and gaps add up to.",
+      "params": {
+        "swings": 8,
+        "speed_min": 0.7,
+        "speed_max": 1.0,
+        "ramp_per_swing": 0.05,
+        "center_min": 0.2,
+        "center_max": 0.8,
+        "good_width": 0.24,
+        "perfect_width": 0.08,
+        "good_points": 0.6,
+        "perfect_points": 1,
+        "swing_timeout_ms": 4000,
+        "gap_ms": 700,
+        "min_tap_ms": 120
+      }
+    }
+  }
+}

@@ -240,6 +240,7 @@ function city_echo_text(string $type, array $p): ?string
         'listed'       => "listed $n $item",
         'sold'         => "sold $n $item",
         'gathered'     => 'brought in fresh materials',
+        'worked'       => 'worked their station by hand',
         'order_filled' => 'filled an order for ' . ($p['customer'] ?? 'a customer'),
         'duke_contributed' => "gave $n $item to the Duke",
         default        => null,

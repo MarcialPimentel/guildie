@@ -11,6 +11,7 @@ import { ActionButton, Stepper, useGame, useNow } from './common'
 import { Orders } from './Orders'
 import { celebrate, gainText, XpChip } from './Progress'
 import { Trainer } from './Trainer'
+import { MinigamePanel } from '../minigames/MinigamePanel'
 
 export function Workshop() {
   const s = useSession()
@@ -102,6 +103,7 @@ export function Station({ state, now }: { state: GameState; now: number }) {
       <ActionButton action={() => session.collectStation()} success="Collected." after={onCollected} disabled={!anyReady} testid="collect-station">
         Collect
       </ActionButton>
+      {station.minigame && <MinigamePanel game={station.minigame} />}
     </section>
   )
 }

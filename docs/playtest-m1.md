@@ -28,6 +28,15 @@ This is a prototype: plain screens, no art yet, and numbers that will change. Yo
 10. **Little surprises:** collecting can turn up a rich vein, a bumper crop or a prize pelt, and crafts sometimes come out with a bonus item.
 11. **While you were away:** come back after a while and the game shows what happened, with one tap to collect everything.
 
+## New in 0.15.0: work your station by hand
+
+- **Your station has a minigame** (on the station card, under Collect): **Work the seam** (Blacksmith), **Harvest by hand** (Alchemist) or **Set the snares** (Leatherworker).
+- A marker sweeps along a bar: **tap when it's over the bright spot** (tap the bar, the button, or press Space). Eight tries, each a little faster. Bright gold is a clean hit; the paler band still counts.
+- A good round brings extra raw materials straight to your storehouse. A great round (90% or more) also finds something rarer.
+- **You tire:** each round pays a bit less than the last, and you recover over a few hours. The card says how much a clean round brings right now.
+- It's optional: your station still gathers on its own.
+- **Questions for this playtest:** Is it fun for a few rounds? Too easy or too hard? Does the reward feel worth playing for? When did you stop, and why?
+
 ## New in 0.14.0: first steps
 
 - **A new merchant gets a guide:** a card with one step at a time (collect, craft, train to skill 6, learn a recipe, walk up to the Palazzo, and an optional slap). The button to press pulses, and on a computer a lemon arrow points at the place. Claim ducats at each step, and a 150-ducat purse at the end.

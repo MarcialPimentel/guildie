@@ -245,7 +245,7 @@ Procs supply the small surprises that make routine crafts exciting.
 - More slots unlock through rank and workshop upgrades. Concurrency is the main late-game constraint, not raw duration.
 
 **Active play versus idle**
-- Optional active mechanics (each profession's signature mechanic, such as forge heat or volatile brewing) give a bonus to quality, proc chance, or yield [tune: roughly +25–50% value].
+- Optional active mechanics give a bonus to quality, proc chance, or yield [tune: roughly +25–50% value]. **Since 0.15.0 these are minigames** (systems.md 5.5): first at the station, where a short round pays extra raws (Strike: pickaxe, sickle, snare); later on crafts for quality (Focus, such as forge heat or volatile brewing). A round tires you, so grinding fades instead of flooding the market.
 - A 30-minute session is the "active" mode. It should naturally **end into idle**: players queue long crafts and expeditions before leaving.
 - Idle play is never penalized. It just lacks the active bonus.
 
@@ -762,6 +762,11 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-29 | **Three officials** (notary, town crier, Duke's steward): rumors built from real game data, one favor a day each (1.2x usual value, under the suppliers' 1.5x, plus order XP), and flavor lines. The steward asks for another guild's goods | Marz asked for all three kinds of NPC interaction. Rumors make reading the market a skill (Pillar 2); favors give a 30-second visit a purpose (Pillar 4) |
 | 2026-10-29 | City-wide prosperity (the city growing from Duke's orders) **revisited later** | Marz preferred each player's bottega growing with their rank first |
 | 2026-10-29 | Machine running costs (lamp oil and wages) **come with the ladder and the balance pass**, not 0.11.0 | They need the ladder's Lamp Oil supply and a simulator run |
+| 2026-10-29 | **Minigames (0.15.0):** optional, short games at your station that pay **extra raws**; active play comes to gathering first, and crafting Focus (quality) later on the same framework | Playtest feedback: idle collecting isn't fun. Quality tiers don't exist yet, so a quality bonus would have nothing to give (systems.md 5.4, 5.5) |
+| 2026-10-29 | The first game is **Strike** (tap when the marker is over the sweet spot) with **three looks**: pickaxe, sickle, snare | Marz's pick: the smallest build that proves the fun and the framework; more kinds later |
+| 2026-10-29 | Minigames **tire you**: each round pays less, recovering over a few hours; never a hard wall | Marz's pick. Unlimited full pay would flood the shared market with raws and crash prices for everyone (Pillar 2) |
+| 2026-10-29 | **Modular minigames:** kinds (rules) and targets (what a round pays) are registries; each guild picks a kind, look and words in content, so a new profession needs no code | Marz asked for a system future professions can adapt |
+| 2026-10-29 | Built as **0.15.0, after the guide and before the balance pass (#52)** | So #52 tunes the economy with minigame income included |
 
 ---
 

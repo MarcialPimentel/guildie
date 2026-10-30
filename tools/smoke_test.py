@@ -1032,6 +1032,82 @@ if PLAYER_TOOL:
     s, r = call("guide_claim", {"step": "slap"}, token=tok_g)
     check("a finished guide pays nothing more", s == 409 and r["error"]["code"] == "guide_finished", r)
 
+# ---------------------------------------------------------------- minigames (0.15.0, content/minigames.json)
+MG = json.loads((CONTENT / "minigames.json").read_text(encoding="utf-8"))
+
+
+def strike_pos(sw, ms):
+    x = (sw["phase"] + sw["speed"] * ms / 1000) % 2
+    return x if x <= 1 else 2 - x
+
+
+def strike_taps(plan, aim="perfect"):
+    """One tap per swing: the first moment the marker is dead centre (perfect), or as far from it as possible (miss)."""
+    taps = []
+    for sw in plan["swings"]:
+        span = range(plan["min_tap_ms"], plan["swing_timeout_ms"] + 1)
+        if aim == "perfect":
+            taps.append(next(ms for ms in span if abs(strike_pos(sw, ms) - sw["center"]) <= 0.01))
+        else:
+            taps.append(max(span, key=lambda ms: abs(strike_pos(sw, ms) - sw["center"])))
+    return taps
+
+
+def strike_min_s(plan, taps):
+    return (sum(t if t is not None else plan["swing_timeout_ms"] for t in taps) + plan["gap_ms"] * (len(taps) - 1)) / 1000
+
+
+name_m, _, tok_m, _ = register("m")
+s, r = call("choose_profession", {"profession_id": "blacksmith"}, token=tok_m)
+game = r["data"]["profession"]["station"].get("minigame") or {}
+check("a station has its game: kind, look, words, freshness", game.get("kind") == "strike" and game.get("skin") == "pickaxe"
+      and game.get("words", {}).get("title") and game.get("freshness") == 1 and game.get("item_id") == "copper_ore" and game.get("max_units", 0) > 0, game)
+s, r = call("minigame_start", {"target": "nowhere"}, token=tok_m)
+check("only known targets can be played", s == 400, r)
+s, r = call("minigame_start", {"target": "station"}, token=tok_m)
+rnd = r["data"] if r.get("ok") else {}
+plan = rnd.get("plan", {})
+check("starting a round rolls a plan (one swing each, sweet spot on the bar)", s == 200 and len(plan.get("swings", [])) == MG["kinds"]["strike"]["params"]["swings"]
+      and all(0 < sw["center"] < 1 and sw["speed"] > 0 for sw in plan["swings"]), r)
+taps = strike_taps(plan)
+s, r = call("minigame_finish", {"round_id": rnd.get("round_id"), "taps": taps[:-1]}, token=tok_m)
+check("one tap per swing is required", s == 400 and r["error"]["code"] == "bad_request", r)
+s, r = call("minigame_finish", {"round_id": rnd.get("round_id"), "taps": [5] * len(taps)}, token=tok_m)
+check("taps before the swing can start are refused", s == 400, r)
+s, r = call("minigame_finish", {"round_id": rnd.get("round_id"), "taps": taps}, token=tok_m)
+check("a round sent back faster than it can be played is refused", s == 400 and r["error"]["code"] == "too_fast", r)
+time.sleep(strike_min_s(plan, taps))
+s, r = call("get_state", token=tok_m)
+copper0 = have(r["data"], "copper_ore")
+s, r = call("minigame_finish", {"round_id": rnd.get("round_id"), "taps": taps}, token=tok_m)
+res = r["data"] if r.get("ok") else {}
+paid = {x["item_id"]: x["quantity"] for x in res.get("rewards", []) if not x.get("find")}
+finds = [x for x in res.get("rewards", []) if x.get("find")]
+check("a perfect fresh round scores 100% and pays the full amount shown", s == 200 and res["score"] == 1 and res["steps"] == ["perfect"] * len(taps)
+      and paid.get("copper_ore") == game["max_units"], r)
+check("a great round also finds raws, labelled with the station's find text", len(finds) == 1 and finds[0]["quantity"] == MG["targets"]["station"]["find_units"]
+      and finds[0]["text"] == GUILDS[0]["station"]["find_label"], finds)
+check("the raws are in the storehouse", have(res.get("state", {}), "copper_ore") == copper0 + game["max_units"] + finds[0]["quantity"] if finds else False, res.get("state", {}).get("inventory"))
+check("the round is in the activity log", any(a["type"] == "worked" and "Copper Ore" in a["text"] for a in res.get("state", {}).get("activity", [])), res.get("state", {}).get("activity", [])[:3])
+s, r = call("minigame_finish", {"round_id": rnd.get("round_id"), "taps": taps}, token=tok_m)
+check("a round pays only once", s == 400 and r["error"]["code"] == "round_closed", r)
+fresh2 = res.get("state", {}).get("profession", {}).get("station", {}).get("minigame", {})
+drop = MG["tiredness"]["drop_per_round"]
+check("after a round you're a little tired: the next pays less", abs(fresh2.get("freshness", 0) - (1 - drop)) < 0.01 and fresh2.get("max_units", 99) < game["max_units"], fresh2)
+
+s, r = call("minigame_start", {"target": "station"}, token=tok_m)
+old = r["data"]["round_id"]
+s, r = call("minigame_start", {"target": "station"}, token=tok_m)
+rnd2 = r["data"]
+s, r = call("minigame_finish", {"round_id": old, "taps": strike_taps(plan)}, token=tok_m)
+check("starting a new round closes the one still open", s == 400 and r["error"]["code"] == "round_closed", r)
+taps2 = strike_taps(rnd2["plan"], aim="miss")
+time.sleep(strike_min_s(rnd2["plan"], taps2))
+s, r = call("minigame_finish", {"round_id": rnd2["round_id"], "taps": taps2}, token=tok_m)
+check("missing every swing scores 0 and pays nothing", s == 200 and r["data"]["score"] == 0 and r["data"]["rewards"] == [], r)
+s, r = call("minigame_finish", {"round_id": rnd2["round_id"], "taps": taps2}, token=tok_a)
+check("another player can't finish your round", s == 400 and r["error"]["code"] == "round_closed", r)
+
 s, r = call("logout", {}, token=tok_a)
 s, r = call("get_state", token=tok_a)
 check("logged out", s == 401, r)
