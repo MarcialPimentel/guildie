@@ -1,4 +1,4 @@
-# Guildie: the shared blob body (body, face, feet) that every person is dressed on (art-direction.md ง9.3).
+# Guildie: the shared blob body (body, face, feet) that every person is dressed on (art-direction.md ยง9.3).
 # Builds it in Blender and exports client/src/world/models/blob_body.glb. Run from the repo root:
 #   blender -b -P tools/art/blob_body.py            (or paste into Blender's Text Editor and press Run)
 # Blender is Z-up and the face looks toward -Y; the glTF export turns that into the game's Y-up, +Z forward.
@@ -18,13 +18,17 @@ def lin(hexs):
     f = lambda v: v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
     return (f(c[0]), f(c[1]), f(c[2]), 1.0)
 
-def new_obj(name, bm, color, coll):
+def new_obj(name, bm, color, coll, foot=0):
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me); bm.free()
     attr = me.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')
     col = lin(color)
     for d in attr.data:
         d.color = col
+    # _FOOT: which foot a vertex belongs to (-1 at -X, +1 at +X, 0 for the rest), so the game can step the feet
+    fa = me.attributes.new('_FOOT', 'FLOAT', 'POINT')
+    for d in fa.data:
+        d.value = float(foot)
     for p in me.polygons:
         p.use_smooth = True
     ob = bpy.data.objects.new(name, me)
@@ -135,9 +139,9 @@ def build(option, coll, x=0.0):
     ft = option['feet']
     for side in (-1, 1):
         loc = (side * 0.22, -0.1 - ft.get('fwd', 0), 0.05)
-        parts.append(new_obj('foot', ellipsoid(ft['r'], 10 if LOW else 12, 6 if LOW else 7, loc, ft['scale'], (0, 0, side * ft.get('splay', 0))), ft['color'], coll))
+        parts.append(new_obj('foot', ellipsoid(ft['r'], 10 if LOW else 12, 6 if LOW else 7, loc, ft['scale'], (0, 0, side * ft.get('splay', 0))), ft['color'], coll, foot=side))
         if ft.get('sole'):
-            parts.append(new_obj('sole', ellipsoid(ft['r'] * 1.04, 10 if LOW else 12, 3 if LOW else 4, (loc[0], loc[1], 0.015), (ft['scale'][0], ft['scale'][1], 0.18), (0, 0, side * ft.get('splay', 0))), ft['sole'], coll))
+            parts.append(new_obj('sole', ellipsoid(ft['r'] * 1.04, 10 if LOW else 12, 3 if LOW else 4, (loc[0], loc[1], 0.015), (ft['scale'][0], ft['scale'][1], 0.18), (0, 0, side * ft.get('splay', 0))), ft['sole'], coll, foot=side))
     # join into one mesh
     bpy.ops.object.select_all(action='DESELECT')
     for p in parts: p.select_set(True)
@@ -173,7 +177,7 @@ def export(path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_materials='NONE',
         export_vertex_color='ACTIVE', export_active_vertex_color_when_no_material=True, export_yup=True,
-        export_normals=True, export_texcoords=False, export_apply=True, export_animations=False, export_skins=False, export_morph=False)
+        export_attributes=True, export_normals=True, export_texcoords=False, export_apply=True, export_animations=False, export_skins=False, export_morph=False)
     return sum(len(p.vertices) - 2 for p in ob.data.polygons)
 
 if __name__ == '__main__':

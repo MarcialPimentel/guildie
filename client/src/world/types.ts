@@ -144,6 +144,8 @@ export interface WorldEngine {
   setSlaps(id: number, on: boolean): void
   /** The nearest other merchant within reach, or null. */
   nearestPeer(reach: number): number | null
+  /** Slap the nearest townsperson, customer or official within reach (only you see it); false if nobody is there. */
+  slapNpc(reach: number): boolean
   /** Your id, so the engine knows which slaps and waves are yours. */
   setMyId(id: number): void
   /** A short speech bubble over a player (or over you). */

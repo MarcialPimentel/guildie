@@ -238,13 +238,13 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 
 | Move | What happens | Time |
 |---|---|---|
-| Walk / stop | Bob 0.08 m, squash 6% per step, lean into travel; one overshoot wobble on stopping | loop / 0.4 s |
+| Walk / stop | Bob 0.08 m, squash 6% per step, lean into travel, a small waddle; the feet step in turn, lifting and pointing their toes (0.18.0); one overshoot wobble on stopping | loop / 0.4 s |
 | Idle | After 4 s still: look around, rock on the heels or stretch, never in sync | 2–3 s every 5–9 s |
 | Wave (E) | One hand up, three waggles | 1.2 s |
 | Bow (1) | Lean 30°, one hand to the chest, the other sweeps back | 1.4 s |
 | Cheer (2) | Both hands up, two hops | 1.3 s |
 | Shrug (3) | Hands out, palms up, small squash and head tilt | 1.1 s |
-| Slapped | Squash sideways, slide back 0.8 m, wobble, "Challenge!" | 0.6 s |
+| Slapped | Knocked over away from the glove (any direction), arms flailing, feet kicking, a dizzy shake, slide back, wobble upright; "Challenge!" for players, an "Ow!" line for everyone else (0.18.0) | 0.9 s |
 | Hand over | Both hands forward; a parcel arcs across | 1.0 s |
 | Trumpet | The herald raises the trumpet and shouts | 2.0 s |
 | Carry / hammer | Loops for hired hands | loop |
@@ -300,3 +300,14 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 **Budget:** houses 630–1,500 triangles, the church 3,450, the guild hall 2,460, the Dogana 1,890, the campanile 2,430, the Palazzo 6,700 (the one hero piece slightly over the 6,000 guideline). The file is about 960 KB (vertex colors only, no textures). Everything static is still baked into a few meshes, so draw calls don't grow; window panes are a separate part so they light up at night.
 
 **Checking it:** in development, `/town.html` shows the harbor (`?scene=piazza` the Piazza, `?code=1` the old buildings, `?night=1` lit windows) without logging in. Before and after pictures are in [`docs/art/town/`](art/town/).
+
+### 9.4 Walking feet and slapping anyone (0.18.0)
+
+**Status:** Marz's request of 2026-10-30: a walk animation, and every character can be slapped and reacts.
+
+- **Feet with bones:** the body model has two foot bones (and one for everything else), so the feet can step without a draw call of their own. Each vertex of the feet is tagged in Blender (`_FOOT`: -1 or +1, exported as a glTF attribute) and the merged body becomes a skinned mesh. The clothes, hats and face ride the body bone, so nothing else changes. The code body (fallback) tags its feet the same way.
+- **Walk:** the foot opposite the forward hand swings forward, lifting about 9 cm with toes up; the body waddles a little onto the standing foot. Standing still, the feet settle back.
+- **Slapped:** a 0.9 s reaction for everyone: knocked away from the glove, arms flail above the head, feet kick, a quick dizzy shake, then the usual springy wobble back. With reduced motion: arms up, no shaking or tipping.
+- **Who:** a player within reach still gets the challenge through the room (both slaps on, as before). Otherwise **F** or **Slap** hits the nearest townsperson, customer, buyer, the herald, the mason, an official, vendor or trainer. Those people live in your own browser, so only you see it and nothing in the game changes; walkers are knocked back a step and glare at you, people at a post rock back to their spot. Slap is now available on the quay too.
+- **Checking it:** `/cast.html?anim=walk` or `?anim=slap` (dev server) plays the walk or the reaction on every look.
+

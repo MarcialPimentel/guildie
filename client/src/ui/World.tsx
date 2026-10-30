@@ -310,13 +310,15 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
     else engine.current?.emote(myId, e)
   }
   const wave = () => emote('wave')
+  // A merchant within reach gets the challenge (through the room); otherwise the nearest townsperson, customer or
+  // official gets slapped, which only you see.
   const slap = () => {
     const e = engine.current
-    if (!e || scene === 'harbor') return
-    if (!slaps) return game.say('Your slaps are off. Turn them on to challenge someone.', true)
+    if (!e) return
+    if (!slaps) return game.say('Your slaps are off. Turn them on to slap someone.', true)
     const target = e.nearestPeer(SLAP_REACH)
-    if (target === null) return game.say('Nobody within reach. Walk up to a merchant first.', true)
-    presence.current?.send({ t: 'slap', to: target })
+    if (target !== null) return presence.current?.send({ t: 'slap', to: target })
+    if (!e.slapNpc(SLAP_REACH)) game.say('Nobody within reach. Walk up to someone first.', true)
   }
   const toggleSlaps = async () => {
     const r = await session.cityPrefs(!slaps)
@@ -364,12 +366,12 @@ export function World({ scene, focus, panelWidth, onPick, onPickPlayer, onFail }
         <button class="secondary small" onClick={() => emote('bow')} data-testid="world-bow" title="Bow (1)">Bow</button>
         <button class="secondary small" onClick={() => emote('cheer')} data-testid="world-cheer" title="Cheer (2)">Cheer</button>
         <button class="secondary small" onClick={() => emote('shrug')} data-testid="world-shrug" title="Shrug (3)">Shrug</button>
-        {inQuarter && <button class="secondary small" onClick={slap} data-testid="world-slap" title="Slap the nearest merchant (F)">Slap</button>}
+        <button class="secondary small" onClick={slap} data-testid="world-slap" title="Slap whoever is nearest (F)">Slap</button>
         {inQuarter && <button class="secondary small" onClick={toggleSlaps} data-testid="world-slaps">{slaps ? 'Slaps: on' : 'Slaps: off'}</button>}
         <button class="secondary small" onClick={() => setNight((n) => !n)} data-testid="world-night">{night ? 'Day' : 'Night'}</button>
         <button class="secondary small" onClick={() => engine.current?.resetView()} data-testid="world-reset">Reset view</button>
       </div>
-      <p class="world-hint tiny">WASD or click to walk · drag to turn · scroll to zoom · E wave · 1 bow · 2 cheer · 3 shrug{inQuarter ? ' · F slap' : ''}</p>
+      <p class="world-hint tiny">WASD or click to walk · drag to turn · scroll to zoom · E wave · 1 bow · 2 cheer · 3 shrug · F slap</p>
       {me && status === 'ready' && (lookOpen || !me.look_chosen) && (
         <LookSheet guild={state.profession!.id} me={me} invite={!lookOpen}
           onDone={(m) => {

@@ -354,6 +354,11 @@ test('the Palazzo: two guilds meet live, the officials, the market, buy offers, 
   await expect(a.locator(id('panel-notary'))).toBeVisible()
   await expect(a.locator(id('npc-rumor'))).not.toBeEmpty()
   await expect(a.locator(id('npc-favor'))).toBeVisible()
+  // Anyone can be slapped (0.18.0): standing at the notary, the slap lands on him (only you see it; to = -1).
+  await expect(async () => {
+    await a.click(id('world-slap'))
+    expect(await a.evaluate(() => window.__guildieWorld!.lastSlap?.to)).toBe(-1)
+  }).toPass({ timeout: 10_000 })
   await a.click(id('dock-hall'))
   await expect(a.locator(id('honors-skill'))).toBeVisible()
 

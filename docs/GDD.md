@@ -776,6 +776,7 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-30 | **No account reset for the M2 playtest** | Marz's pick. Players keep their skill, gold and bottega |
 | 2026-10-30 | **Gold: raise what players spend on** (recipes and bottega upgrades), not what the city pays | Marz's pick. The simulator showed income ~10x the sinks (bots ended with 10,000–45,000 ducats); keeping income keeps trading rewarding. Recipes now cost 50 / 500 / 2,000 / 7,500 by rank (were 50 / 200 / 800 / 3,000) and bottega upgrades 200 / 2,000 / 7,500 (were 150 / 800 / 3,000), about 2.5x on the later ranks. Resolves Open Question 5 |
 | 2026-10-30 | Simulator finding: **craft time doesn't limit progress; other guilds' goods do.** At every pace tried, Blacksmith and Leatherworker bots stalled at skill 50 because Alchemists sold all their Lemon Tonic to the city | The simulator now uses buy offers the way players are told to; watch Lemon Tonic supply in the playtest |
+| 2026-10-30 | People **walk with stepping feet** (two foot bones in the body model) and **anyone can be slapped**: townsfolk, customers, officials, vendors and trainers react with a knock-back and flail. Slapping a non-player is local and cosmetic; a merchant in reach still gets the room-checked challenge first | Marz's request. Townsfolk live only in each browser, so a local slap needs no server and can't touch the economy |
 
 ---
 
