@@ -6,7 +6,7 @@
  *                                                     skill 1, both raws at the station, progress_version 0,
  *                                                     so their next request replays their past crafts (#30)
  *   php tools/test_player.php skill smoke_dxxxxx 25   set their skill, one XP short of the next level
- *   php tools/test_player.php give smoke_dxxxxx ITEM 10   add goods to their storehouse (0.11.0)
+ *   php tools/test_player.php give smoke_dxxxxx ITEM 10 [Q]  add goods to their storehouse (0.11.0); Q = quality 1-3 (0.18.0)
  *   php tools/test_player.php gold smoke_dxxxxx 5000      set their ducats
  *   php tools/test_player.php build_ready smoke_dxxxxx    finish their bottega upgrade's build time now
  *   php tools/test_player.php kept_rank smoke_dxxxxx 1    the rank they "held before 0.11.0" (migration 009)
@@ -40,7 +40,7 @@ tx(function (PDO $pdo) use ($mode, $name, $value, $argv) {
     }
     $id = (int) $p['id'];
     if ($mode === 'give') {
-        inventory_add($pdo, $id, (string) $argv[3], (int) ($argv[4] ?? 1));
+        inventory_add($pdo, $id, (string) $argv[3], (int) ($argv[4] ?? 1), (int) ($argv[5] ?? QUALITY_COMMON));
         return;
     }
     if ($mode === 'gold') {

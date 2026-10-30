@@ -2,6 +2,7 @@
 import { Coins, ItemIcon } from './art'
 import { useSession } from '../session'
 import { useGame } from './common'
+import { QualityTag } from './Quality'
 
 export function Bag() {
   const s = useSession()
@@ -16,12 +17,12 @@ export function Bag() {
       {items.length > 0 && (
         <div class="card tight">
           {items.map((item) => (
-            <div class="list-row" data-testid={`bag-${item.item_id}`}>
+            <div class="list-row" data-testid={`bag-${item.item_id}${item.quality > 1 ? `-q${item.quality}` : ''}`}>
               <ItemIcon id={item.item_id} />
-              <span class="grow">{item.name}</span>
+              <span class="grow">{item.name}<QualityTag q={item.quality} /></span>
               <span class="num">× {item.quantity}</span>
               <span class="col-num muted small num">~<Coins n={item.quantity * item.reference} /></span>
-              <button class="secondary small" onClick={() => game.openTab('market', { sellItem: item.item_id, sellQty: item.quantity })}>
+              <button class="secondary small" onClick={() => game.openTab('market', { sellItem: item.item_id, sellQty: item.quantity, sellQuality: item.quality })}>
                 Sell
               </button>
             </div>

@@ -462,3 +462,11 @@ body[data-guide="claim"] [data-testid="guide-claim"] {
 .strike-pips .pip.perfect { background: var(--lemon); border-color: var(--lemon); }
 .strike-pips .pip.good { background: var(--accent); border-color: var(--accent); }
 .strike-pips .pip.miss { background: var(--panel-light); border-color: var(--error); }
+
+/* ---------------------------------------------------------------- 0.18.0: quality tiers (#79) */
+.tag.q2 { background: #2E7D5B; color: #FFFFFF; }          /* Fine: verdigris green */
+.tag.q3 { background: #B8862B; color: #FFFFFF; }          /* Masterwork: gilt */
+:root { --fine: #2E7D5B; }
+@media (prefers-color-scheme: dark) { :root { --fine: #6FCF9F; } }
+.quality-odds { margin: 0; color: var(--muted); }
+.quality-odds.q2, .quality-odds.q3, .quality-note { color: var(--fine); font-weight: 700; }

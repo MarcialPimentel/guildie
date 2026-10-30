@@ -112,7 +112,7 @@ The theme and the progression arc are the same story. The player begins as an ap
 | Apprentice | 1–25 | Hand tools, manual work, tapping to gather | Basic recipes, two craft slots (live in M1) |
 | Journeyman | 26–50 | Better tools, first mechanical aids | Third craft slot, first water-powered station |
 | Expert | 51–75 | Water wheels and gear trains run while you're away | Automated gathering, longer high-value crafts |
-| Master | 76–100 | A bottega of clockwork machines, prestige crafts | Masterwork recipes, second profession unlock |
+| Master | 76–100 | A bottega of clockwork machines, prestige crafts | Masterwork recipes, second profession unlock (Master bottega) |
 
 ### Target pacing
 
@@ -183,7 +183,7 @@ The market has a weekly rhythm (see [6.5](#65-market-rhythm--events)). Players l
 Apprentice → Journeyman → Expert → Master
   → Unlock and upgrade water wheels and machines
   → Collect rare recipes and Masterwork results
-  → Max profession → unlock a second profession (prestige)
+  → Master bottega → unlock a second profession (capped at Expert, shares your slots)
   → (Later) Join a guild, contribute to guild projects
 ```
 
@@ -226,10 +226,21 @@ This turns leveling into a light routing puzzle: what's the cheapest path to the
 - **Chosen and bought at the guild trainer** (gold sink): one free starter recipe per rank, the rest bought as you choose. **Rare recipes** come only from orders and rare finds, and they're trophies. No specialization branches for now. Details: [professions.md](professions.md) §4.
 - Rare recipes are trophies and a major collection goal.
 
-**Quality tiers**
-- Each crafted item has a quality: **Common, Fine, Masterwork** [tune].
-- Quality affects sale price and eligibility for some crafting orders.
-- Quality is influenced by skill relative to recipe difficulty, tools, and the signature mechanic.
+**Quality tiers** *(built in 0.18.0, #79)*
+- Each crafted item has a quality: **Common, Fine, Masterwork**.
+- **The more XP a recipe gives you, the worse you make it.** The recipe's colour at your skill sets a minimum quality, and each unit has a chance to come out one tier better (Inspiration) [tune, `economy.json` `progression.colours`]:
+
+  | Colour | XP | At least | Chance of one tier better |
+  |---|---|---|---|
+  | Orange | 100% | Common | 10% Fine |
+  | Yellow | 60% | Common | 35% Fine |
+  | Green | 20% | Fine | 15% Masterwork |
+  | Grey | none | Fine | 35% Masterwork |
+
+  So every craft is a choice: **learn** (orange and yellow recipes give XP) or **excel** (green and grey recipes make good goods). Old recipes stay useful, and a player at the bottega's XP cap has something worth doing.
+- Quality raises an item's value: **Fine 1.5x, Masterwork 2.5x** [tune, `economy.json` `quality`], in the bag, at the selling desk, at the Mercato and to the city's buyers and traders. The Guild Suppliers sell Common only.
+- **Quality never blocks you:** recipes, orders, the Duke, favors, upgrades, buy offers and trades take any quality, lowest first, and trades keep the quality of what's handed over. Only selling picks a quality, because the price depends on it.
+- Next (#80): customers who ask for "Fine or better" or Masterwork. Later: Focus (the crafting minigame) raises the chance of a better tier; better ingredients may help too.
 
 **Crafting stats and procs** (inspired by Dragonflight)
 
@@ -320,10 +331,26 @@ More professions are planned, but the list is deliberately not decided yet. Cand
 
 ### 5.7 Second profession
 
-- Unlocked when the first profession reaches **skill 80** (80% complete) [tune], at a significant gold cost (sink).
-- The player can keep leveling the first profession to 100 alongside the second.
-- Starts at skill 1, but carries over some benefits [to design], such as market knowledge, NPC reputation, or workshop buildings.
+_Designed 2026-10-30, not built. Built after the M2 playtest and the Glassblower (the 4th guild makes the choice richer)._
+
+**Principle:** what stays scarce is what you can make *at the same time* (your craft slots), not which recipes you may know. A second profession adds choice, not output, so specialists stay needed (Pillars 1 and 5).
+
+- **Unlock:** when your bottega reaches its **Master** level (replaces "skill 80"), at a gold cost [tune] (sink).
+- **Capped at Expert (skill 75).** Master goods of every guild still need that guild's specialist.
+- **Shares your craft slots.** No extra slots: every batch of your second guild's goods is a batch of your own you didn't make.
+- Your first profession keeps leveling to 100 alongside it.
+- **Carries over** (Open Question 4): your **bottega and machines** (slots, building level, upkeep), your **city standing** (Palazzo favors, friends, anything social), and a **"seasoned crafter" XP bonus** (+50% XP [tune] in the second profession until Journeyman), since you've done an Apprentice grind before.
+- **Doesn't carry over:** recipes. Each guild's recipes are learned and bought at its own trainer (one free starter per rank, as now), a gold sink.
 - Acts as New Game+ and a long-term goal for a permanent world.
+
+### 5.8 Changing guild
+
+_Designed 2026-10-30, not built._ Changing guild is for a wrong first pick; the second profession (5.7) is for growing.
+
+- **Free until your first bottega upgrade** (Journeyman): pick again with no cost.
+- **After that, changing guild starts the new one at skill 1** and your old guild's skill and recipes are lost. No ducat fee: the lost progress is the cost.
+- Your ducats, inventory, bottega building and city standing stay [to confirm when built: the bottega stays, as in 5.7, so a restart doesn't feel like punishment].
+- Everything open at once (any player crafts every guild's goods) is ruled out: self-sufficiency kills trade (Pillar 5), and the 0.16.0 simulator showed other guilds' goods are what pace progress.
 
 ---
 
@@ -647,7 +674,7 @@ Each milestone ends with a playtest and a clear exit question.
 1. ~~**Gold leaderboard: total gold or net worth?**~~ **Decided 2026-10-27: total gold** (City tab, 0.3.0). Net worth stays an option if holding stock starts to feel punished.
 2. **Exact skill curve and craft timers** to hit the pacing targets in [Section 3](#target-pacing). Tune in M1–M2 playtests.
 3. **Active bonus size:** how much more should active play reward than idle without making idle feel bad?
-4. **Second profession carryover:** what transfers from the first profession, if anything?
+4. ~~**Second profession carryover:** what transfers from the first profession, if anything?~~ **Decided 2026-10-30:** the bottega and machines, city standing, and a +50% XP bonus until Journeyman; recipes don't carry over ([5.7](#57-second-profession)).
 5. ~~**Gold sinks before slowing the pace**~~ **Decided 2026-10-30 (#52):** recipes, bottega upgrades and machine running costs are the sinks; their prices were raised with the simulator before slowing the pace.
 6. ~~**City name**~~ **Decided 2026-10-28: Portovela** ("port of sails"), replacing the working name Brassmere.
 7. **Skill source (#30):** replace random skill-ups with crafting XP plus a first-craft bonus? How big should the bonus be, and should gathering give XP? The current 12 recipes can't fill the 100-point curve, so more recipes are needed in M2.
@@ -775,7 +802,14 @@ Each milestone ends with a playtest and a clear exit question.
 | 2026-10-30 | **The town becomes Italian Renaissance, not Greek** (playtest feedback): Blender-made buildings with round arches on columns, rusticated ground floors, cornices, terracotta roofs, green shutters and earth plasters; a church with a ribbed dome replaces the blue-domed tower | Marz's pick: option 1 "warm plaster" of two colorways (the other: Florentine stone). art-direction.md §9.4 |
 | 2026-10-30 | **No account reset for the M2 playtest** | Marz's pick. Players keep their skill, gold and bottega |
 | 2026-10-30 | **Gold: raise what players spend on** (recipes and bottega upgrades), not what the city pays | Marz's pick. The simulator showed income ~10x the sinks (bots ended with 10,000–45,000 ducats); keeping income keeps trading rewarding. Recipes now cost 50 / 500 / 2,000 / 7,500 by rank (were 50 / 200 / 800 / 3,000) and bottega upgrades 200 / 2,000 / 7,500 (were 150 / 800 / 3,000), about 2.5x on the later ranks. Resolves Open Question 5 |
+| 2026-10-30 | **Quality tiers (0.18.0, #79): the more XP a recipe gives you, the worse you make it.** Each colour guarantees a minimum quality (orange and yellow Common, green and grey Fine) with a chance of one tier better (10 / 35 / 15 / 35%) | Marz's pick. Turns every craft into a choice between levelling and making good goods, and keeps grey recipes useful. The other way round (more XP = better) would let the newest recipe win on both counts |
+| 2026-10-30 | Quality is **a guaranteed floor plus a chance**, not a pure roll or a fixed result | Marz's pick. Players can plan for a quality and still get surprises (the GDD's Inspiration proc) |
+| 2026-10-30 | **Only customers ask for quality** (orders, #80, the next build); recipes, upgrades and trades take any quality, lowest first | Marz's pick. Recipes asking for Fine parts would make trade between the guilds harder |
+| 2026-10-30 | **Ingredient quality doesn't change the result** for now | Marz's pick. Simpler rules; revisit after the playtest |
+| 2026-10-30 | Quality shipped in **two builds**: 0.18.0 (quality on crafted goods, prices) then #80 (orders that ask for quality) | Marz's pick: smaller builds, one playtest each |
 | 2026-10-30 | Simulator finding: **craft time doesn't limit progress; other guilds' goods do.** At every pace tried, Blacksmith and Leatherworker bots stalled at skill 50 because Alchemists sold all their Lemon Tonic to the city | The simulator now uses buy offers the way players are told to; watch Lemon Tonic supply in the playtest |
+| 2026-10-30 | **Second profession (designed, not built):** unlocks at the Master bottega (replaces skill 80), **capped at Expert**, and **shares your craft slots**; the bottega, city standing and a +50% XP bonus until Journeyman carry over, recipes don't ([5.7](#57-second-profession)). Built after the M2 playtest and the Glassblower | Marz's pick. Slots are the scarce thing, so a second craft adds choice, not output, and Master goods still need specialists. Replaces the 2026-10-25 "skill 80" row; resolves Open Question 4 |
+| 2026-10-30 | **Changing guild (designed, not built):** free until your first bottega upgrade; after that the new guild starts at skill 1 and the old guild's progress is lost, with no fee ([5.8](#58-changing-guild)) | Marz's pick over "frozen and restored on return". Switching fixes a wrong pick; the second profession is the way to grow. Everything open at once is ruled out: self-sufficiency kills trade |
 | 2026-10-30 | People **walk with stepping feet** (two foot bones in the body model) and **anyone can be slapped**: townsfolk, customers, officials, vendors and trainers react with a knock-back and flail. Slapping a non-player is local and cosmetic; a merchant in reach still gets the room-checked challenge first | Marz's request. Townsfolk live only in each browser, so a local slap needs no server and can't touch the economy |
 
 ---

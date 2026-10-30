@@ -177,7 +177,7 @@ These rules apply to every system.
 | **Job** | Track what each player owns |
 | **Owns** | `inventory` (item, quality, quantity), `players.gold` |
 | **Verbs** | None directly; other systems move items through it |
-| **Rules** | Only add/remove functions change it, always inside the calling action's transaction. Quantities and gold can never go negative (enforced in code and by unsigned columns). Gold is a whole number. |
+| **Rules** | Only add/remove functions change it, always inside the calling action's transaction. Quantities and gold can never go negative (enforced in code and by unsigned columns). Gold is a whole number. **Quality (0.18.0):** rows are kept per quality; counting and removing without a quality covers every tier, lowest first, and returns what was taken so a transfer (trade, buy offer) keeps the quality. Only selling (selling desk, Mercato listing) names a quality. An item's value at a quality is its value × `quality.value_multiplier` (Fine 1.5, Masterwork 2.5). |
 | **Tuning knobs** | Starting gold and items (`economy.json`); storage cap [tune, M2] |
 | **M1 adds** | `inventory_remove`, items **reserved** while listed on the Exchange (listed items leave the inventory and return if cancelled or expired) |
 | **Later** | Storage cap from the Storehouse building (M2) |
@@ -280,12 +280,13 @@ These rules apply to every system.
 - Starting a craft **removes the inputs immediately** (no double-spending) and creates a job with an end time.
 - A job occupies one **queue slot** until collected. Starting slots: 2 [tune] (so a player can make a component and a finished good at once). More come from rank and buildings.
 - Results are rolled **at collection** on the server: quantity (multicraft), refunds (resourcefulness), quality (inspiration), skill-up.
+- **Quality (0.18.0, #79):** each unit rolls from the recipe's colour at the player's skill before the batch's XP: at least `quality_floor`, with a `quality_up` chance of one tier better (`progression.colours`). The more XP a recipe gives, the worse the goods (GDD 5.2).
 - Craft time scales by recipe tier: seconds to minutes for Apprentice recipes, hours for Master recipes (GDD 3, Target pacing).
 - A player can queue a **batch** (up to 10 at once [tune]) in one slot, with total time = per-item time × quantity, so short sessions can set up long idle runs.
 
 **Tuning knobs:** recipe inputs, outputs, time, difficulty; proc chances; starting slots; batch limit.
 
-**Milestones:** M1 = recipes, timers, two slots, batches, collect (Common quality only). M2 = quality tiers, procs, extra slots.
+**Milestones:** M1 = recipes, timers, two slots, batches, collect (Common quality only). M2 = quality tiers (0.18.0), procs, extra slots.
 
 ### 5.4 Focus — active play *(new, Confirmed)*
 
@@ -569,7 +570,7 @@ Social layer: guild orders needing several professions, a shared guild hall, gui
 - **Looks (0.10.0):** a body color 0–5 and a hat 0–2, checked by the server; players who never chose keep the 0.9.0 look (a color from their player number, the first hat). The rank sash comes from skill. Looks travel only in the signed pass, so nobody can show someone else's.
 - **Only logged-in players join:** the room checks the pass's HMAC-SHA256 signature (secret shared with `config.php` → `realtime_secret`) and expiry, and takes identity from the pass, never from the client.
 - **Rooms:** since 0.13.0 only the Palazzo (`palazzo-1`, `palazzo-2`, …), at most `30` players per copy [tune]; a full room sends the join to the next copy. (0.9.0–0.12.0 also had one per guild quarter.)
-- **Slapping townsfolk (0.18.0)** happens only in your browser (they are client-side people); the room is not involved and nothing is saved.
+- **Slapping townsfolk (0.19.0)** happens only in your browser (they are client-side people); the room is not involved and nothing is saved.
 - **Fair play:** positions clamped to the piazza; at most 10 messages a second per client (more are dropped); a slap needs both players' slaps on, distance ≤ 2.5 m and 1.5 s since the slapper's last slap.
 - **Optional:** with no `realtime_url` configured, or the service unreachable, quarters still show stalls, townsfolk and **echoes** (crafters of that guild who acted in the last 30 minutes, from `activity`).
 - Players aren't solid, and clicking a place opens it from anywhere, so nobody can block a door.

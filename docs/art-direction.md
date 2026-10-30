@@ -238,13 +238,13 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 
 | Move | What happens | Time |
 |---|---|---|
-| Walk / stop | Bob 0.08 m, squash 6% per step, lean into travel, a small waddle; the feet step in turn, lifting and pointing their toes (0.18.0); one overshoot wobble on stopping | loop / 0.4 s |
+| Walk / stop | Bob 0.08 m, squash 6% per step, lean into travel, a small waddle; the feet step in turn, lifting and pointing their toes (0.19.0); one overshoot wobble on stopping | loop / 0.4 s |
 | Idle | After 4 s still: look around, rock on the heels or stretch, never in sync | 2–3 s every 5–9 s |
 | Wave (E) | One hand up, three waggles | 1.2 s |
 | Bow (1) | Lean 30°, one hand to the chest, the other sweeps back | 1.4 s |
 | Cheer (2) | Both hands up, two hops | 1.3 s |
 | Shrug (3) | Hands out, palms up, small squash and head tilt | 1.1 s |
-| Slapped | Knocked over away from the glove (any direction), arms flailing, feet kicking, a dizzy shake, slide back, wobble upright; "Challenge!" for players, an "Ow!" line for everyone else (0.18.0) | 0.9 s |
+| Slapped | Knocked over away from the glove (any direction), arms flailing, feet kicking, a dizzy shake, slide back, wobble upright; "Challenge!" for players, an "Ow!" line for everyone else (0.19.0) | 0.9 s |
 | Hand over | Both hands forward; a parcel arcs across | 1.0 s |
 | Trumpet | The herald raises the trumpet and shouts | 2.0 s |
 | Carry / hammer | Loops for hired hands | loop |
@@ -301,7 +301,7 @@ Rank sash: none (Apprentice), sea-glass `#8FD3C4` (Journeyman), majolica `#2A4C9
 
 **Checking it:** in development, `/town.html` shows the harbor (`?scene=piazza` the Piazza, `?code=1` the old buildings, `?night=1` lit windows) without logging in. Before and after pictures are in [`docs/art/town/`](art/town/).
 
-### 9.4 Walking feet and slapping anyone (0.18.0)
+### 9.5 Walking feet and slapping anyone (0.19.0)
 
 **Status:** Marz's request of 2026-10-30: a walk animation, and every character can be slapped and reacts.
 

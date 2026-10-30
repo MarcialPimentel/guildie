@@ -81,7 +81,7 @@ In Renaissance Italy a glove across the face was a challenge to a duel. Here it'
 
 - Stand next to another merchant (within about 2.5 m) and press **F**, or tap them and choose **Slap**. An oversized white glove swings in, *thwack*, and they wobble and slide back a step. A "Challenge!" bubble appears over them.
 - **Cosmetic only.** Nothing is lost or won. No physics engine: the wobble is a spring on the blob's squash and stretch, the knockback a short slide.
-- **Anyone else (0.18.0):** with no merchant in reach, the slap lands on the nearest townsperson, customer, official, vendor or trainer: they're knocked back with arms flailing and say something indignant. Only you see it (they live in your browser), it changes nothing, and it works on the quay too. A merchant in reach always gets the challenge first.
+- **Anyone else (0.19.0):** with no merchant in reach, the slap lands on the nearest townsperson, customer, official, vendor or trainer: they're knocked back with arms flailing and say something indignant. Only you see it (they live in your browser), it changes nothing, and it works on the quay too. A merchant in reach always gets the challenge first.
 - **Opt-out:** a **Slaps on/off** switch in the world tools (saved on the server). With slaps off you can't slap or be slapped, and others see a little white flag over your hat.
 - **Fair use:** the realtime room checks distance and allows one slap per 1.5 s per player. Slaps never move anyone off a door in a way that matters, because doors can't be blocked (§3).
 - Each slap is also a duel challenge in name only for now. A later idea: a friendly "duel" (a rock-paper-scissors bow-off) that only gives bragging rights.

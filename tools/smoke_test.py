@@ -1142,6 +1142,62 @@ check("missing every swing scores 0 and pays nothing", s == 200 and r["data"]["s
 s, r = call("minigame_finish", {"round_id": rnd2["round_id"], "taps": taps2}, token=tok_a)
 check("another player can't finish your round", s == 400 and r["error"]["code"] == "round_closed", r)
 
+# ---------------------------------------------------------------- quality tiers (0.18.0, #79)
+# CI sets every colour's quality_up chance to 0, so each colour makes exactly its minimum quality.
+def have_q(state, item_id, quality):
+    return sum(i["quantity"] for i in state.get("inventory", []) if i["item_id"] == item_id and i["quality"] == quality)
+
+
+name_q, _, tok_q, r = register("q")
+s, r = call("choose_profession", {"profession_id": "blacksmith"}, token=tok_q)
+brass = next((x for x in r["data"]["profession"]["recipes"] if x["id"] == "brass_fittings"), {}) if s == 200 else {}
+check("a new recipe is orange and makes Common goods", brass.get("colour") == "orange" and brass.get("quality", {}).get("floor") == 1, brass)
+if PLAYER_TOOL:
+    tool("skill", name_q, 21)   # Brass Fittings (skill 1) is grey from skill 21
+    tool("give", name_q, "copper_ore", 4)
+    s, r = call("get_state", token=tok_q)
+    brass = next((x for x in r["data"]["profession"]["recipes"] if x["id"] == "brass_fittings"), {})
+    check("a grey recipe gives no XP but makes Fine goods", brass.get("colour") == "grey" and brass.get("xp_each") == 0
+          and brass.get("quality", {}).get("floor") == 2, brass)
+    s, r = craft_and_collect(tok_q, "brass_fittings", 2)
+    col = r["data"]["collected"][0] if s == 200 else {}
+    st = r["data"]["state"] if s == 200 else {}
+    check("collecting a grey craft gives Fine goods", col.get("qualities") == {"2": 2} and have_q(st, "brass_fittings", 2) == 2
+          and have_q(st, "brass_fittings", 1) == 0, col)
+    check("the activity log says they're Fine", any(a["type"] == "crafted" and "Fine" in a["text"] for a in st.get("activity", [])), st.get("activity", [])[:3])
+    row = next((i for i in st.get("inventory", []) if i["item_id"] == "brass_fittings"), {})
+    s, r = call("sell_quote", {"item_id": "brass_fittings", "quantity": 1}, token=tok_q)
+    common = r["data"] if s == 200 else {}
+    s, r = call("sell_quote", {"item_id": "brass_fittings", "quantity": 1, "quality": 2}, token=tok_q)
+    fine = r["data"] if s == 200 else {}
+    check("Fine is worth 1.5x Common, in the bag and the sell quote", fine.get("reference") == round(common.get("reference", 0) * 1.5)
+          and row.get("reference") == fine.get("reference") and fine.get("you_have") == 2 and common.get("you_have") == 0, (common, fine, row))
+    check("the suppliers don't sell Fine goods", fine.get("suppliers_sell") is False and common.get("suppliers_sell") is True, fine)
+    check("the guild pays more for Fine", fine.get("guild", {}).get("total", 0) > common.get("guild", {}).get("total", 0), (common.get("guild"), fine.get("guild")))
+    s, r = call("sell_to_guild", {"item_id": "brass_fittings", "quantity": 1, "expected_total": common.get("guild", {}).get("total", 0)}, token=tok_q)
+    check("selling Common you don't have is refused (Fine isn't sold by mistake)", s == 400 and r["error"]["code"] == "not_enough_items", r)
+    s, r = call("get_state", token=tok_q)
+    gold_q = r["data"]["player"]["gold"]
+    s, r = call("sell_to_guild", {"item_id": "brass_fittings", "quantity": 1, "quality": 2, "expected_total": fine["guild"]["total"]}, token=tok_q)
+    check("sell a Fine one to the guild at the Fine price", s == 200 and r["data"]["state"]["player"]["gold"] == gold_q + fine["guild"]["total"]
+          and have_q(r["data"]["state"], "brass_fittings", 2) == 1, r)
+    s, r = call("list_item", {"item_id": "brass_fittings", "quantity": 1, "unit_price": fine["reference"], "duration_hours": 12, "quality": 2}, token=tok_q)
+    lid = r["data"]["listing"]["listing_id"] if s == 200 else 0
+    check("list a Fine one at the Mercato", s == 200 and have_q(r["data"]["state"], "brass_fittings", 2) == 0, r)
+    s, r = call("market_item", {"item_id": "brass_fittings"}, token=tok_a)
+    check("the listing shows as Fine", any(l["id"] == lid and l["quality"] == 2 for l in r["data"]["listings"]), r["data"]["listings"][:5])
+    s, r = call("my_listings", token=tok_q)
+    check("my listings name it Fine", any(l["id"] == lid and l["name"] == "Fine Brass Fittings" for l in r["data"]["listings"]), r["data"]["listings"][:3])
+    s, r = call("cancel_listing", {"listing_id": lid}, token=tok_q)
+    check("a cancelled listing comes back Fine", s == 200 and have_q(r["data"]["state"], "brass_fittings", 2) == 1, r)
+    s, r = offer(tok_q, id_a, give=[("brass_fittings", 1)], ask_gold=1)
+    oid = r["data"]["offer"]["offer_id"] if s == 200 else 0
+    check("a trade can hold a Fine item", s == 200 and have(r["data"]["state"], "brass_fittings") == 0, r)
+    s, r = call("offer_accept", {"offer_id": oid}, token=tok_a)
+    check("it arrives Fine", s == 200 and have_q(r["data"]["state"], "brass_fittings", 2) == 1, r)
+else:
+    print("SKIP  quality tiers (no --player-tool)")
+
 s, r = call("logout", {}, token=tok_a)
 s, r = call("get_state", token=tok_a)
 check("logged out", s == 401, r)

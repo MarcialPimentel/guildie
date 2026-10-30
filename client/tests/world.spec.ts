@@ -159,12 +159,22 @@ async function goPalazzo(page: Page) {
  * First A must see B where B really is: right after a slap, B's step back may still be on its way to A, and
  * A would walk to where B used to stand.
  */
+const DIAG_LOG: string[] = []
 async function walkUpTo(a: Page, b: Page, idA: number, idB: number) {
-  await expect.poll(async () => {
-    const seen = await a.evaluate((pid) => window.__guildieWorld!.peer(pid), idB)
-    const real = await b.evaluate(() => window.__guildieWorld!.me())
-    return seen ? Math.hypot(seen.x - real.x, seen.z - real.z) : 99
-  }, { timeout: 10_000 }).toBeLessThan(0.2)
+  try {
+    await expect.poll(async () => {
+      const seen = await a.evaluate((pid) => window.__guildieWorld!.peer(pid), idB)
+      const real = await b.evaluate(() => window.__guildieWorld!.me())
+      return seen ? Math.hypot(seen.x - real.x, seen.z - real.z) : 99
+    }, { timeout: 10_000 }).toBeLessThan(0.2)
+  } catch (e) {
+    // DIAG: what each side thinks (temporary)
+    const sa = await a.evaluate((pid) => ({ s: window.__guildieWorld!.stats(), me: window.__guildieWorld!.me(), peer: window.__guildieWorld!.peer(pid) }), idB)
+    const sb = await b.evaluate((pid) => ({ s: window.__guildieWorld!.stats(), me: window.__guildieWorld!.me(), peer: window.__guildieWorld!.peer(pid) }), idA)
+    await b.waitForTimeout(3000)
+    const sb2 = await b.evaluate(() => ({ s: window.__guildieWorld!.stats(), me: window.__guildieWorld!.me() }))
+    throw new Error(`DIAG A=${JSON.stringify(sa)} B=${JSON.stringify(sb)} B+3s=${JSON.stringify(sb2)} logs=${JSON.stringify(DIAG_LOG.slice(-15))} :: ${(e as Error).message.slice(0, 200)}`)
+  }
   await a.click(id(`world-peer-${idB}`))
   await expect(a.locator(id('panel-visit'))).toBeVisible()
   await a.keyboard.press('Escape')
@@ -195,8 +205,8 @@ test('the living city: walk, the Palazzo, a second player live, and a slap', asy
   const a = await ctxA.newPage()
   const b = await ctxB.newPage()
   for (const [who, page] of [['A', a], ['B', b]] as const) {
-    page.on('pageerror', (e) => console.log(`[${who} pageerror]`, e.message, e.stack?.split(String.fromCharCode(10)).slice(0, 6).join(' | ')))
-    page.on('console', (m) => { if (m.type() === 'error') console.log(`[${who} console]`, m.text().slice(0, 500)) })
+    page.on('pageerror', (e) => DIAG_LOG.push(`[${who} pageerror] ${e.message} ${e.stack?.split(String.fromCharCode(10)).slice(0, 4).join(' | ')}`))
+    page.on('console', (m) => { if (m.type() === 'error') DIAG_LOG.push(`[${who} console] ${m.text().slice(0, 300)}`) })
   }
 
   // Walk: WASD moves your merchant on the quay.
@@ -238,7 +248,6 @@ test('the living city: walk, the Palazzo, a second player live, and a slap', asy
 
   // Arrivals spread out at the top of the Steps (0.10.0), so A walks up to B (tapping them opens their
   // bottega and walks over), then slaps, and B sees it.
-  for (let i = 0; i < 2; i++) { console.log('[B stats]', JSON.stringify(await b.evaluate(() => ({ s: window.__guildieWorld!.stats(), me: window.__guildieWorld!.me() })))); await b.waitForTimeout(1000) }
   await walkUpTo(a, b, idA, idB)
   await a.locator('.world-canvas').focus()
   await a.keyboard.press('f')
@@ -359,7 +368,7 @@ test('the Palazzo: two guilds meet live, the officials, the market, buy offers, 
   await expect(a.locator(id('panel-notary'))).toBeVisible()
   await expect(a.locator(id('npc-rumor'))).not.toBeEmpty()
   await expect(a.locator(id('npc-favor'))).toBeVisible()
-  // Anyone can be slapped (0.18.0): standing at the notary, the slap lands on him (only you see it; to = -1).
+  // Anyone can be slapped (0.19.0): standing at the notary, the slap lands on him (only you see it; to = -1).
   await expect(async () => {
     await a.click(id('world-slap'))
     expect(await a.evaluate(() => window.__guildieWorld!.lastSlap?.to)).toBe(-1)

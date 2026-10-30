@@ -14,9 +14,7 @@ function crafting_recipes(int $playerId, string $professionId): array
 {
     $inventory = [];
     foreach (inventory_list($playerId) as $row) {
-        if ($row['quality'] === QUALITY_COMMON) {
-            $inventory[$row['item_id']] = $row['quantity'];
-        }
+        $inventory[$row['item_id']] = ($inventory[$row['item_id']] ?? 0) + $row['quantity'];   // any quality works (0.18.0)
     }
     $pdo = db();
     $row = progression_row($pdo, $playerId);
@@ -42,6 +40,7 @@ function crafting_recipes(int $playerId, string $professionId): array
             ];
             $maxBatch = min($maxBatch, intdiv($have, (int) $in['quantity']));
         }
+        $colour = recipe_colour($recipe, $skill);
         $out[] = [
             'id'           => $recipe['id'],
             'name'         => recipe_name($recipe),
@@ -53,8 +52,12 @@ function crafting_recipes(int $playerId, string $professionId): array
             'lamp_oil_each' => workshop_oil_for($level, $recipe, 1) > 0 ? (float) $recipe['time_seconds'] / 60 * (float) (workshop_running($level)['lamp_oil_per_minute'] ?? 0) : 0,
             'can_make'     => max(0, $maxBatch),
             'skill'        => recipe_skill($recipe),
-            'colour'       => recipe_colour($recipe, $skill)['id'],
+            'colour'       => $colour['id'],
             'xp_each'      => recipe_xp_each($recipe, $skill),
+            'quality'      => [   // what you'd make at this colour (0.18.0): at least this tier, a chance of one better
+                'floor' => $colour['quality_floor'],
+                'up'    => $colour['quality_floor'] < QUALITY_MASTERWORK ? $colour['quality_up'] : 0,
+            ],
             'trade_bonus'  => (bool) recipe_import_guilds($recipe),
             'rare'         => recipe_is_rare($recipe),
             'discovered'   => $known[$recipe['id']]['first_crafted_at'] !== null,
@@ -181,11 +184,20 @@ function crafting_collect(int $playerId): array
         $surprises = [];
         foreach ($jobs as $job) {
             $recipe = content_recipe($job['recipe_id']);
+            $itemId = $recipe['output']['item_id'];
             $qty = (int) $job['quantity'] * (int) $recipe['output']['quantity'];
-            inventory_add($pdo, $playerId, $recipe['output']['item_id'], $qty);
+            // Quality (0.18.0, #79): each unit rolls from the recipe's colour at your skill before this batch's XP.
+            $colour = recipe_colour($recipe, (int) ($row['skill'] ?? 1));
+            $byQuality = [];
+            for ($i = 0; $i < $qty; $i++) {
+                $q = recipe_roll_quality($colour);
+                $byQuality[$q] = ($byQuality[$q] ?? 0) + 1;
+            }
+            ksort($byQuality);
+            inventory_add_each($pdo, $playerId, $itemId, $byQuality);
             $pdo->prepare('UPDATE craft_jobs SET collected_at = ? WHERE id = ?')->execute([$now, $job['id']]);
-            activity_log($pdo, $playerId, 'crafted', ['item_id' => $recipe['output']['item_id'], 'quantity' => $qty]);
-            $collected[] = ['item_id' => $recipe['output']['item_id'], 'quantity' => $qty];
+            activity_log($pdo, $playerId, 'crafted', ['item_id' => $itemId, 'quantity' => $qty, 'qualities' => $byQuality]);
+            $collected[] = ['item_id' => $itemId, 'name' => item_name($itemId), 'quantity' => $qty, 'qualities' => $byQuality];
 
             // Skill and XP (#30), worked out here on the server at collection.
             if ($row !== null) {
@@ -210,10 +222,11 @@ function crafting_collect(int $playerId): array
 
             // Small surprise (#48): sometimes a batch yields an extra item.
             if (rand_between(0, 1) < (float) econ('surprises.bonus_craft_chance', 0.1)) {
-                inventory_add($pdo, $playerId, $recipe['output']['item_id'], 1);
-                $text = sprintf('Bonus craft! +1 %s', item_name($recipe['output']['item_id']));
+                $q = recipe_roll_quality($colour);
+                inventory_add($pdo, $playerId, $itemId, 1, $q);
+                $text = sprintf('Bonus craft! +1 %s', item_name_q($itemId, $q));
                 activity_log($pdo, $playerId, 'surprise', ['text' => $text]);
-                $surprises[] = ['text' => $text, 'item_id' => $recipe['output']['item_id'], 'quantity' => 1];
+                $surprises[] = ['text' => $text, 'item_id' => $itemId, 'quantity' => 1, 'quality' => $q];
             }
         }
 

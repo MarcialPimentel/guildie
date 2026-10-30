@@ -215,14 +215,14 @@ function city_listings(PDO $pdo, array $playerIds): array
     }
     $in = implode(',', array_fill(0, count($playerIds), '?'));
     $stmt = $pdo->prepare(
-        "SELECT seller_player_id, id, item_id, quantity, unit_price FROM listings
+        "SELECT seller_player_id, id, item_id, quality, quantity, unit_price FROM listings
          WHERE seller_player_id IN ($in) AND status = 'active' AND expires_at > ? ORDER BY item_id, unit_price"
     );
     $stmt->execute([...$playerIds, game_now()]);
     $out = [];
     foreach ($stmt->fetchAll() as $l) {
         $out[(int) $l['seller_player_id']][] = [
-            'id' => (int) $l['id'], 'item_id' => $l['item_id'], 'name' => item_name($l['item_id']),
+            'id' => (int) $l['id'], 'item_id' => $l['item_id'], 'name' => item_name_q($l['item_id'], (int) $l['quality']), 'quality' => (int) $l['quality'],
             'quantity' => (int) $l['quantity'], 'unit_price' => (int) $l['unit_price'],
         ];
     }
@@ -233,7 +233,7 @@ function city_listings(PDO $pdo, array $playerIds): array
 function city_echo_text(string $type, array $p): ?string
 {
     $n = (int) ($p['quantity'] ?? 0);
-    $item = item_name((string) ($p['item_id'] ?? ''));
+    $item = item_name_q((string) ($p['item_id'] ?? ''), (int) ($p['quality'] ?? QUALITY_COMMON));
     return match ($type) {
         'crafted'      => "crafted $n $item",
         'craft_started' => "is crafting $n $item",
