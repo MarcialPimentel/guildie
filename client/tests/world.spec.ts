@@ -155,6 +155,12 @@ async function goPalazzo(page: Page) {
 }
 
 /**
+ * How long to wait for something to travel between the two players. CI draws 3D in software, at one or two
+ * frames a second, and a page can stall for 10+ seconds the first time it draws the Palazzo.
+ */
+const LIVE_WAIT = 30_000
+
+/**
  * A taps B (their bottega opens and A walks over), closes the panel, and waits until B sees A within reach.
  * First A must see B where B really is: right after a slap, B's step back may still be on its way to A, and
  * A would walk to where B used to stand.
@@ -164,7 +170,7 @@ async function walkUpTo(a: Page, b: Page, idA: number, idB: number) {
     const seen = await a.evaluate((pid) => window.__guildieWorld!.peer(pid), idB)
     const real = await b.evaluate(() => window.__guildieWorld!.me())
     return seen ? Math.hypot(seen.x - real.x, seen.z - real.z) : 99
-  }, { timeout: 10_000 }).toBeLessThan(0.2)
+  }, { timeout: LIVE_WAIT }).toBeLessThan(0.2)
   await a.click(id(`world-peer-${idB}`))
   await expect(a.locator(id('panel-visit'))).toBeVisible()
   await a.keyboard.press('Escape')
@@ -172,7 +178,7 @@ async function walkUpTo(a: Page, b: Page, idA: number, idB: number) {
     const pa = await b.evaluate((pid) => window.__guildieWorld!.peer(pid), idA)
     const pb = await b.evaluate(() => window.__guildieWorld!.me())
     return pa ? Math.hypot(pa.x - pb.x, pa.z - pb.z) : 99
-  }, { timeout: 10_000 }).toBeLessThan(2.4)
+  }, { timeout: LIVE_WAIT }).toBeLessThan(2.4)
 }
 
 const me = (page: Page) => page.evaluate(() => window.__guildieWorld!.me())
@@ -187,6 +193,7 @@ async function hold(page: Page, key: string, ms: number) {
 
 test('the living city: walk, the Palazzo, a second player live, and a slap', async ({ browser }, info) => {
   test.skip(info.project.name !== 'desktop', 'The 3D city is the desktop view; phones get the City tab as lists (play.spec.ts).')
+  test.setTimeout(240_000)   // two 3D pages drawn in software on one CI machine (see LIVE_WAIT)
   const stamp = Date.now() % 1_000_000
   const nameA = `lca${stamp}`, nameB = `lcb${stamp}`
   const opts = { baseURL: info.project.use.baseURL, viewport: { width: 1280, height: 860 } }
@@ -253,7 +260,7 @@ test('the living city: walk, the Palazzo, a second player live, and a slap', asy
   const before = await b.evaluate((pid) => window.__guildieWorld!.peer(pid), idA)
   await a.locator('.world-canvas').focus()
   await hold(a, 'a', 900)
-  await expect.poll(async () => (await b.evaluate((pid) => window.__guildieWorld!.peer(pid), idA))!.x, { timeout: 10_000 }).toBeLessThan(before!.x - 1)
+  await expect.poll(async () => (await b.evaluate((pid) => window.__guildieWorld!.peer(pid), idA))!.x, { timeout: LIVE_WAIT }).toBeLessThan(before!.x - 1)
 
   // Tap the other player: their bottega opens (shop window, trade, add a friend).
   await a.click(id(`world-peer-${idB}`))
