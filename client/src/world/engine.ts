@@ -1108,6 +1108,9 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
       me.heading = Math.PI
       me.blob.root.rotation.y = Math.PI
       lastSent = { at: 0, x: NaN, z: NaN }
+      // Tell the room where you arrived now, not on the next drawn frame: a slow device may draw only one or
+      // two frames a second. If the room isn't open yet this is dropped, and the room's welcome sends it again.
+      reportMove(true)
       const h = home()
       Object.assign(goal, { yaw: h.yaw, pitch: h.pitch, dist: h.dist })
       goal.target.copy(h.target)
@@ -1486,6 +1489,7 @@ export function createWorld(container: HTMLElement, profession: ProfessionId, pl
     slapNpc,
     resendPosition() {
       // a move made before the room's welcome was dropped by the socket; send where we really are
+      // (if the welcome beats the arrival fade, the arrival itself sends it)
       lastSent = { at: 0, x: NaN, z: NaN }
       reportMove(true)
     },
