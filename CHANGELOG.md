@@ -1,6 +1,10 @@
 # Guildie — Changelog
 
-_Current as of 0.19.0 (2026-10-30). One entry per build, newest first, from the merged pull requests. The version is in [`VERSION`](VERSION); the live build shows in the game's footer._
+_Current as of 0.20.0 (2026-11-01). One entry per build, newest first, from the merged pull requests. The version is in [`VERSION`](VERSION); the live build shows in the game's footer._
+
+## 0.20.0 — 2026-11-01
+- Customers ask for quality: regular customers sometimes want "Fine or better", and collectors always want Fine or better or Masterwork. They pay for that quality, well above what the Guild Suppliers charge, because the suppliers only sell Common ([#80](https://github.com/MarcialPimentel/guildie/issues/80)).
+- They only ask for goods you can already make at Fine (an old green or grey recipe). A Masterwork order takes Masterwork only; "Fine or better" uses your Fine goods before your Masterwork ones.
 
 ## 0.19.0 — 2026-10-30
 - People walk with stepping feet and a little waddle ([#78](https://github.com/MarcialPimentel/guildie/pull/78)).

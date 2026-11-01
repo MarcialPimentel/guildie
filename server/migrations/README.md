@@ -1,6 +1,6 @@
 # Guildie — Migrations
 
-_Current as of 0.19.0 (2026-10-30): 001 to 012._
+_Current as of 0.20.0 (2026-11-01): 001 to 013._
 
 SQL files that build and change the database. From 0.2.1 the server applies them itself: the first API request or cron tick after a deploy runs every file numbered higher than `game_state.schema_version`, in order, once, under a database lock (`server/app/lib/migrate.php`).
 
@@ -16,6 +16,7 @@ SQL files that build and change the database. From 0.2.1 the server applies them
 - `010_guide.sql`: the new-player guide's progress (`guide_progress`: next step, done, when the player reached the Palazzo and first slapped someone); players from before 0.14.0 get a finished guide (0.14.0)
 - `011_minigames.sql`: minigame rounds (`minigame_rounds`: the plan the server rolled, status, score, reward); tiredness is read from recent rounds (0.15.0)
 - `012_running_costs.sql`: `player_professions.wages_day`, the last day the Expert and Master machines' wages were paid (0.16.0, #52)
+- `013_order_quality.sql`: `orders.min_quality`, the lowest quality a customer accepts (1 = any, the default; 0.20.0, #80)
 
 Rules:
 - Name files `NNN_short_name.sql`, numbered in order. Never edit a migration that has already been applied; add a new file instead.

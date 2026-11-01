@@ -1,8 +1,8 @@
 # Guildie — Game Design Document
 
-_Current as of 0.19.0 (2026-10-30)._
+_Current as of 0.20.0 (2026-11-01)._
 
-**Version:** 0.19 · **Date:** 2026-10-30 · **Status:** M2 Crafting Depth in progress, live build 0.19.0 (see [CHANGELOG.md](../CHANGELOG.md))
+**Version:** 0.20 · **Date:** 2026-11-01 · **Status:** M2 Crafting Depth in progress, live build 0.20.0 (see [CHANGELOG.md](../CHANGELOG.md))
 **Owner:** Marz · **Client:** TypeScript + Preact web app · **Platform:** Mobile-first browser, desktop browser
 
 > This document is the Guildie "bible." It is the source of truth for design decisions. Every AI or human working session should read the relevant sections before proposing or building features. Changes go through pull requests, and significant decisions are recorded in the [Decision Log](#15-decision-log).
@@ -241,8 +241,8 @@ This turns leveling into a light routing puzzle: what's the cheapest path to the
 
   So every craft is a choice: **learn** (orange and yellow recipes give XP) or **excel** (green and grey recipes make good goods). Old recipes stay useful, and a player at the bottega's XP cap has something worth doing.
 - Quality raises an item's value: **Fine 1.5x, Masterwork 2.5x** [tune, `economy.json` `quality`], in the bag, at the selling desk, at the Mercato and to the city's buyers and traders. The Guild Suppliers sell Common only.
-- **Quality never blocks you:** recipes, orders, the Duke, favors, upgrades, buy offers and trades take any quality, lowest first, and trades keep the quality of what's handed over. Only selling picks a quality, because the price depends on it.
-- Next (#80): customers who ask for "Fine or better" or Masterwork. Later: Focus (the crafting minigame) raises the chance of a better tier; better ingredients may help too.
+- **Quality never blocks you:** recipes, plain orders, the Duke, favors, upgrades, buy offers and trades take any quality, lowest first, and trades keep the quality of what's handed over. Only selling picks a quality, because the price depends on it.
+- **Customers who ask for quality** *(0.20.0, #80)*: see Crafting orders below. Later: Focus (the crafting minigame) raises the chance of a better tier; better ingredients may help too.
 
 **Crafting stats and procs** (inspired by Dragonflight)
 
@@ -269,6 +269,9 @@ Procs supply the small surprises that make routine crafts exciting.
 
 **Crafting orders**
 - NPC customers (and later players) post orders: an item, a minimum quality, a deadline, and a reward (gold, rare materials, or recipes).
+- **Orders that ask for quality** *(0.20.0, #80)*: about 1 in 5 regular orders ask for **Fine or better**; collectors always ask for quality, half the time **Masterwork** [tune, `orders.json` `quality_chance`, `collector_masterwork_chance`]. Bundles never do. A customer only asks for goods you can make at Fine right now (a recipe that is green or grey for you); until you have one, orders take any quality as before.
+  - The reward is the usual order markup on the value **at that quality**: about 2x the usual value per Fine good, about 3.6x per Masterwork good for a collector, who also keeps the guaranteed rare material. The Guild Suppliers sell Common only, so these rewards can go above the suppliers' price (the 0.5.1 rule doesn't apply).
+  - Masterwork means Masterwork; Fine or better takes Fine first, then Masterwork. A quality order keeps the usual size in ducats, so it asks for fewer, better goods.
 - Orders give direction ("what should I make?") and guaranteed demand.
 
 **Specializations** (post-MVP)
@@ -817,6 +820,10 @@ Each milestone ends with a playtest and a clear exit question. This table is the
 | 2026-10-30 | **Second profession (designed, not built):** unlocks at the Master bottega (replaces skill 80), **capped at Expert**, and **shares your craft slots**; the bottega, city standing and a +50% XP bonus until Journeyman carry over, recipes don't ([5.7](#57-second-profession)). Built after the M2 playtest and the Glassblower | Marz's pick. Slots are the scarce thing, so a second craft adds choice, not output, and Master goods still need specialists. Replaces the 2026-10-25 "skill 80" row; resolves Open Question 4 |
 | 2026-10-30 | **Changing guild (designed, not built):** free until your first bottega upgrade; after that the new guild starts at skill 1 and the old guild's progress is lost, with no fee ([5.8](#58-changing-guild)) | Marz's pick over "frozen and restored on return". Switching fixes a wrong pick; the second profession is the way to grow. Everything open at once is ruled out: self-sufficiency kills trade |
 | 2026-10-30 | People **walk with stepping feet** (two foot bones in the body model) and **anyone can be slapped**: townsfolk, customers, officials, vendors and trainers react with a knock-back and flail. Slapping a non-player is local and cosmetic; a merchant in reach still gets the room-checked challenge first | Marz's request. Townsfolk live only in each browser, so a local slap needs no server and can't touch the economy |
+| 2026-11-01 | **Orders that ask for quality (0.20.0, #80):** collectors always ask for quality (Fine or better, or Masterwork); about 1 in 5 regular orders ask for Fine or better; only collectors ask for Masterwork; bundles never ask | Marz's pick. Quality becomes a regular reason to use old recipes, while Masterwork stays a special event. Collectors can pay big again, as promised in 0.5.1 |
+| 2026-11-01 | Quality orders only ask for **goods you can make at Fine now** (a green or grey recipe); otherwise the customer takes any quality | Marz's pick. New players never get an order they can't fill |
+| 2026-11-01 | Quality orders pay the **usual markup on the value at that quality** (Fine about 2x usual, Masterwork collector about 3.6x); collectors keep the guaranteed rare material. They may exceed the suppliers' ceiling, since suppliers sell Common only | Marz's pick over a bigger premium, which would pull players too hard toward grey recipes and away from levelling |
+| 2026-11-01 | A **Masterwork order takes Masterwork only**; Fine or better takes Fine first, then Masterwork | Marz's pick. Keeps Masterwork worth chasing |
 | 2026-10-30 | **Station choices moved to later; minigames cover active play for now.** The Mine's veins, the Herb Garden's plots and the Lodge's trip length (5.4, systems.md 5.2) are built after the M2 playtest ([#85](https://github.com/MarcialPimentel/guildie/issues/85)) | Marz, docs sync. They were never built; since 0.15.0 the station minigames give the station its active play |
 
 ---

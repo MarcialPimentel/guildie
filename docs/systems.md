@@ -429,6 +429,7 @@ The GDD promises that a 30-minute session rewards active play, but never says wh
 - Each order has a deadline in hours. Skipping one has a cooldown.
 - Fulfilling **removes the items** (consumed: a sink) and pays rewards the market can't give: XP, rare materials (sometimes another guild's), and **rare recipes**, the only way to get some recipes.
 - **Rewards are priced from each item's usual value** (0.5.1). The *whole* reward (gold plus any rare material at its usual value) is `reward_multiplier` × that value. The validator keeps this below `market.ceiling_multiplier`, and the **Guild Suppliers never sell below ceiling × usual**, so an order can never be filled at a profit from supplier stock.
+- **Minimum quality** *(0.20.0, #80)*: `orders.min_quality` (1 any, 2 Fine or better, 3 Masterwork). An order asks for quality with `quality_chance[kind]` (standard 0.2, collector 1, bundle always 0); a collector asks for Masterwork with `collector_masterwork_chance` (0.5), anyone else for Fine or better. Only for goods from recipes the player knows whose colour gives a Fine floor (green, grey); with none, the order takes any quality. The reward is `reward_multiplier` × the value **at that quality** (`quality.value_multiplier`), which may go above the supplier ceiling because the Guild Suppliers sell Common only. Filling counts and removes only that quality or better, lowest first (`inventory_count` / `inventory_remove` with `$minQuality`).
 
 Player-posted orders are in the backlog.
 

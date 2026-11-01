@@ -45,6 +45,13 @@ During the week:
 - **Save up** for the next recipe at the guild trainer, and for the next bottega upgrade.
 - When you reach Expert, keep the machines in **Lamp Oil**, or try a day without and see how much slower it feels.
 
+## New in 0.20.0: customers who ask for quality ([#80](https://github.com/MarcialPimentel/guildie/issues/80))
+
+- Some customers now want **Fine or better** (a green badge on the order) and collectors may want **Masterwork** (a gold badge). They pay for that quality: about 2x an item's usual value for Fine, and much more for Masterwork.
+- They only ask for goods you can already make at Fine, so you'll start seeing them once an old recipe turns green (about 12 skill points after you learned it).
+- Plain goods don't count: the order's "have" shows only goods that are good enough ("have 1 Fine+").
+- Try: when a Fine order arrives, craft a batch of that item from your green or grey recipe, then fill it. Watch for a collector asking for Masterwork.
+
 ## What to tell Marz
 
 Use the **Feedback** button any time (it attaches what you're looking at). At the end of the test, answer these:
@@ -67,6 +74,7 @@ Use the **Feedback** button any time (it attaches what you're looking at). At th
 **Quality (new in 0.18.0)**
 10. Did you ever craft an old recipe **for quality instead of XP**? Was "learn or excel" a real choice, or did one side always win?
 11. Did Fine and Masterwork goods feel **worth the effort** when you sold them?
+11a. Did an order asking for **Fine or better** or **Masterwork** change what you crafted? Did the pay feel worth it, and were they too rare or too common?
 
 **Anything else**
 12. What was the best moment, and the most annoying one?
