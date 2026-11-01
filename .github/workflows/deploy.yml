@@ -99,6 +99,8 @@ jobs:
           json.dump(d, open(p, 'w'), indent=1)
           p = 'ci/content/orders.json'; o = json.load(open(p))
           o['settings']['rare_recipe_chance'] = {k: 1 for k in o['settings']['rare_recipe_chance']}   # tests always see one (#49)
+          o['settings']['quality_chance']['standard'] = 1   # quality orders (0.20.0, #80): asked whenever you can make Fine
+          o['settings']['collector_masterwork_chance'] = 0  # ...always Fine or better (Masterwork is tested with test_player)
           json.dump(o, open(p, 'w'), indent=1)
           EOF
           cat > ci/private/config.php <<'EOF'

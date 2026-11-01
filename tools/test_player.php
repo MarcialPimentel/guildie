@@ -25,7 +25,7 @@ define('GUILDIE_PRIVATE', getenv('GUILDIE_PRIVATE') ?: dirname(__DIR__) . '/serv
 require dirname(__DIR__) . '/server/app/bootstrap.php';
 
 [$mode, $name, $value] = [(string) ($argv[1] ?? ''), (string) ($argv[2] ?? ''), (int) ($argv[3] ?? 0)];
-$modes = ['legacy', 'skill', 'give', 'gold', 'build_ready', 'kept_rank', 'expire_wanted'];
+$modes = ['legacy', 'skill', 'give', 'gold', 'build_ready', 'kept_rank', 'expire_wanted', 'order_quality'];
 if (!config('debug', false) || !str_starts_with($name, 'smoke_') || !in_array($mode, $modes, true)) {
     fwrite(STDERR, 'Usage: test_player.php ' . implode('|', $modes) . " smoke_NAME [VALUE]. Needs 'debug' => true in config.php.\n");
     exit(1);
@@ -41,6 +41,10 @@ tx(function (PDO $pdo) use ($mode, $name, $value, $argv) {
     $id = (int) $p['id'];
     if ($mode === 'give') {
         inventory_add($pdo, $id, (string) $argv[3], (int) ($argv[4] ?? 1), (int) ($argv[5] ?? QUALITY_COMMON));
+        return;
+    }
+    if ($mode === 'order_quality') {   // 0.20.0 (#80): every open order now asks for this quality or better
+        $pdo->prepare("UPDATE orders SET min_quality = ? WHERE player_id = ? AND status = 'open'")->execute([max(1, min(3, $value)), $id]);
         return;
     }
     if ($mode === 'gold') {
