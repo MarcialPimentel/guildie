@@ -18,6 +18,19 @@ export function QualityTag({ q }: { q: number }) {
   return <span class={`tag q${q}`} data-testid={`quality-${q}`}>{qualityName(q)}</span>
 }
 
+/** "Fine or better" or "Masterwork": what an order asks for (0.20.0, #80); empty when any quality will do. */
+export function qualityAsk(min: number | undefined): string {
+  if (!min || min <= 1) return ''
+  return min < NAMES.length ? `${qualityName(min)} or better` : qualityName(min)
+}
+
+/** A badge on an order that asks for quality. */
+export function QualityAskTag({ min }: { min: number | undefined }) {
+  const text = qualityAsk(min)
+  if (!text) return null
+  return <span class={`tag q${min}`} data-testid={`order-quality-${min}`}>{text}</span>
+}
+
 /** What a recipe makes at your skill: "Makes Common · 10% Fine". */
 export function qualityOdds(floor: number, up: number): string {
   const base = `Makes ${qualityName(floor)}`
