@@ -8,6 +8,7 @@ import { worldEvents } from '../worldEvents'
 import type { Order, ProgressGain } from '../types'
 import { ActionButton, useGame, useLoad, useNow } from './common'
 import { celebrate, gainText } from './Progress'
+import { QualityAskTag, qualityName } from './Quality'
 
 export function Orders() {
   const s = useSession()
@@ -57,6 +58,7 @@ function OrderCard({ order, elapsed, skipIn, after, say }: {
           {order.customer}
           {order.kind === 'collector' && <span class="tag collector">collector</span>}
           {order.kind === 'bundle' && <span class="tag bundle">bundle</span>}
+          <QualityAskTag min={order.min_quality} />
         </h3>
         <span class={`tiny ${left < 1800 ? 'error' : 'muted'}`}>{left > 0 ? `${duration(left)} left` : 'leaving…'}</span>
       </div>
@@ -65,7 +67,7 @@ function OrderCard({ order, elapsed, skipIn, after, say }: {
         <div class="row">
           <ItemIcon id={i.item_id} />
           <span class={`grow ${i.own_guild ? '' : 'npc'}`}>{i.quantity} × {i.name}</span>
-          <span class={`small ${i.have >= i.quantity ? 'ok' : 'error'}`}>have {i.have}</span>
+          <span class={`small ${i.have >= i.quantity ? 'ok' : 'error'}`}>have {i.have}{(order.min_quality ?? 1) > 1 ? ` ${qualityName(order.min_quality ?? 1)}${(order.min_quality ?? 1) < 3 ? '+' : ''}` : ''}</span>
         </div>
       ))}
       <p class="small">

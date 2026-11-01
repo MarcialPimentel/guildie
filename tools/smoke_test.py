@@ -774,7 +774,8 @@ if TICK:
 
     # Fill an order (#44): buy what's missing from the Guild Suppliers, then hand it over.
     s, r = call("orders", token=tok_a)
-    ready = [o for o in r["data"]["orders"] if o["arriving_in"] == 0]
+    # Orders that ask for quality (0.20.0) can't be filled from the suppliers' Common stock, so skip those here.
+    ready = [o for o in r["data"]["orders"] if o["arriving_in"] == 0 and o.get("min_quality", 1) == 1]
     filled = False
     for o in sorted(ready, key=lambda o: (not o.get("reward_recipe"), sum(i["quantity"] for i in o["items"]))):
         ok = True
@@ -1195,6 +1196,57 @@ if PLAYER_TOOL:
     check("a trade can hold a Fine item", s == 200 and have(r["data"]["state"], "brass_fittings") == 0, r)
     s, r = call("offer_accept", {"offer_id": oid}, token=tok_a)
     check("it arrives Fine", s == 200 and have_q(r["data"]["state"], "brass_fittings", 2) == 1, r)
+
+    # ------------------------------------------------------------ orders that ask for quality (0.20.0, #80)
+    # CI sets quality_chance.standard to 1 and collector_masterwork_chance to 0: every order q can make Fine asks Fine or better.
+    ITEMS = {i["id"]: i for i in json.loads((CONTENT / "items.json").read_text(encoding="utf-8"))["items"]}
+    s, r = call("get_state", token=tok_q)
+    st = r["data"]
+    s, r = call("orders", token=tok_q)
+    qorders = [o for o in r["data"]["orders"] if o["arriving_in"] == 0] if s == 200 else []
+    check("q's orders ask for Fine or better", qorders and all(o.get("min_quality") == 2 for o in qorders), [o.get("min_quality") for o in qorders])
+    check("...say so in the customer's line", all("Fine or better" in o["line"] for o in qorders), [o["line"] for o in qorders])
+    check("...only for goods q makes Fine now (a grey recipe)", all(i["item_id"] == "brass_fittings" for o in qorders for i in o["items"]),
+          [[i["item_id"] for i in o["items"]] for o in qorders])
+    def reward_value(o):
+        return o["reward_gold"] + sum(x["quantity"] * ITEMS[x["item_id"]]["reference_value"] for x in o["reward_items"])
+    def fine_value(o):
+        return sum(i["quantity"] * ITEMS[i["item_id"]]["reference_value"] * 1.5 for i in o["items"])
+    check("a Fine order pays above the suppliers' price (priced from the Fine value)",
+          all(reward_value(o) > fine_value(o) for o in qorders), [(reward_value(o), fine_value(o)) for o in qorders])
+    if qorders:
+        o = min(qorders, key=lambda o: sum(i["quantity"] for i in o["items"]))
+        need = o["items"][0]["quantity"]
+        tool("give", name_q, "brass_fittings", need, 1)   # Common: not good enough
+        s, r = call("orders", token=tok_q)
+        o2 = next((x for x in r["data"]["orders"] if x["id"] == o["id"]), o)
+        check("Common goods don't count towards a Fine order", o2["items"][0]["have"] == have_q(st, "brass_fittings", 2), o2["items"])
+        s, r = call("order_fill", {"order_id": o["id"]}, token=tok_q)
+        if have_q(st, "brass_fittings", 2) < need:
+            check("Common goods can't fill a Fine order", s == 400 and r["error"]["code"] == "not_enough_items" and "Fine or better" in r["error"]["message"], r)
+            tool("give", name_q, "brass_fittings", need, 3)   # Masterwork is "or better"
+            s, r = call("order_fill", {"order_id": o["id"]}, token=tok_q)
+        check("Fine or better fills it", s == 200, r)
+        st2 = r["data"]["state"] if s == 200 else {}
+        check("...and the Common goods are left in the bag", have_q(st2, "brass_fittings", 1) == need, st2.get("inventory"))
+        check("...the activity log names the quality", any(a["type"] == "order_filled" and "Fine or better" in a["text"] for a in st2.get("activity", [])[:4]),
+              st2.get("activity", [])[:4])
+
+        # Masterwork means Masterwork: Fine doesn't fill it.
+        tool("order_quality", name_q, 3)
+        s, r = call("orders", token=tok_q)
+        mo = next((x for x in r["data"]["orders"] if x["arriving_in"] == 0), None) if s == 200 else None
+        if mo:
+            check("a Masterwork order says Masterwork", mo["min_quality"] == 3 and "Masterwork" in mo["line"] and "or better" not in mo["line"], mo)
+            item, qty = mo["items"][0]["item_id"], mo["items"][0]["quantity"]
+            tool("give", name_q, item, qty, 2)
+            s, r = call("order_fill", {"order_id": mo["id"]}, token=tok_q)
+            check("Fine goods can't fill a Masterwork order", s == 400 and r["error"]["code"] == "not_enough_items", r)
+            tool("give", name_q, item, qty, 3)
+            s, r = call("order_fill", {"order_id": mo["id"]}, token=tok_q)
+            check("Masterwork goods fill it", s == 200, r)
+        else:
+            print("SKIP  Masterwork order (no customer arrived)")
 else:
     print("SKIP  quality tiers (no --player-tool)")
 

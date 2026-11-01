@@ -135,6 +135,22 @@ for kind in kinds:
     if not (0 <= os_.get("rare_material_chance", {}).get(kind, -1) <= 1):
         err(f"orders: settings.rare_material_chance.{kind} must be between 0 and 1")
 
+# Orders that ask for quality (0.20.0, #80). They're priced from the value AT the quality asked for, so their reward
+# goes above the suppliers' ceiling on purpose: the Guild Suppliers sell Common only, so they can't fill them.
+os_ = orders.get("settings", {})
+qc = os_.get("quality_chance", {})
+for kind in kinds:
+    if not (0 <= qc.get(kind, -1) <= 1):
+        err(f"orders: settings.quality_chance.{kind} must be between 0 and 1")
+if qc.get("bundle", 0) != 0:
+    err("orders: settings.quality_chance.bundle must be 0 (a bundle needs another guild's goods, so it never asks for quality)")
+if not (0 <= os_.get("collector_masterwork_chance", -1) <= 1):
+    err("orders: settings.collector_masterwork_chance must be between 0 and 1")
+quality = economy.get("quality", {})
+if not (quality.get("value_multiplier") and quality["value_multiplier"][0] == 1
+        and quality["value_multiplier"] == sorted(quality["value_multiplier"])):
+    err("economy: quality.value_multiplier must start at 1 (Common) and rise with quality, or quality orders pay less than plain ones")
+
 if not (0 <= orders.get("settings", {}).get("max_rare_share", -1) < 1):
     err("orders: settings.max_rare_share must be between 0 and 1 (the share of a reward paid as rare materials)")
 

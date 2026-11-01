@@ -270,6 +270,8 @@ export interface Order {
   arriving_in: number
   seconds_left: number
   items: OrderLine[]
+  /** The lowest quality the customer accepts: 1 any, 2 Fine or better, 3 Masterwork (0.20.0, #80). */
+  min_quality?: number
   reward_gold: number
   reward_items: { item_id: string; name: string; quantity: number }[]
   reward_xp: number
