@@ -86,32 +86,49 @@ function inventory_by_quality(PDO $pdo, int $playerId, string $itemId, bool $loc
     return $out;
 }
 
+/** "Fine or better Iron Sword", "Masterwork Iron Sword", or just "Iron Sword" when any quality will do (0.20.0). */
+function item_name_min_q(string $itemId, int $minQuality): string
+{
+    if ($minQuality <= QUALITY_COMMON) {
+        return item_name($itemId);
+    }
+    return quality_name($minQuality) . ($minQuality < QUALITY_MASTERWORK ? ' or better ' : ' ') . item_name($itemId);
+}
+
+/** Only the rows of $minQuality or better (quality => quantity), lowest first. */
+function inventory_at_least(array $rows, int $minQuality): array
+{
+    return array_filter($rows, fn($q) => $q >= $minQuality, ARRAY_FILTER_USE_KEY);
+}
+
 /**
  * How many of an item a player has: of one quality, or of every quality when $quality is null.
+ * $minQuality (0.20.0, orders that ask for quality) counts only that quality or better.
  * Pass $lock = true inside a transaction before removing.
  */
-function inventory_count(PDO $pdo, int $playerId, string $itemId, ?int $quality = null, bool $lock = false): int
+function inventory_count(PDO $pdo, int $playerId, string $itemId, ?int $quality = null, bool $lock = false, int $minQuality = QUALITY_COMMON): int
 {
-    $rows = inventory_by_quality($pdo, $playerId, $itemId, $lock);
+    $rows = inventory_at_least(inventory_by_quality($pdo, $playerId, $itemId, $lock), $minQuality);
     return $quality === null ? array_sum($rows) : ($rows[$quality] ?? 0);
 }
 
 /**
  * Remove items, or throw if the player doesn't have enough. With no quality, any quality counts and the lowest
- * goes first (0.18.0). Returns what was taken (quality => quantity), so a transfer can keep the quality.
+ * goes first (0.18.0); $minQuality skips anything below it (0.20.0). Returns what was taken (quality => quantity),
+ * so a transfer can keep the quality.
  */
-function inventory_remove(PDO $pdo, int $playerId, string $itemId, int $quantity, ?int $quality = null): array
+function inventory_remove(PDO $pdo, int $playerId, string $itemId, int $quantity, ?int $quality = null, int $minQuality = QUALITY_COMMON): array
 {
     if ($quantity <= 0) {
         throw new ApiError('bad_request', 'Quantity must be positive.');
     }
-    $rows = inventory_by_quality($pdo, $playerId, $itemId, true);
+    $rows = inventory_at_least(inventory_by_quality($pdo, $playerId, $itemId, true), $minQuality);
     if ($quality !== null) {
         $rows = isset($rows[$quality]) ? [$quality => $rows[$quality]] : [];
     }
     $have = array_sum($rows);
     if ($have < $quantity) {
-        $what = $quality !== null && $quality > QUALITY_COMMON ? item_name_q($itemId, $quality) : item_name($itemId);
+        $what = $quality !== null && $quality > QUALITY_COMMON ? item_name_q($itemId, $quality) : item_name_min_q($itemId, $minQuality);
         throw new ApiError('not_enough_items', sprintf('You need %d %s but have %d.', $quantity, $what, $have));
     }
     $taken = [];

@@ -19,6 +19,11 @@ declare(strict_types=1);
  *
  * 0.8.0 (#30, #49): orders ask only for goods from recipes you know or can learn now, pay XP (no fall-off,
  * the best XP for the time), and sometimes teach one of your guild's rare recipes.
+ *
+ * 0.20.0 (#80): some orders ask for quality (orders.min_quality): standard ones sometimes ask for Fine or better,
+ * collectors always ask for Fine or better or Masterwork. Only for goods whose recipe makes Fine for you now (green
+ * or grey), and the reward is priced from the value at that quality. The Guild Suppliers sell Common only, so
+ * these rewards may go above the supplier ceiling.
  */
 
 function orders_settings(): array
@@ -45,10 +50,10 @@ function order_items_to_json(array $items): string
     return json_encode(array_map(fn($id, $q) => ['item_id' => $id, 'quantity' => $q], array_keys($items), $items));
 }
 
-/** "3 Copper Lantern and 1 Smelting Flux" */
-function order_items_text(array $items): string
+/** "3 Copper Lantern and 1 Smelting Flux", or "2 Fine or better Copper Lantern" for an order that asks for quality. */
+function order_items_text(array $items, int $minQuality = QUALITY_COMMON): string
 {
-    $parts = array_map(fn($id, $q) => $q . ' ' . item_name((string) $id), array_keys($items), $items);
+    $parts = array_map(fn($id, $q) => $q . ' ' . item_name_min_q((string) $id, $minQuality), array_keys($items), $items);
     if (count($parts) <= 1) {
         return $parts[0] ?? '';
     }
@@ -69,6 +74,26 @@ function orders_own_items(string $professionId, bool $selfSufficientOnly, ?int $
             continue;
         }
         if ($skill !== null && !isset($known[$recipe['id']]) && (recipe_is_rare($recipe) || recipe_skill($recipe) > $skill)) {
+            continue;
+        }
+        $items[] = $recipe['output']['item_id'];
+    }
+    return array_values(array_unique($items));
+}
+
+/**
+ * Goods you can make at Fine or better right now (0.20.0, #80): outputs of recipes you know whose colour at your
+ * skill guarantees Fine (green and grey). Orders that ask for quality only ask for these.
+ */
+function orders_fine_items(string $professionId, bool $selfSufficientOnly, int $skill, array $known): array
+{
+    $items = [];
+    foreach (content_recipes_for($professionId) as $recipe) {
+        if (!isset($known[$recipe['id']]) || recipe_colour($recipe, $skill)['quality_floor'] < QUALITY_FINE) {
+            continue;
+        }
+        $imports = array_filter($recipe['inputs'], fn($in) => (content_item($in['item_id'])['profession'] ?? '') !== $professionId);
+        if ($selfSufficientOnly && $imports) {
             continue;
         }
         $items[] = $recipe['output']['item_id'];
@@ -177,11 +202,27 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
         $kind = 'bundle';
     }
 
+    // Quality (0.20.0, #80): only for goods you can make at Fine or better now; otherwise any quality, as before.
+    $minQuality = QUALITY_COMMON;
+    $fine = [];
+    if ($kind !== 'bundle' && rand_between(0, 1) < (float) ($s['quality_chance'][$kind] ?? 0)) {
+        $fine = orders_fine_items($professionId, !$bundles, $skill, $known);
+        if ($fine) {
+            $masterwork = $kind === 'collector' && rand_between(0, 1) < (float) ($s['collector_masterwork_chance'] ?? 0);
+            $minQuality = $masterwork ? QUALITY_MASTERWORK : QUALITY_FINE;
+        }
+    }
+    $qualityValue = quality_multiplier($minQuality);
+
     // The order's size grows with your rank (0.12.0), so a Master isn't asked for one prestige good far over target.
+    // A quality order keeps the same size in ducats, so it asks for fewer, better goods.
     [$lo, $hi] = $s['target_value_by_rank'][progression_rank_index($skill)] ?? [$s['target_value_min'], $s['target_value_max']];
     $target = rand_between((float) $lo, (float) $hi);
     $items = [];
-    if ($kind === 'collector') {
+    if ($minQuality > QUALITY_COMMON) {
+        $item = orders_pick($fine);
+        $items[$item] = $kind === 'collector' ? mt_rand(1, 2) : orders_quantity_for($item, $target / $qualityValue);
+    } elseif ($kind === 'collector') {
         $item = orders_pick(orders_own_items($professionId, !$bundles, $skill, $known));
         $items[$item] = mt_rand(1, 2);
     } elseif ($kind === 'bundle') {
@@ -197,10 +238,11 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
     }
 
     // The whole reward is worth reward_multiplier x the items' usual value (validator: below the
-    // suppliers' ceiling_multiplier). A rare material is paid out of that budget, not on top of it.
+    // suppliers' ceiling_multiplier), at the quality asked for (0.20.0). A rare material is paid out of that
+    // budget, not on top of it.
     $value = 0.0;
     foreach ($items as $id => $q) {
-        $value += $q * orders_usual((string) $id);
+        $value += $q * orders_usual((string) $id) * $qualityValue;
     }
     $budget = $value * (float) $s['reward_multiplier'][$kind];
 
@@ -232,7 +274,8 @@ function orders_generate(PDO $pdo, int $playerId, string $professionId, int $now
 
     $customers = array_values(array_filter(orders_customers(), fn($c) => in_array($kind, $c['kinds'], true)));
     $customer = orders_pick($customers);
-    return ['customer_id' => $customer['id'], 'kind' => $kind, 'items' => $items, 'reward_gold' => $gold, 'reward_items' => $rewardItems, 'reward_recipe' => $recipe];
+    return ['customer_id' => $customer['id'], 'kind' => $kind, 'items' => $items, 'min_quality' => $minQuality,
+        'reward_gold' => $gold, 'reward_items' => $rewardItems, 'reward_recipe' => $recipe];
 }
 
 /** Expire overdue orders and fill empty slots. Runs inside a transaction. */
@@ -258,9 +301,9 @@ function orders_insert(PDO $pdo, int $playerId, string $professionId, int $slot,
     $hours = rand_between((float) $s['deadline_hours_min'], (float) $s['deadline_hours_max']);
     $expires = $arrivesAt + (int) round($hours * 3600 * pace());
     $pdo->prepare(
-        'INSERT INTO orders (player_id, slot, customer_id, kind, items, reward_gold, reward_items, reward_recipe, created_at, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    )->execute([$playerId, $slot, $o['customer_id'], $o['kind'], order_items_to_json($o['items']), $o['reward_gold'],
+        'INSERT INTO orders (player_id, slot, customer_id, kind, items, min_quality, reward_gold, reward_items, reward_recipe, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    )->execute([$playerId, $slot, $o['customer_id'], $o['kind'], order_items_to_json($o['items']), $o['min_quality'], $o['reward_gold'],
         order_items_to_json($o['reward_items']), $o['reward_recipe'], $arrivesAt, $expires]);
 }
 
@@ -289,6 +332,7 @@ function orders_board(int $playerId): array
     $orders = [];
     foreach ($board['rows'] as $row) {
         $items = order_items_from_json($row['items']);
+        $minQuality = (int) ($row['min_quality'] ?? QUALITY_COMMON);
         $customer = $customers[$row['customer_id']] ?? ['name' => 'A customer', 'line' => 'Wants {items}.'];
         $arriving = (int) $row['created_at'] > $now;
         $orders[] = [
@@ -297,14 +341,15 @@ function orders_board(int $playerId): array
             'kind'         => $row['kind'],
             'customer'     => $customer['name'],
             'customer_id'  => $row['customer_id'],   // picks the customer's look in the 3D harbor
-            'line'         => str_replace('{items}', order_items_text($items), $customer['line']),
+            'line'         => str_replace('{items}', order_items_text($items, $minQuality), $customer['line']),
+            'min_quality'  => $minQuality,   // 1 = any quality, 2 = Fine or better, 3 = Masterwork (0.20.0)
             'arriving_in'  => $arriving ? (int) $row['created_at'] - $now : 0,
             'seconds_left' => max(0, (int) $row['expires_at'] - $now),
             'items'        => array_map(fn($id, $q) => [
                 'item_id'  => $id,
                 'name'     => item_name((string) $id),
                 'quantity' => $q,
-                'have'     => inventory_count($pdo, $playerId, (string) $id),
+                'have'     => inventory_count($pdo, $playerId, (string) $id, null, false, $minQuality),
                 'own_guild' => (content_item((string) $id)['profession'] ?? '') === player_profession_id($pdo, $playerId),
             ], array_keys($items), $items),
             'reward_gold'  => (int) $row['reward_gold'],
@@ -355,14 +400,16 @@ function orders_fill(int $playerId, int $orderId): array
         $now = game_now();
         $order = orders_lock($pdo, $playerId, $orderId, $now);
         $items = order_items_from_json($order['items']);
+        $minQuality = (int) ($order['min_quality'] ?? QUALITY_COMMON);
         foreach ($items as $id => $q) {
-            $have = inventory_count($pdo, $playerId, (string) $id, null, true);
+            $have = inventory_count($pdo, $playerId, (string) $id, null, true, $minQuality);
             if ($have < $q) {
-                throw new ApiError('not_enough_items', sprintf('You need %d %s for this order but have %d.', $q, item_name((string) $id), $have));
+                throw new ApiError('not_enough_items', sprintf('You need %d %s for this order but have %d.', $q, item_name_min_q((string) $id, $minQuality), $have));
             }
         }
         foreach ($items as $id => $q) {
-            inventory_remove($pdo, $playerId, (string) $id, $q);   // consumed by the customer: a sink
+            // consumed by the customer: a sink. The lowest quality that's good enough goes first (0.20.0).
+            inventory_remove($pdo, $playerId, (string) $id, $q, null, $minQuality);
         }
         gold_add($pdo, $playerId, (int) $order['reward_gold']);
         $rewardItems = order_items_from_json($order['reward_items']);
@@ -373,7 +420,7 @@ function orders_fill(int $playerId, int $orderId): array
 
         $customer = orders_customers()[$order['customer_id']]['name'] ?? 'A customer';
         $rewardText = ducats((int) $order['reward_gold']) . ($rewardItems ? ' and ' . order_items_text($rewardItems) : '');
-        activity_log($pdo, $playerId, 'order_filled', ['customer' => $customer, 'items' => order_items_text($items), 'reward' => $rewardText]);
+        activity_log($pdo, $playerId, 'order_filled', ['customer' => $customer, 'items' => order_items_text($items, $minQuality), 'reward' => $rewardText]);
 
         // XP (#30) and, sometimes, a rare recipe (#49).
         $row = progression_row($pdo, $playerId, true);
