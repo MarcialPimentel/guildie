@@ -3,7 +3,7 @@
 _Current as of 0.19.1 (2026-11-01). One entry per build, newest first, from the merged pull requests. The version is in [`VERSION`](VERSION); the live build shows in the game's footer._
 
 ## 0.19.1 — 2026-11-01
-- Fix: when you go up to the Palazzo, other players see where you really arrived straight away. On a slow device they could see you at the top of the Steps' middle spot for several seconds, until your screen drew its next frame (PR link below).
+- Fix: when you go up to the Palazzo, other players see where you really arrived straight away. On a slow device they could see you in the middle of the top of the Steps for several seconds ([#88](https://github.com/MarcialPimentel/guildie/pull/88)).
 
 ## 0.19.0 — 2026-10-30
 - People walk with stepping feet and a little waddle ([#78](https://github.com/MarcialPimentel/guildie/pull/78)).
