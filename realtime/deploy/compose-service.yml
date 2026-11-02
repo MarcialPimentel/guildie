@@ -1,5 +1,5 @@
-# Add this under `services:` in /opt/hub/docker-compose.yml on the droplet (and in the copy in the
-# hormigas repo's deploy/hub/). docs/realtime-setup.md has the steps.
+# Add this under `services:` in /opt/hub/docker-compose.yml on the droplet (and in the master copy,
+# the hub repo MarcialPimentel/hub). docs/realtime-setup.md has the steps.
 
   guildie-realtime:
     image: ghcr.io/marcialpimentel/guildie-realtime:latest

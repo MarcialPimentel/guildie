@@ -1,4 +1,4 @@
-# Add this to /opt/hub/Caddyfile on the droplet (and the copy in the hormigas repo's deploy/hub/).
+# Add this to /opt/hub/Caddyfile on the droplet (and in the master copy, the hub repo MarcialPimentel/hub).
 # Caddy gets the HTTPS certificate by itself and passes WebSockets through. Only the rooms (/q/…) and the
 # health check go to the container; anyone opening guildie.marz.gg in a browser is sent to the game.
 
