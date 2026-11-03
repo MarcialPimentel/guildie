@@ -52,3 +52,27 @@ See `docs/README.md` for every doc, its role and whether it's current or histori
 /content           JSON game data
 /docs              GDD, setup and deploy guides
 ```
+
+## Ship and build notes
+
+_Read by the `ship`, `next-build` and `prod-run` skills, which keep no per-game notes of their own. Keep this section current when the deploy or build process changes._
+
+### Shipping (merge, deploy, live check)
+
+- **Default branch:** `main`. **Merge style:** squash.
+- **Deploy:** `.github/workflows/deploy.yml` ("Deploy") runs on push to `main`: checks (PHP, API smoke test, TypeScript web client build, Playwright browser test), then FTPS upload of the server code and the web client to marz.gg. The client was Godot until 0.4.0. Database migrations apply themselves on the next request.
+- **Live check:** `curl -s "https://marz.gg/games/guildie/api/index.php?action=ping"`
+  - `data.build` must be `"<contents of VERSION> (build <deploy run number>)"`, e.g. `0.3.0 (build 13)`.
+  - `data.schema` should equal the highest number in `server/migrations/NNN_*.sql` (e.g. `004_trade_offers.sql` → 4). Migrations apply on the first request after the upload, so the ping call itself triggers it; retry once if it still shows the old number.
+  - `data.tick.seconds_since` should be under 300; if not, mention it (the cron tick may be stalled) but don't fail the ship over it.
+- **Rules:** release PRs bump `VERSION`; check that it changed. Merging only the PR Marz named is a hard rule here.
+- **Playtest link:** https://marz.gg/games/guildie/ (the footer shows client and server build).
+
+### Planning and building the next build
+
+- **Where the next build comes from:** GitHub milestones M0–M4 and their open issues (the earliest open milestone with open issues), plus `docs/GDD.md` and `docs/systems.md` (systems.md says which system a feature belongs to and what it owns; its milestone plans may not be issues yet). Playtest notes arrive as issues labelled `playtest-feedback` and through the in-game Feedback page.
+- **Version:** bump `VERSION`: minor (0.3.0 → 0.4.0) for new features, patch (0.3.0 → 0.3.1) for fixes and tuning. The build is named after it ("0.3.0: City tab and direct trades").
+- **Branch / PR:** `release/<version>`, one PR for the build, one commit per issue, `Closes #N` for each. PR title `<version>: <short summary>`. Squash-merged.
+- **Before the PR:** `tools/smoke_test.py` against a local server, `npm run build` in `client/` (type check + Vite build), and the Playwright browser test in `client/tests/`. CI runs all of them on a phone and a desktop screen.
+- **Docs in the same PR:** GDD Decision Log for every decision Marz made, `docs/systems.md` for any system change, the playtest guide (`docs/playtest-*.md`) with the new steps, `docs/deploy.md` for any manual step, `VERSION`.
+- **Watch for:** new database tables or columns need a new `server/migrations/NNN_*.sql`. Manual steps for Marz (SiteGround, config.php) need click-by-click instructions in `docs/`.
